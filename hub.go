@@ -1,30 +1,31 @@
 package main
 
-import (
-	"fmt"
+import "fmt"
 
-	"github.com/gin-gonic/gin"
-)
+func testCloudSyncService() {
+	// testCloudSyncServiceDownload()
+	testCloudSyncServiceDelete()
+}
 
 func main() {
-	// call this first time before to setup database locally
-	// setupDbForTesting()
 
 	// Instantiate database connection to serve requests
 	if !createDatabaseConnection() {
 		fmt.Println("Could not create database connection, no point starting the server")
 		return
 	}
-
+	// Call this the first time to setup testing
+	// setupDbForTesting()
+	testCloudSyncServiceDelete()
 	// start a concurrent background service which checks if the files on the device are tampered with
-	go check()
+	// go check()
 
 	// set up the web server and routes
-	router := gin.Default()
-	fmt.Println("Setting up routes")
-	setupRoutes(router)
-	fmt.Println("Server starting ....")
+	// router := gin.Default()
+	// fmt.Println("Setting up routes")
+	// setupRoutes(router)
+	// fmt.Println("Server starting ....")
 
-	// start the web server at port 5000
-	router.Run("0.0.0.0:5000")
+	// // start the web server at port 5000
+	// router.Run("0.0.0.0:5000")
 }

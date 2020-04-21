@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const checkingInterval time.Duration = 100
+const checkingInterval time.Duration = 10
 
 func computeSHA256(filePath string) string {
 	f, err := os.Open(filePath)
