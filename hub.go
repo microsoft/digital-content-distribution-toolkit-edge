@@ -8,7 +8,7 @@ import (
 
 func main() {
 	// call this first time before to setup database locally
-	// setupDbForTesting()
+	setupDbForTesting()
 
 	// Instantiate database connection to serve requests
 	if !createDatabaseConnection() {
@@ -18,7 +18,7 @@ func main() {
 
 	// start a concurrent background service which checks if the files on the device are tampered with
 	go check()
-
+	go checkForVOD()
 	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")

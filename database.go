@@ -90,14 +90,14 @@ func getChildrenEntries(mediaHouse string, parent string) []FolderStructureEntry
 			return nil
 		}
 		cursor := parentBucket.Cursor()
-		// fmt.Println("==============Children==============")
+		 fmt.Println("==========="+parent+":===Children==============")
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
-			// fmt.Printf("key=%s, value=%s\n", k, v)
+			fmt.Printf("key=%s, value=%s\n", k, v)
 			target := new(FolderStructureEntry)
 			json.Unmarshal(v, target)
 			result = append(result, *target)
 		}
-		// fmt.Println("====================================")
+		 fmt.Println("====================================")
 		return nil
 	})
 	return result
@@ -175,6 +175,46 @@ func setupDbForTesting() {
 
 		return nil
 	})
+}
+
+func KeyExistsInDb(mediaHouse string, parent string, id string) bool {
+	var haskey = false
+	db.View(func(tx *bolt.Tx) error {
+		mediaHouseBucket := getMediaHouseBucket(folderStructureBucketName, mediaHouse, tx)
+		if mediaHouseBucket == nil{
+			return nil
+		}
+		parentBucket := mediaHouseBucket.Bucket(getByteString(parent))
+		if parentBucket == nil {
+			return nil
+		}
+		if v := parentBucket.Get(getByteString(id)); v != nil {
+			haskey = true
+		} 
+		return nil
+	})
+	
+	return haskey
+}
+
+func updateFolderStr(mediaHouse string, parent string, folderStructureEntry FolderStructureEntry) error {
+	if err := db.Update(func(tx *bolt.Tx) error{
+		addFolder(tx, mediaHouse, parent, folderStructureEntry)
+		return nil
+	}); err!= nil {
+		return err
+	}
+	return nil
+}
+func updateFileInfoInDb(mediaHouse string, id string, metadataFiles []FileEntry, bulkFiles []FileEntry) error {
+	if err := db.Update(func(tx *bolt.Tx) error{
+		addMetadataFiles(tx, mediaHouse, id, metadataFiles)
+		addBulkFiles(tx, mediaHouse, id, bulkFiles)
+		return nil
+	}); err!= nil {
+		return err
+	}
+	return nil
 }
 
 // Directory structure
