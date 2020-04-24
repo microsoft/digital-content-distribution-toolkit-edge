@@ -17,8 +17,15 @@ const lengthOfInt64Bytes int = 8
 // Route 1: "/list/files/:parent" returns the children and their metadata of :parent
 func setupRoutes(ginEngine *gin.Engine) {
 	ginEngine.Static("/static", "./static")
+	ginEngine.GET("/metadata/:mediaHouse/:id", serveSingleMetadata)
 	ginEngine.GET("/list/files/:mediaHouse/:parent", serveMetadata)
 	ginEngine.GET("/download/files/:mediaHouse/:folderID/:fileName", serveFile)
+}
+
+func serveSingleMetadata(context *gin.Context) {
+	mediaHouse := context.Param("mediaHouse")
+	folderID := context.Param("id")
+	writeMetadataFiles(context, getMetadataFiles(mediaHouse, folderID), mediaHouse, folderID)
 }
 
 func serveFile(context *gin.Context) {
@@ -51,7 +58,10 @@ func serveMetadata(context *gin.Context) {
 	for i := 0; i < len(children); i++ {
 
 		// return length of name - 4 bytes
-		writeString(context, children[i].ID)
+		if writeString(context, children[i].ID) < 0 {
+			fmt.Println("Could not write ID of child")
+			return
+		}
 
 		// TODO: consider processing infoMetadataFile and send results as a part of this reply
 
@@ -62,45 +72,56 @@ func serveMetadata(context *gin.Context) {
 		if children[i].HasChildren {
 			hasChildren = 1
 		}
-		writeInt32(context, hasChildren)
-
-		metadataFiles := getMetadataFiles(mediaHouse, children[i].ID)
-
-		// return number of metadata files
-		if writeInt32(context, len(metadataFiles)) < 0 {
+		if writeInt32(context, hasChildren) < 0 {
+			fmt.Println("Could not write hasChildren of ID: ", children[i].ID)
 			return
 		}
 
-		// loop through metadata files
-		for j := 0; j < len(metadataFiles); j++ {
-			// write length of name
-			if writeString(context, metadataFiles[j]) < 0 {
-				return
-			}
-
-			// write length of file
-			filePath := getFilePath(mediaHouse, children[i].ID, metadataFiles[j])
-			fileInfo, err := os.Stat(filePath)
-			if err != nil {
-				fmt.Println("Could not get file info")
-				return
-			}
-			if writeInt64(context, fileInfo.Size()) < 0 {
-				return
-			}
-
-			// write the actual file data
-			fileHandle, err := os.Open(filePath)
-			defer fileHandle.Close()
-			if err != nil {
-				fmt.Println("Could not open file ", filePath)
-				return
-			}
-			fmt.Println("Writing file ", filePath)
-			written := writeFile(context, fileHandle, fileInfo.Size())
-			fmt.Println("Done writing file ", filePath, " total bytes written: ", written, "/", fileInfo.Size())
+		metadataFiles := getMetadataFiles(mediaHouse, children[i].ID)
+		if writeMetadataFiles(context, metadataFiles, mediaHouse, children[i].ID) < 0 {
+			fmt.Println("Could not write metadata files for ID: " + children[i].ID)
 		}
 	}
+}
+
+func writeMetadataFiles(context *gin.Context, metadataFiles []string, mediaHouse string, id string) int {
+	// return number of metadata files
+	if writeInt32(context, len(metadataFiles)) < 0 {
+		return -1
+	}
+
+	// loop through metadata files
+	for j := 0; j < len(metadataFiles); j++ {
+		// write length of name
+		if writeString(context, metadataFiles[j]) < 0 {
+			fmt.Println("Could not write file name: for ID ", id, " name: ", metadataFiles[j])
+			return -1
+		}
+
+		// write length of file
+		filePath := getFilePath(mediaHouse, id, metadataFiles[j])
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			fmt.Println("Could not get file info ", id, " name: ", metadataFiles[j])
+			return -1
+		}
+		if writeInt64(context, fileInfo.Size()) < 0 {
+			fmt.Println("Could not write file size ", id, " name: ", metadataFiles[j])
+			return -1
+		}
+
+		// write the actual file data
+		fileHandle, err := os.Open(filePath)
+		defer fileHandle.Close()
+		if err != nil {
+			fmt.Println("Could not open file ", filePath)
+			return -1
+		}
+		fmt.Println("Writing file ", filePath)
+		written := writeFile(context, fileHandle, fileInfo.Size())
+		fmt.Println("Done writing file ", filePath, " total bytes written: ", written, "/", fileInfo.Size(), " FOR: ", id, " name: ", metadataFiles[j])
+	}
+	return len(metadataFiles)
 }
 
 // Writes bytes int the method parameter 'value' to the output stream associated with the current HTTP request

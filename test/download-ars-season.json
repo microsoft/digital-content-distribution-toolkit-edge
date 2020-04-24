@@ -1,0 +1,25 @@
+{
+  "id": "ars-talks",
+  "mediaHouse": "MSR",
+  "channel": ["cellular", "boradband"],
+  "metadataFiles": [
+    {
+      "name": "genre_cover.jpg",
+      "cdn": "https://binemsr.azureedge.net/ars-talks/genre_cover.jpg",
+      "hashsum": "e30913ee1b82e05a708509906dcd5302f253e1075f7a05db063010efcf5a81f0"
+    },
+    {
+      "name": "genre_metadata.json",
+      "cdn": "https://binemsr.azureedge.net/ars-talks/genre_metadata.json",
+      "hashsum": "b3484822eeb929bd437d4ec4edeff771dca13c3e058fcd82180c759567be967e"
+    }
+  ],
+  "bulkFiles" : [
+  ],
+  "deadline": 100000,
+  "hierarchy": {
+      "level": "root",
+      "child": null
+  },
+  "hasChildren": true
+}
