@@ -305,7 +305,7 @@ func KeyExistsInDb(mediaHouse string, parent string, id string) bool {
 
 func updateFolderStr(mediaHouse string, parent string, folderStructureEntry FolderStructureEntry) error {
 	if err := db.Update(func(tx *bolt.Tx) error{
-		addFolder(tx, mediaHouse, parent, folderStructureEntry)
+		addFolder( mediaHouse, parent, folderStructureEntry)
 		return nil
 	}); err!= nil {
 		return err
@@ -314,8 +314,8 @@ func updateFolderStr(mediaHouse string, parent string, folderStructureEntry Fold
 }
 func updateFileInfoInDb(mediaHouse string, id string, metadataFiles []FileEntry, bulkFiles []FileEntry) error {
 	if err := db.Update(func(tx *bolt.Tx) error{
-		addMetadataFiles(tx, mediaHouse, id, metadataFiles)
-		addBulkFiles(tx, mediaHouse, id, bulkFiles)
+		addMetadataFiles( mediaHouse, id, metadataFiles)
+		addBulkFiles( mediaHouse, id, bulkFiles)
 		return nil
 	}); err!= nil {
 		return err

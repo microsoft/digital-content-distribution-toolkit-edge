@@ -125,7 +125,7 @@ func callNoovoAPI(){
 				}else{
 					fmt.Println("COULD NOT DOWNLOAD:::", err)
 					//delete the partially downloaded folder
-					deleteFolder(mediaHouse, parent, id)
+					deleteMediaFolder(mediaHouse, parent, id)
 				}
 				
 			}else{
@@ -177,7 +177,7 @@ func downloadFiles(mediaHouse string, parent string, id string, files []FileInfo
 		
 
 }
-func deleteFolder(mediaHouse string, parent string, id string){
+func deleteMediaFolder(mediaHouse string, parent string, id string){
 	pathToBeDeleted := filepath.Join(mediaHouse, id)
 	if err := os.RemoveAll(pathToBeDeleted); err!=nil {
 		fmt.Println("Error in deleting the folder id ", id, "::::", err)
