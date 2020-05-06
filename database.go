@@ -283,16 +283,16 @@ func setupDbForTesting() {
 	addBulkFiles("MSR", "FS02E01", []FileEntry{FileEntry{Name: "vod.mp4", HashSum: "e754ddcf735de06ac797915b814c933771276831b1d802022036036e0edd4294"}})
 }
 
-func KeyExistsInDb(mediaHouse string, parent string, id string) bool {
+func KeyExistsInDb(mediaHouse string, parent string, id string) (bool, error) {
 	var haskey = false
-	db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bolt.Tx) error {
 		mediaHouseBucket := getMediaHouseBucket(folderStructureBucketName, mediaHouse, tx)
 		if mediaHouseBucket == nil{
-			return nil
+			return errors.New("MediaHouse bucket for "+mediaHouse+ " was nil")
 		}
 		parentBucket := mediaHouseBucket.Bucket(getByteString(parent))
 		if parentBucket == nil {
-			return nil
+			return errors.New("Parent bucket for "+parent+ "was nil")
 		}
 		if v := parentBucket.Get(getByteString(id)); v != nil {
 			haskey = true
@@ -300,27 +300,7 @@ func KeyExistsInDb(mediaHouse string, parent string, id string) bool {
 		return nil
 	})
 	
-	return haskey
-}
-
-func updateFolderStr(mediaHouse string, parent string, folderStructureEntry FolderStructureEntry) error {
-	if err := db.Update(func(tx *bolt.Tx) error{
-		addFolder( mediaHouse, parent, folderStructureEntry)
-		return nil
-	}); err!= nil {
-		return err
-	}
-	return nil
-}
-func updateFileInfoInDb(mediaHouse string, id string, metadataFiles []FileEntry, bulkFiles []FileEntry) error {
-	if err := db.Update(func(tx *bolt.Tx) error{
-		addMetadataFiles( mediaHouse, id, metadataFiles)
-		addBulkFiles( mediaHouse, id, bulkFiles)
-		return nil
-	}); err!= nil {
-		return err
-	}
-	return nil
+	return haskey, err
 }
 
 // Directory structure
