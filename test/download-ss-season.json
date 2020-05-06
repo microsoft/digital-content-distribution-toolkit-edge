@@ -1,0 +1,25 @@
+{
+    "id": "microsoft-research-cambridge-ai-summer-school-2017",
+    "mediaHouse": "MSR",
+    "channel": ["cellular", "boradband"],
+    "metadataFiles": [
+      {
+        "name": "genre_cover.jpg",
+        "cdn": "https://binemsr.azureedge.net/microsoft-research-cambridge-ai-summer-school-2017/genre_cover.jpg",
+        "hashsum": "e30913ee1b82e05a708509906dcd5302f253e1075f7a05db063010efcf5a81f0"
+      },
+      {
+        "name": "genre_metadata.json",
+        "cdn": "https://binemsr.azureedge.net/microsoft-research-cambridge-ai-summer-school-2017/genre_metadata.json",
+        "hashsum": "099777b452847fe1d7d11c983208cc31007c15e72b37827092e4c12f83da7d39"
+      }
+    ],
+  	"bulkFiles" : [
+    ],
+    "deadline": 100000,
+    "hierarchy": {
+        "level": "root",
+        "child": null
+    },
+    "hasChildren": true
+}

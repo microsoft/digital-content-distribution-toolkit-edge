@@ -1,12 +1,18 @@
 package main
 
-import "fmt"
-import "github.com/gin-gonic/gin"
+import (
+	"fmt"
 
-// func testCloudSyncService() {
-// 	// testCloudSyncServiceDownload()
-// 	testCloudSyncServiceDelete()
-// }
+	"github.com/gin-gonic/gin"
+)
+
+func test() {
+
+	// Call this the first time to setup testing
+	// setupDbForTesting()
+	// testCloudSyncServiceDownload()
+	// navigate("root")
+}
 
 func main() {
 
@@ -15,13 +21,11 @@ func main() {
 		fmt.Println("Could not create database connection, no point starting the server")
 		return
 	}
-	// Call this the first time to setup testing
-	setupDbForTesting()
-	//testCloudSyncServiceDelete()
+	// testCloudSyncServiceDownload()
 	// start a concurrent background service which checks if the files on the device are tampered with
-	//go check()
+	go check()
 	go checkForVOD()
-	//set up the web server and routes
+	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")
 	setupRoutes(router)

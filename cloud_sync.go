@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"time"
 )
 
@@ -28,8 +29,8 @@ func downloadFolder(downloadCommandBytes []byte) error {
 	println("Media House is: " + downloadCommand.MediaHouse)
 	println("Ignoring channel now, need to figure out how to create sockets on a particular network")
 	println("Verifying hierarchy of the current download request")
-	currentNode := downloadCommand.Hierarchy
-	parentNode := currentNode
+	currentNode := downloadCommand.Hierarchy.Child // should start from child because root always exists
+	parentNode := downloadCommand.Hierarchy
 	for currentNode != nil {
 		childNode := currentNode.Child
 		children := getChildren(downloadCommand.MediaHouse, currentNode.Level)
@@ -49,6 +50,7 @@ func downloadFolder(downloadCommandBytes []byte) error {
 		currentNode = childNode
 	}
 	folderPath := getFolderPath(downloadCommand.MediaHouse, downloadCommand.ID)
+	println("folder path: " + folderPath)
 	err = os.MkdirAll(folderPath, 0700)
 	if err != nil {
 		println("Could not create directory for ID: " + downloadCommand.ID)
@@ -74,7 +76,10 @@ func downloadFolder(downloadCommandBytes []byte) error {
 		return err
 	}
 
-	println("adding folder to db")
+	print("adding folder to db ")
+	if downloadCommand.HasChildren {
+		println(downloadCommand.ID + " has children")
+	}
 	err = addFolder(downloadCommand.MediaHouse, parentNode.Level, FolderStructureEntry{downloadCommand.ID, downloadCommand.HasChildren, ""})
 	if err != nil {
 		return err
@@ -103,6 +108,7 @@ func downloadExponential(filePath string, url string, trueSha256 string) error {
 	return errors.New("Could not download: " + url)
 }
 
+//TODO: Implement download resume? use a golang library maybe
 func downloadFile(filePath string, url string) error {
 	println("Downloading file: " + url)
 	resp, err := http.Get(url)
@@ -116,13 +122,16 @@ func downloadFile(filePath string, url string) error {
 		return err
 	}
 	defer fileOutputStream.Close()
-
-	_, err = io.Copy(fileOutputStream, resp.Body)
+	fileLengthString := resp.Header.Get("Content-Length")
+	fileLength, err := strconv.Atoi(fileLengthString)
+	progressWriter := &ProgressWriter{}
+	progressWriter.Total = int64(fileLength / 1024 / 1024)
+	_, err = io.Copy(fileOutputStream, io.TeeReader(resp.Body, progressWriter))
 	return err
 }
 
 func downloadCloudFiles(folderPath string, cloudFileEntries []CloudFileEntry) []FileEntry {
-	var fileEntries []FileEntry
+	fileEntries := []FileEntry{}
 	for _, cloudFileEntry := range cloudFileEntries {
 		err := downloadExponential(path.Join(folderPath, cloudFileEntry.Name), cloudFileEntry.Cdn, cloudFileEntry.Hashsum)
 		if err != nil {
@@ -175,11 +184,18 @@ func getChildrenToRemove(mediaHouse string, parent string, result []string) []st
 }
 
 func testCloudSyncServiceDownload() {
-	bytes, err := ioutil.ReadFile("test/download.json")
-	if err != nil {
-		println("Could not read json:" + err.Error())
-	} else {
-		downloadFolder(bytes)
+	files := []string{"test/download-ars-season.json", "test/download-ss-season.json", "test/download-ss-ep1.json", "test/download-ars-ep1.json"}
+
+	for _, filePath := range files {
+		bytes, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			println("Could not read json:" + err.Error())
+		} else {
+			err = downloadFolder(bytes)
+			if err != nil {
+				println(err.Error())
+			}
+		}
 	}
 }
 
@@ -203,7 +219,7 @@ type DownloadCommand struct {
 	BulkFiles     []CloudFileEntry `json:"bulkFiles"`
 	Deadline      int              `json:"deadline"`
 	Hierarchy     *HierarchyNode   `json:"hierarchy"`
-	HasChildren   bool             `json:"hasChildre"`
+	HasChildren   bool             `json:"hasChildren"`
 }
 
 //CloudFileEntry represents cloud download Command Json
