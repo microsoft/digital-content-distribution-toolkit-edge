@@ -9,7 +9,7 @@
 ### Setting up Development environment
 
 #### Requirements on Ubuntu or Windows Subsystem for Linux
- *  Go language - https://golang.org/
+ *  Go language - https://golang.org/dl/
  *  Python 3 - https://www.python.org/downloads/
 
 #### Fetching application dependencies after installing Go and Python
