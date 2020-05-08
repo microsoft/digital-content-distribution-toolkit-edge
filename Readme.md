@@ -28,7 +28,7 @@
     cd ZMQ-PY
     python3 zmq_socket.py
     ```
-3. Populate hub with files (optional, do this when hub is started for the first time. This sends a message to the iot device which then passes it to the file server, refer to the [Code organization](#Code-organization) section for more details)
+3. Populate hub with files (optional, do this when hub is started for the first time. This sends a message to the iot device which then passes it to the file server, refer to the [Code organization](#code-organization) section for more details)
     ```
     cd ZMQ-PY
     python3 SendCloudToDeviceMessage.py
