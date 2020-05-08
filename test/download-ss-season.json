@@ -1,7 +1,7 @@
 {
     "id": "microsoft-research-cambridge-ai-summer-school-2017",
     "mediaHouse": "MSR",
-    "channel": ["cellular", "boradband"],
+    "channel": ["cellular", "broadband"],
     "metadataFiles": [
       {
         "name": "genre_cover.jpg",

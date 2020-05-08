@@ -6,13 +6,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func test() {
-
-	// Call this the first time to setup testing
-	// setupDbForTesting()
-	// testCloudSyncServiceDownload()
-	// navigate("root")
-}
+// TODO: Implement remote update of code
+// TODO: Implement update of part of a content
+// TODO: Implement Acknowledgement of content update
+// TODO: Have HUB ID (speak to Cloud which Vinod will write)
+// TODO: Add unit tests to go functions
 
 func main() {
 
@@ -24,6 +22,10 @@ func main() {
 	// testCloudSyncServiceDownload()
 	// start a concurrent background service which checks if the files on the device are tampered with
 	go check()
+
+	// this starts ZMQ dealer
+	fmt.Println("Setting up IPC")
+	go setupIPC()
 
 	// set up the web server and routes
 	router := gin.Default()
