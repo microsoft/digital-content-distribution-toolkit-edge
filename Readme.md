@@ -39,7 +39,7 @@ cd ..
     ```
 
 ### Code organization
-There are two main components to the BINE HUB - IoT Edge device written in Python and the file server written in Golang. These components communicate with each other using [ZeroMQ](#https://zeromq.org/) sockets.
+There are two main components to the BINE HUB - IoT Edge device written in Python and the file server written in Golang. These components communicate with each other using [ZeroMQ](https://zeromq.org/) sockets.
 
 1. The IoT Edge device is responsible for speaking with azure iot hub to receive commands and report hub level telemetry to the cloud. Please refer to ```ZMQ-PY/zmq_socket.py``` for the code.
 
@@ -54,4 +54,4 @@ There are two main components to the BINE HUB - IoT Edge device written in Pytho
 
 ### Testing the File server
 
-Please clone the following repository and follow the instructions there to test the file server, once it is up and running - [TestClient](#https://dev.azure.com/binemsr/Hub/_git/TestClient)
+Please clone the following repository and follow the instructions there to test the file server, once it is up and running - [TestClient](https://dev.azure.com/binemsr/Hub/_git/TestClient)
