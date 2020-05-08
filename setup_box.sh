@@ -18,4 +18,7 @@ echo "Installing python3 modules"
 cd ZMQ-PY
 pip3 install -r requirements.txt
 cd ..
+echo "=========================================="
 echo "Done configuring development environment!!"
+echo "Have fun hacking for BINE!!"
+echo "=========================================="

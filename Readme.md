@@ -14,7 +14,7 @@
 
 #### Fetching application dependencies after installing Go and Python
 ```
-sudo ./setup_box.sh
+./setup_box.sh
 ```
 
 ### Running the BINE-HUB
