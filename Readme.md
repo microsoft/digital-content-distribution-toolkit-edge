@@ -15,10 +15,6 @@
 #### Fetching application dependencies after installing Go and Python
 ```
 ./setup_box.sh
-go get
-cd ZMQ-PY
-pip3 install -r requirements.txt
-cd ..
 ```
 
 ### Running the BINE-HUB

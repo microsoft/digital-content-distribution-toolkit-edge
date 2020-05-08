@@ -12,3 +12,12 @@ echo "Installing go-dependencies"
 go get
 echo "Installing PIP"
 apt install python3-pip
+echo "Installing Go modules"
+go get github.com/boltdb/bolt/...
+go get -u github.com/gin-gonic/gin
+go get gopkg.in/zeromq/goczmq.v4
+echo "Installing python3 modules"
+cd ZMQ-PY
+pip3 install -r requirements.txt
+cd ..
+echo "Done configuring development environment!!"
