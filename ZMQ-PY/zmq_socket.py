@@ -54,7 +54,7 @@ class Log(threading.Thread):
 
     def run(self):
         logs = [] # batch send logs, every 100 maybe
-        print("Waiting to receive messsage from GO\n")
+        print("Waiting to receive messsage from GO")
         while True:
             log_from_go = self.socket.recv()
             logs.append(log_from_go)
@@ -82,12 +82,14 @@ class IOTHub(threading.Thread):
         logging_thread = Log(socket, client)
         logging_thread.daemon = True
         logging_thread.start()
-        print("Waiting to receive message from Azure IOT HUB\n")
+        print("Waiting to receive message from Azure IOT HUB")
         while True:
             message = client.receive_message()
+            print("RECEIVED MESSAGE FROM IOT HUB")
             for property in vars(message).items():
                 if property[0] == 'data':
                     socket.send_string(property[1].decode('utf-8'))
+                    print("Sent message to Go Hub")
 
 
 iotHub_thread = IOTHub()

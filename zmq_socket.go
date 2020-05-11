@@ -12,6 +12,8 @@ import (
 	"gopkg.in/zeromq/goczmq.v4"
 )
 
+// TODO: Implement deletion
+
 //Log this structure represents logs sent by hub to azure blob
 type Log struct {
 	Level   int
@@ -21,6 +23,7 @@ type Log struct {
 var logsContainer []Log
 var mutex *sync.Mutex = new(sync.Mutex)
 var dealer *goczmq.Sock = nil
+var downloaderChannel = make(chan []byte, 100) // Maximum 100 download command queued.
 
 const downloadCommandPrefix string = "DOWNLOAD_CMD"
 const deleteCommandPrefix string = "DELETE_CMD"
@@ -47,6 +50,18 @@ func appendLog(log Log) {
 	mutex.Unlock()
 }
 
+func downloaderThread() {
+	for true {
+		fmt.Println("Waiting for downloader channel")
+		downloadCommand := <-downloaderChannel
+		fmt.Println("Issuing download command")
+		err := downloadFolder(downloadCommand)
+		if err != nil {
+			println(err.Error())
+		}
+	}
+}
+
 func messageReceiver() {
 	for true {
 		fmt.Println("Waiting to receive message")
@@ -59,10 +74,9 @@ func messageReceiver() {
 					parts := strings.Split(stringMessage, downloadCommandPrefix)
 					if len(parts) > 1 {
 						command := parts[1]
-						err = downloadFolder([]byte(command))
-						if err != nil {
-							println(err.Error())
-						}
+						// Enqueue this, the downloader function will dequeue and resume downloads
+						downloaderChannel <- []byte(command)
+						fmt.Println("Enqueued Download command")
 					} else {
 						fmt.Println("invalid Download CMD: ", stringMessage)
 					}
@@ -117,6 +131,7 @@ func setupIPC() {
 		fmt.Println(reflect.TypeOf(dealer))
 		go logsFlusher()
 		go messageReceiver()
+		go downloaderThread()
 		break
 	}
 	for true {
