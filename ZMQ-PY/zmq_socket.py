@@ -87,7 +87,7 @@ class IOTHub(threading.Thread):
             message = client.receive_message()
             for property in vars(message).items():
                 if property[0] == 'data':
-                    socket.send_string(str(property[1]))
+                    socket.send_string(property[1].decode('utf-8'))
 
 
 iotHub_thread = IOTHub()
