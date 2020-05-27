@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+
+	cl "./logger"
 )
 
 // TODO: Implement remote update of code
@@ -11,21 +13,23 @@ import (
 // TODO: Implement Acknowledgement of content update
 // TODO: Have HUB ID (speak to Cloud which Vinod will write)
 // TODO: Add unit tests to go functions
+var logger cl.Logger;
 
 func main() {
+	// if you change the port here, please make a correspoding change in device_sdk/downstream.py file
+	grpc_port := 50051;
+	logger = cl.MakeLogger(grpc_port);
+	
+	logger.Log("Info", "All first level info being sent to iot-hub...")
 
 	// Instantiate database connection to serve requests
 	if !createDatabaseConnection() {
-		fmt.Println("Could not create database connection, no point starting the server")
+		logger.Log("Critical", "Could not create database connection, no point starting the server")
 		return
 	}
 	// testCloudSyncServiceDownload()
 	// start a concurrent background service which checks if the files on the device are tampered with
 	go check()
-
-	// this starts ZMQ dealer
-	fmt.Println("Setting up IPC")
-	go setupIPC()
 
 	// set up the web server and routes
 	router := gin.Default()
