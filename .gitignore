@@ -2,4 +2,3 @@ static
 *.db
 *.db.lock
 bine-hub
-__pycache__/

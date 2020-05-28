@@ -25,19 +25,19 @@
     ```
 2. Start Python IoT device
     ```
-    cd device_sdk/upstream
-    python3 upstream.py
+    cd ZMQ-PY
+    python3 zmq_socket.py
     ```
 3. Populate hub with files (optional, do this when hub is started for the first time. This sends a message to the iot device which then passes it to the file server, refer to the [Code organization](#code-organization) section for more details)
     ```
-    cd device_sdk/downstream
-    python3 downstream.py
+    cd ZMQ-PY
+    python3 SendCloudToDeviceMessage.py
     ```
 
 ### Code organization
 There are two main components to the BINE HUB - IoT Edge device written in Python and the file server written in Golang. These components communicate with each other using [ZeroMQ](https://zeromq.org/) sockets.
 
-1. The IoT Edge device is responsible for speaking with azure iot hub to receive commands and report hub level telemetry to the cloud. Please refer to ```device_sdk``` for the code.
+1. The IoT Edge device is responsible for speaking with azure iot hub to receive commands and report hub level telemetry to the cloud. Please refer to ```ZMQ-PY/zmq_socket.py``` for the code.
 
 2. The File server has the following components 
     * ```hub.go``` sets up all the go routines and starts a http server.
@@ -46,6 +46,7 @@ There are two main components to the BINE HUB - IoT Edge device written in Pytho
     * ```folder_checker.go``` Checks if there is any tampering with the cached files and purges them if necessary.
     * ```cloud_sync.go``` offers methods to download folders and delete folders and update the database accordingly.
     * ```route_handler.go``` creates and manages http routes to offer APIs to access the file server
+    * ```zmq_socket.go``` speaks with python iot device and offers two way communication channel to send telemetry to iot device and recieve commands to download/delete/etc.. from the iot device.
 
 ### Testing the File server
 
