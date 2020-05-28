@@ -138,14 +138,14 @@ func getChildrenEntries(mediaHouse string, parent string) []FolderStructureEntry
 			return nil
 		}
 		cursor := parentBucket.Cursor()
-		 fmt.Println("==========="+parent+":===Children==============")
+		fmt.Println("===========" + parent + ":===Children==============")
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			fmt.Printf("key=%s, value=%s\n", k, v)
 			target := new(FolderStructureEntry)
 			json.Unmarshal(v, target)
 			result = append(result, *target)
 		}
-		 fmt.Println("====================================")
+		fmt.Println("====================================")
 		return nil
 	})
 	return result
@@ -287,19 +287,19 @@ func KeyExistsInDb(mediaHouse string, parent string, id string) (bool, error) {
 	var haskey = false
 	err := db.View(func(tx *bolt.Tx) error {
 		mediaHouseBucket := getMediaHouseBucket(folderStructureBucketName, mediaHouse, tx)
-		if mediaHouseBucket == nil{
-			return errors.New("MediaHouse bucket for "+mediaHouse+ " was nil")
+		if mediaHouseBucket == nil {
+			return nil
 		}
 		parentBucket := mediaHouseBucket.Bucket(getByteString(parent))
 		if parentBucket == nil {
-			return errors.New("Parent bucket for "+parent+ "was nil")
+			return nil
 		}
 		if v := parentBucket.Get(getByteString(id)); v != nil {
 			haskey = true
-		} 
+		}
 		return nil
 	})
-	
+
 	return haskey, err
 }
 

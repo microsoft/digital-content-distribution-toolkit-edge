@@ -1,25 +1,70 @@
-{
-  "id": "ars-talks",
-  "mediaHouse": "MSR",
-  "channel": ["cellular", "boradband"],
-  "metadataFiles": [
-    {
-      "name": "genre_cover.jpg",
-      "cdn": "https://binemsr.azureedge.net/ars-talks/genre_cover.jpg",
-      "hashsum": "e30913ee1b82e05a708509906dcd5302f253e1075f7a05db063010efcf5a81f0"
-    },
-    {
-      "name": "genre_metadata.json",
-      "cdn": "https://binemsr.azureedge.net/ars-talks/genre_metadata.json",
-      "hashsum": "b3484822eeb929bd437d4ec4edeff771dca13c3e058fcd82180c759567be967e"
-    }
-  ],
-  "bulkFiles" : [
-  ],
-  "deadline": 100000,
-  "hierarchy": {
+[
+  {
+    "id": "ars-talks",
+    "mediaHouse": "MSR",
+    "channel": [
+      "cellular",
+      "broadband"
+    ],
+    "metadataFiles": [
+      {
+        "name": "genre_cover.jpg",
+        "cdn": "https://binemsr.azureedge.net/ars-talks/genre_cover.jpg",
+        "hashsum": "e30913ee1b82e05a708509906dcd5302f253e1075f7a05db063010efcf5a81f0"
+      },
+      {
+        "name": "genre_metadata.json",
+        "cdn": "https://binemsr.azureedge.net/ars-talks/genre_metadata.json",
+        "hashsum": "b3484822eeb929bd437d4ec4edeff771dca13c3e058fcd82180c759567be967e"
+      }
+    ],
+    "bulkFiles": [],
+    "deadline": 100000,
+    "hierarchy": {
       "level": "root",
       "child": null
+    },
+    "hasChildren": true
   },
-  "hasChildren": true
-}
+  {
+    "id": "ars-talks-ARS 2020 Fairness Transparency and Privacy in Digital Systems",
+    "mediaHouse": "MSR",
+    "channel": [
+      "cellular",
+      "broadband"
+    ],
+    "metadataFiles": [
+      {
+        "name": "6720566b-92ab-4b97-9063-ecd661c285db.jpg",
+        "cdn": "https://binemsr.azureedge.net/ars-talks/data/6720566b-92ab-4b97-9063-ecd661c285db.jpg",
+        "hashsum": "7beeae2ebf510421d2a4dd2570b5edd29631242f7b5ae5cd06f85fb85922cae5"
+      },
+      {
+        "name": "6cf2d92d-d7c7-4a1b-8b75-579c9e8281ed.jpg",
+        "cdn": "https://binemsr.azureedge.net/ars-talks/data/6cf2d92d-d7c7-4a1b-8b75-579c9e8281ed.jpg",
+        "hashsum": "2867fae0bf646ba07e49a32e6055ee7bd0742c08515b9240e1e772ac31d359e3"
+      },
+      {
+        "name": "867a0382-66b4-4f98-a523-cdd5ec094ab9.json",
+        "cdn": "https://binemsr.azureedge.net/ars-talks/data/867a0382-66b4-4f98-a523-cdd5ec094ab9.json",
+        "hashsum": "53ea59ca63e97f5200a1d85243a6e10837b1008dffd3d687937104d14e1ca89c"
+      }
+    ],
+    "bulkFiles": [
+      {
+        "name": "ARS 2020 Fairness Transparency and Privacy in Digital Systems.mp4",
+        "cdn": "https://binemsr.azureedge.net/ars-talks/videos/ARS-2020-Fairness-Transparency-and-Privacy-in-Digital-Systems.mp4",
+        "hashsum": "6300b91450d6d1737c74e7f5a209f6661a00c7cc1e128a2bcb38268e4616a5bd"
+      }
+    ],
+    "deadline": 100000,
+    "hierarchy": {
+      "level": "root",
+      "child": {
+        "level": "ars-talks",
+        "child": null
+      }
+    },
+    "hasChildren": false
+  }
+]

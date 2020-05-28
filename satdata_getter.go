@@ -1,224 +1,332 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
-	"io"
-	"os"
-	"time"
-	"net/http"
 	"encoding/json"
-	"path/filepath"
 	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
-	//"strconv"
+	"net/http"
+	"os"
+	"path"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
 )
 
-const interval time.Duration = 20
+const interval time.Duration = 2
 const source string = "mstore"
 
-type VodObj struct{
-	Source string
-	Content Content
+type VodObj struct {
+	Source  string `json:"source"`
+	Content struct {
+		UserDefined struct {
+			MediaHouse    string `json:"mediaHouse"`
+			IsDRM         bool   `json:"isDRM"`
+			MediaId       string `json:"mediaId"`
+			Title         string `json:"title"`
+			ParentTitle   string `json:"parentTitle"`
+			ParentId      string `json:"parentId"`
+			MetadataFiles struct {
+				Item []struct {
+					Filename string `json:"filename"`
+					Checksum string `json:"checksum"`
+					FolderId string `json:"folderId"`
+					Type     string `json:"type"`
+				} `json:"item"`
+			} `json:"metadataFiles"`
+			AncestorIds struct {
+				Item []string `json:"item"`
+			} `json:"ancestorIds"`
+			HierarchyLevels int `json:"hierarchyLevels"`
+			BulkFiles       struct {
+				Item []struct {
+					Filename string `json:"filename"`
+					Checksum string `json:"checksum"`
+					FolderId string `json:"folderId"`
+					Type     string `json:"type"`
+				} `json:"item"`
+			} `json:"bulkFiles"`
+		} `json:"userDefined"`
+		Videos struct {
+			Movie struct {
+				Duration string `json:"duration"`
+				File     struct {
+					Filename string `json:"filename"`
+					Filesize int    `json:"filesize"`
+					Checksum string `json:"checksum"`
+				} `json:"file"`
+			} `json:"movie"`
+			Trailer struct {
+				Duration string `json:"duration"`
+				File     struct {
+					Filename string `json:"filename"`
+					Filesize int    `json:"filesize"`
+					Checksum string `json:"checksum"`
+				} `json:"file"`
+			} `json:"trailer"`
+		} `json:"videos"`
+		Pictures struct {
+			Cover struct {
+				File struct {
+					Filename string `json:"filename"`
+					Filesize int    `json:"filesize"`
+					Checksum string `json:"checksum"`
+				} `json:"file"`
+				Resolution string `json:"resolution"`
+			} `json:"cover"`
+			Thumbnail struct {
+				File struct {
+					Filename string `json:"filename"`
+					Filesize int    `json:"filesize"`
+					Checksum string `json:"checksum"`
+				} `json:"file"`
+				Resolution string `json:"resolution"`
+			} `json:"thumbnail"`
+		} `json:"pictures"`
+		Data struct {
+			File []struct {
+				Filename string `json:"filename"`
+				Filesize int    `json:"filesize"`
+				Checksum string `json:"checksum"`
+			} `json:"file"`
+		} `json:"data"`
+		VODInfo struct {
+			MovieID           string    `json:"movieID"`
+			Revision          int       `json:"revision"`
+			ValidityStartDate time.Time `json:"validityStartDate"`
+			ValidityEndDate   time.Time `json:"validityEndDate"`
+			Price             string    `json:"price"`
+		} `json:"VODInfo"`
+	} `json:"content"`
 }
-type Content struct{
-	UserDefined UserDefined
-	Videos Videos
-	Pictures Pictures
-}
-type UserDefined struct{
-	MediaId string
-	MediaHouse string
-	ParentId string
-	HierarchyLevels int		//number of levels excluding the leaf node
-	AncestorIds []string	//ids of all the parents of a leaf node from top to bottom
-	Files Metafiles
+type WrittenProgress struct {
+	Total int64
 }
 
-type Metafiles struct{
-	Thumbnail  MetafileInfo
-	Video MetafileInfo
-}
-
-type MetafileInfo struct{
-	Filename string
-	Size uint64
-	Checksum string
-}
-
-type  File struct{
-	Filesize uint64
-	Filename string
-}
-
-type Videos struct{
-	Movie Movie
-}
-type Movie struct{
-	Duration string
-	File File
-}
-type Pictures struct{
-	Thumbnail Thumbnail
-	//Cover Cover
-}
-type Thumbnail struct{
-	File File
-}
-// type Cover struct{
-// 	File File
-// }
-
-// Info of the files to be downloaded
-type FileInfo struct{  
-	Filename string
-	Url string
-	Size uint64
-	
-}
-
-func checkForVOD(){
-	for true{
-		fmt.Println("==================Polling NOOVO API for the content==============");
-		if err := callNoovoAPI(); err!= nil {
+func checkForVOD() {
+	for true {
+		fmt.Println("==================Polling NOOVO API for the content==============")
+		if err := callNoovoAPI(); err != nil {
 			log.Println(err)
-		}	
+		}
 		time.Sleep(interval * time.Minute)
 	}
 }
 
-func callNoovoAPI() error{
+func callNoovoAPI() error {
 	res, err := http.Get("http://localhost:40000/vod/list")
 	if err != nil {
-		//fmt.Println("ERROR in API CALL::", err)
 		return err
 	}
 	defer res.Body.Close()
 	jsonRes, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		//fmt.Println("ERROR in READING RESPONSE::", err)
 		return err
 	}
 	//fmt.Println("RESPONSE::::::::::", string(jsonRes))
 	var vods []VodObj
 	jsonErr := json.Unmarshal(jsonRes, &vods)
-	if jsonErr != nil{
-		return err
+	if jsonErr != nil {
+		return jsonErr
 	}
-	for i := range vods{
-		if vods[i].Source == source{
-			id := vods[i].Content.UserDefined.MediaId
-			//id := strconv.Itoa(vods[i].Content.PushInfo.CID)
-			mediaHouse := vods[i].Content.UserDefined.MediaHouse
-			parent := vods[i].Content.UserDefined.ParentId
-			if haskey, _ := KeyExistsInDb(mediaHouse, parent, id); !haskey{
-				fmt.Println("========NEW CONTENT=======Downloading files for ID::", id)
-				var filesToBeDownloaded []FileInfo
-				file := FileInfo{vods[i].Content.UserDefined.Files.Thumbnail.Filename, vods[i].Content.Pictures.Thumbnail.File.Filename, vods[i].Content.UserDefined.Files.Thumbnail.Size}
-				filesToBeDownloaded = append(filesToBeDownloaded, file)
-				file = FileInfo{vods[i].Content.UserDefined.Files.Video.Filename, vods[i].Content.Videos.Movie.File.Filename, vods[i].Content.UserDefined.Files.Video.Size}
-				filesToBeDownloaded = append(filesToBeDownloaded, file)
-				err := downloadFiles(mediaHouse, parent, id, filesToBeDownloaded)
-				if err != nil{
-					//delete the partially downloaded folder
-					deleteMediaFolder(mediaHouse, parent, id)
-					return errors.New("COULD NOT DOWNLOAD:::"+ err.Error())
-
+	fmt.Println(":::::::::::::::::NO. OF CONTENTS:::::::::::", len(vods))
+	for _, vod := range vods {
+		if vod.Source == source {
+			if matched, _ := regexp.MatchString(`^BINE.`, vod.Content.VODInfo.MovieID); matched {
+				if err := downloadContent(vod); err != nil {
+					fmt.Println(err)
 				}
-				//Update DB
-				if err:= updateDb(mediaHouse, id, vods[i].Content.UserDefined.HierarchyLevels, vods[i].Content.UserDefined.AncestorIds,vods[i].Content.UserDefined.Files ); err!=nil {
-					return err
-				}		
-			}else{
-				fmt.Println(id," Already exist. Nothing New to Add")
 			}
-		
 		}
 	}
 	return nil
 }
-func downloadFiles(mediaHouse string, parent string, id string, files []FileInfo) error{
-	// Create output dir
-	outpathDir := filepath.Join(".",mediaHouse, id)
-	if err:= os.MkdirAll(outpathDir,os.ModeDir); err!=nil{
+
+func downloadContent(vod VodObj) error {
+	id := vod.Content.UserDefined.MediaId
+	mediaHouse := vod.Content.UserDefined.MediaHouse
+	parent := vod.Content.UserDefined.ParentId
+	fmt.Println("=======Processing for content ID::: ", id, " of MediaHouse::: ", mediaHouse)
+	if haskey, err := KeyExistsInDb(mediaHouse, parent, id); err != nil {
+		return err
+	} else if haskey {
+		fmt.Println("CONTENT: ", id, " Already exist. Nothing new to Add")
+		return nil
+	}
+	fmt.Println("Downloading files for MediaHouse:: ", mediaHouse, " Content ID::", id)
+	// filesUrlMap of the files with the url
+	filesURLMap := make(map[string]string)
+	filesURLMap[lastString(vod.Content.Pictures.Thumbnail.File.Filename, "/")] = vod.Content.Pictures.Thumbnail.File.Filename
+	filesURLMap[lastString(vod.Content.Pictures.Cover.File.Filename, "/")] = vod.Content.Pictures.Cover.File.Filename
+	filesURLMap[lastString(vod.Content.Videos.Movie.File.Filename, "/")] = vod.Content.Videos.Movie.File.Filename
+	for _, datafile := range vod.Content.Data.File {
+		filesURLMap[lastString(datafile.Filename, "/")] = datafile.Filename
+	}
+	folderMetadataFilesMap := make(map[string][]FileEntry)
+	for _, metadatafileEntry := range vod.Content.UserDefined.MetadataFiles.Item {
+		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileEntry{metadatafileEntry.Filename, metadatafileEntry.Checksum})
+		//fmt.Println("MAP APPENDED:::::", folderMetadataFilesMap[metadatafileEntry.FolderId])
+	}
+	fmt.Println(folderMetadataFilesMap)
+	folderBulkFilesMap := make(map[string][]FileEntry)
+	for _, bulkfileEntry := range vod.Content.UserDefined.BulkFiles.Item {
+		folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileEntry{bulkfileEntry.Filename, bulkfileEntry.Checksum})
+	}
+	fmt.Println(folderBulkFilesMap)
+	for k, v := range folderMetadataFilesMap {
+		fmt.Println("KEY---------------", k)
+		metadataFiles := getMetadataFiles(mediaHouse, k)
+		if len(metadataFiles) > 0 {
+			fmt.Println("Files for FolderId: ", k, " already exist.")
+			continue
+		}
+		fmt.Println("Downloading metadata files")
+		err := downloadSatFiles(mediaHouse, k, v, filesURLMap)
+		if err != nil {
+			return errors.New("Could not download metadta files for FolderId ::: " + k + ">>>>>" + err.Error())
+		}
+		//update db
+		err = addMetadataFiles(mediaHouse, k, v)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Updated the DB::::::: for ", k)
+	}
+	for k, v := range folderBulkFilesMap {
+		fmt.Println("Downloading Bulk files")
+		err := downloadSatFiles(mediaHouse, k, v, filesURLMap)
+		if err != nil {
+			return errors.New("Could not download bulk files for FolderId ::: " + k + ">>>>>" + err.Error())
+		}
+		if err = addBulkFiles(mediaHouse, k, v); err != nil {
+			return err
+		}
+	}
+	fmt.Println("adding heirarchy")
+	ancestorIds := vod.Content.UserDefined.AncestorIds.Item
+	for i := 0; i < len(ancestorIds)-1; i++ {
+		children := getChildren(mediaHouse, ancestorIds[i])
+		present := false
+		for _, child := range children {
+			if child.ID == ancestorIds[i+1] {
+				present = true
+				break
+			}
+		}
+		if !present {
+			if err := addFolder(mediaHouse, ancestorIds[i], FolderStructureEntry{ancestorIds[i+1], true, "bine_metadata.json"}); err != nil {
+				return err
+			}
+		}
+	}
+	// update dir str for the VOD(leaf node)
+	if err := addFolder(mediaHouse, ancestorIds[len(ancestorIds)-1], FolderStructureEntry{id, false, "bine_metadata.json"}); err != nil {
 		return err
 	}
-	fmt.Println("=========CREATED FOLDER AT=======", outpathDir)
-	for i := range files{
-		outpath := outpathDir + "/" + files[i].Filename
-		f, err := os.Create(outpath)
-	if err != nil{
-		//fmt.Println("Error in creating ouptput file:: ", err)
+	return nil
+
+}
+func downloadSatFiles(mediaHouse string, folderId string, fileEntries []FileEntry, filesURLMap map[string]string) error {
+	//TODO: If the folder is partially downloaded???
+	// Create output dir
+	folderDir := path.Join(".", mediaHouse, folderId)
+	if err := os.MkdirAll(folderDir, os.ModeDir); err != nil {
 		return err
-	} 
+	}
+	fmt.Println("=========CREATED FOLDER AT=======", folderDir)
+	for _, fileEntry := range fileEntries {
+		outpath := path.Join(folderDir, fileEntry.Name)
+		url := filesURLMap[folderId+"_"+fileEntry.Name]
+		actualHash := fileEntry.HashSum
+		if err := download(outpath, url); err != nil {
+			return err
+		} else {
+			fmt.Println("========CHECKING CHECKSUM=========")
+			computedHash := computeSHA256(outpath)
+			if computedHash != actualHash {
+				//TODO: delete the folder????
+				return errors.New("Checksum did not match for: " + folderId + "_" + fileEntry.Name)
+			}
+			fmt.Println("Checksum matched for FILE::: ", folderId+"_"+fileEntry.Name)
+		}
+	}
+	return nil
+}
+
+func download(outpath string, url string) error {
+	outputStream, err := os.Create(outpath)
+	if err != nil {
+		return err
+	}
+	defer outputStream.Close()
 	fmt.Println("WRITING TO FILE===================", outpath)
-	fmt.Println("GETTING FILE AT URL>>>>>>>>>>>>>" , files[i].Url)
-	res, err := http.Get(files[i].Url)
-	if err != nil{
-		//fmt.Println("Error in getting the response from File URL::::: ",err)
+
+	fmt.Println("DOWNLOADING FILE AT URL>>>>>>>>>>>>>", url)
+	res, err := http.Get(url)
+	if err != nil {
 		return err
 	}
 	defer res.Body.Close()
-	defer f.Close()
-	written, err := io.Copy(f, res.Body)
-	//written, err := io.Copy(f, io.TeeReader(res.Body, &WrittenProgress{}))
-	if err != nil{
-		//fmt.Println("ERROR WRITING TO THE FILE::::", err)
+
+	_, err = io.Copy(outputStream, io.TeeReader(res.Body, &WrittenProgress{}))
+	if err != nil {
 		return err
 	}
+	fmt.Println()
 	fmt.Println("=============DONE DOWNLOADING============")
-	fmt.Println("--------No. of bytes written::: ",written)
-	fmt.Println("------------ Actual size:::",files[i].Size)
-	//Check if downloaded size same as the filesize received in the response
-	// if uint64(written) != files[i].Size{
-	// 	return errors.New("Mismatch in the actual filesize and downloaded filesize")
-	// }
-	//fmt.Println("-------Correct Size Downloaded-------")
-	}
-	//TODO: Compute and check hashsum
 	return nil
-		
 
 }
-func deleteMediaFolder(mediaHouse string, parent string, id string){
+
+func (wp *WrittenProgress) Write(p []byte) (int, error) {
+	written := len(p)
+	wp.Total += int64(written)
+	fmt.Printf("\r%s", strings.Repeat(" ", 100))
+	fmt.Printf("\rDownloaded::: %d MB", wp.Total/1024/1024)
+	return written, nil
+}
+
+func deleteMediaFolder(mediaHouse string, parent string, id string) {
 	pathToBeDeleted := filepath.Join(mediaHouse, id)
-	if err := os.RemoveAll(pathToBeDeleted); err!=nil {
+	if err := os.RemoveAll(pathToBeDeleted); err != nil {
 		log.Println("Error in deleting the folder id ", id, "::::", err)
-	}else{
+	} else {
 		fmt.Println("Deleted Directory::::", pathToBeDeleted)
 	}
 }
-func updateDb(mediaHouse string, id string, levels int, ancestorIds []string, files Metafiles) error{	
-	// check and update directory str for the parents of the VOD
-	for i := 0; i < (levels - 1) ; i++ {
-		if haskey, _ := KeyExistsInDb(mediaHouse, ancestorIds[i], ancestorIds[i+1]); !haskey{
-			folderStructureEntry := FolderStructureEntry{ancestorIds[i+1], true, ""} //infometadatafilename field empty for now
-			if err := addFolder( mediaHouse, ancestorIds[i], folderStructureEntry); err!= nil {
-				return err
+
+func lastString(text string, separator string) string {
+	last := strings.Split(text, separator)
+	if len(last) > 0 {
+		return last[len(last)-1]
+	}
+	return ""
+}
+
+func dummyTest() error {
+	file, err := os.Open("test/sampleResp.json")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	bytevalue, _ := ioutil.ReadAll(file)
+	var vods []VodObj
+	if err = json.Unmarshal(bytevalue, &vods); err != nil {
+		return err
+	}
+	for _, vod := range vods {
+		if vod.Source == source {
+			if matched, _ := regexp.MatchString(`^BINE.`, vod.Content.VODInfo.MovieID); matched {
+				err := downloadContent(vod)
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
-			//TODO: update metadata files of the folder
-		}	
-	}
-	// update dir str for the VOD(leaf node)
-	folderStructureEntry := FolderStructureEntry{id, false, ""}
-	//fmt.Println(ancestorIds[levels - 1])
-	if err := addFolder( mediaHouse, ancestorIds[levels - 1], folderStructureEntry); err!= nil {
-		return err
-	}
-	
-	//update metadata and bulk files for VOD
-	bulkFiles := []FileEntry{FileEntry{files.Video.Filename, files.Video.Checksum}}
-	metadataFiles := []FileEntry{FileEntry{files.Thumbnail.Filename, files.Thumbnail.Checksum}}
-	if err := addMetadataFiles( mediaHouse, id, metadataFiles); err!= nil {
-		return err
-	}
-	if err := addBulkFiles( mediaHouse, id, bulkFiles); err!= nil {
-		return err
+		}
 	}
 	return nil
 
 }
-
-
-
-

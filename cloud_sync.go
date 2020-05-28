@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -17,72 +18,79 @@ import (
 )
 
 const downloadRetries int = 5
-const exponentialBackOffInitTime time.Duration = 3
+const exponentialBackOffInitTime time.Duration = 15
 
 func downloadFolder(downloadCommandBytes []byte) error {
-	downloadCommand := new(DownloadCommand)
-	err := json.Unmarshal(downloadCommandBytes, downloadCommand)
+	var downloadCommands []DownloadCommand
+	err := json.Unmarshal(downloadCommandBytes, &downloadCommands)
 	if err != nil {
 		return errors.New("Could not unmarshall file contents in downloadCommand")
 	}
-	println("Downloading folder: " + downloadCommand.ID)
-	println("Media House is: " + downloadCommand.MediaHouse)
-	println("Ignoring channel now, need to figure out how to create sockets on a particular network")
-	println("Verifying hierarchy of the current download request")
-	currentNode := downloadCommand.Hierarchy.Child // should start from child because root always exists
-	parentNode := downloadCommand.Hierarchy
-	for currentNode != nil {
-		childNode := currentNode.Child
-		children := getChildren(downloadCommand.MediaHouse, currentNode.Level)
-		if childNode != nil {
-			foundChild := false
-			for _, child := range children {
-				if child.ID == childNode.Level {
-					foundChild = true
-					break
+	for _, downloadCommand := range downloadCommands {
+		metadataFiles := getMetadataFiles(downloadCommand.MediaHouse, downloadCommand.ID)
+		if len(metadataFiles) > 0 {
+			fmt.Println("Folder: ", downloadCommand.ID, " already exists")
+			continue
+		}
+		println("Downloading folder: " + downloadCommand.ID)
+		println("Media House is: " + downloadCommand.MediaHouse)
+		println("Ignoring channel now, need to figure out how to create sockets on a particular network")
+		println("Verifying hierarchy of the current download request")
+		currentNode := downloadCommand.Hierarchy.Child // should start from child because root always exists
+		parentNode := downloadCommand.Hierarchy
+		for currentNode != nil {
+			childNode := currentNode.Child
+			children := getChildren(downloadCommand.MediaHouse, currentNode.Level)
+			if childNode != nil {
+				foundChild := false
+				for _, child := range children {
+					if child.ID == childNode.Level {
+						foundChild = true
+						break
+					}
+				}
+				if !foundChild {
+					return errors.New("Could not find hierarchy at currentNode: " + currentNode.Level + " and child: ")
 				}
 			}
-			if !foundChild {
-				return errors.New("Could not find hierarchy at currentNode: " + currentNode.Level + " and child: ")
-			}
+			parentNode = currentNode
+			currentNode = childNode
 		}
-		parentNode = currentNode
-		currentNode = childNode
-	}
-	folderPath := getFolderPath(downloadCommand.MediaHouse, downloadCommand.ID)
-	println("folder path: " + folderPath)
-	err = os.MkdirAll(folderPath, 0700)
-	if err != nil {
-		println("Could not create directory for ID: " + downloadCommand.ID)
-	}
+		folderPath := getFolderPath(downloadCommand.MediaHouse, downloadCommand.ID)
+		println("folder path: " + folderPath)
+		err = os.MkdirAll(folderPath, 0700)
+		if err != nil {
+			println("Could not create directory for ID: " + downloadCommand.ID)
+		}
 
-	println("downl;oading cloud metadata files")
-	fileEntries := downloadCloudFiles(folderPath, downloadCommand.MetadataFiles)
-	if fileEntries == nil {
-		return errors.New("Could not download cloud files for: " + downloadCommand.ID)
-	}
-	err = addMetadataFiles(downloadCommand.MediaHouse, downloadCommand.ID, fileEntries)
-	if err != nil {
-		return err
-	}
+		println("downloading cloud metadata files")
+		fileEntries := downloadCloudFiles(folderPath, downloadCommand.MetadataFiles)
+		if fileEntries == nil {
+			return errors.New("Could not download cloud files for: " + downloadCommand.ID)
+		}
+		err = addMetadataFiles(downloadCommand.MediaHouse, downloadCommand.ID, fileEntries)
+		if err != nil {
+			return err
+		}
 
-	println("downloading cloud bulk files")
-	fileEntries = downloadCloudFiles(folderPath, downloadCommand.BulkFiles)
-	if fileEntries == nil {
-		return errors.New("Could not download cloud bulk files for: " + downloadCommand.ID)
-	}
-	err = addBulkFiles(downloadCommand.MediaHouse, downloadCommand.ID, fileEntries)
-	if err != nil {
-		return err
-	}
+		println("downloading cloud bulk files")
+		fileEntries = downloadCloudFiles(folderPath, downloadCommand.BulkFiles)
+		if fileEntries == nil {
+			return errors.New("Could not download cloud bulk files for: " + downloadCommand.ID)
+		}
+		err = addBulkFiles(downloadCommand.MediaHouse, downloadCommand.ID, fileEntries)
+		if err != nil {
+			return err
+		}
 
-	print("adding folder to db ")
-	if downloadCommand.HasChildren {
-		println(downloadCommand.ID + " has children")
-	}
-	err = addFolder(downloadCommand.MediaHouse, parentNode.Level, FolderStructureEntry{downloadCommand.ID, downloadCommand.HasChildren, ""})
-	if err != nil {
-		return err
+		print("adding folder to db ")
+		if downloadCommand.HasChildren {
+			println(downloadCommand.ID + " has children")
+		}
+		err = addFolder(downloadCommand.MediaHouse, parentNode.Level, FolderStructureEntry{downloadCommand.ID, downloadCommand.HasChildren, ""})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

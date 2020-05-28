@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-const checkingInterval time.Duration = 1000
+const checkingInterval time.Duration = 100
 
 func computeSHA256(filePath string) string {
 	f, err := os.Open(filePath)
 	if err != nil {
-		fmt.Println("Could not open the file")
+		fmt.Errorf("Could not open the file:::", err)
 	}
 	defer f.Close()
 

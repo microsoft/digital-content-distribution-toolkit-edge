@@ -25,6 +25,11 @@ func setupRoutes(ginEngine *gin.Engine) {
 func serveSingleMetadata(context *gin.Context) {
 	mediaHouse := context.Param("mediaHouse")
 	folderID := context.Param("id")
+	// write folder size
+	if writeInt64(context, getFolderSize(mediaHouse, folderID)) < 0 {
+		fmt.Println("Could not write folder size for ID: ", folderID)
+		return
+	}
 	writeMetadataFiles(context, getMetadataFiles(mediaHouse, folderID), mediaHouse, folderID)
 }
 
@@ -74,6 +79,12 @@ func serveMetadata(context *gin.Context) {
 		}
 		if writeInt32(context, hasChildren) < 0 {
 			fmt.Println("Could not write hasChildren of ID: ", children[i].ID)
+			return
+		}
+
+		// write folder size
+		if writeInt64(context, getFolderSize(mediaHouse, children[i].ID)) < 0 {
+			fmt.Println("Could not write folder size for ID: ", children[i].ID)
 			return
 		}
 

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"path"
 )
 
@@ -47,6 +49,22 @@ func getFilePath(mediaHouse string, folderID string, fileName string) string {
 
 func getFolderPath(mediaHouse string, folderID string) string {
 	return path.Join("static", mediaHouse, folderID)
+	//return path.Join(mediaHouse, folderID)
+}
+
+func getFolderSize(mediaHouse string, folderID string) int64 {
+	bulkFiles := getBulkFileEntries(mediaHouse, folderID)
+	var totalSize int64 = 0
+	for _, bulkFile := range bulkFiles {
+		path := getFilePath(mediaHouse, folderID, bulkFile.Name)
+		fileInfo, err := os.Stat(path)
+		if err != nil {
+			fmt.Println("Could not get file info for: ", path)
+		} else {
+			totalSize += fileInfo.Size()
+		}
+	}
+	return totalSize
 }
 
 //FileToCheck Struct with file path and it's hashsum (sha256)
