@@ -1,53 +1,45 @@
-import random
+from concurrent import futures
+import time
 import sys
-from azure.iot.hub import IoTHubRegistryManager
 
-MESSAGE_COUNT = 2
-AVG_WIND_SPEED = 10.0
-MSG_TXT = "{\"service client sent a message\": %.2f}"
+import grpc
 
-CONNECTION_STRING = "HostName=gohub.azure-devices.net;SharedAccessKeyName=service;SharedAccessKey=/asbil6M5YnN72WCQOH6qGex/GmhEG1gkNLM5Vt9ArA="
-DEVICE_ID = "MyPythonDevice"
+import logger_pb2
+import logger_pb2_grpc
 
-def get_download_command(contents):
-    return "DOWNLOAD_CMD" + contents
+from azure.iot.device import IoTHubDeviceClient, Message
 
-def iothub_messaging_sample_run():
-    try:
-        # Create IoTHubRegistryManager
-        registry_manager = IoTHubRegistryManager(CONNECTION_STRING)
-    
-        print('Sending message')
-        data = "unread"
-        with open('../test/download-ars-season.json', 'r') as command_file:
-            data = get_download_command(command_file.read())
-        props={}
-        # optional: assign system properties
-        props.update(messageId = "message")
-        props.update(correlationId = "correlation")
-        props.update(contentType = "application/json")
 
-        # optional: assign application properties
-        prop_text = "PropMsg"
-        props.update(testProperty = prop_text)
+CONNECTION_STRING = "HostName=gohub.azure-devices.net;DeviceId=MyPythonDevice;SharedAccessKey=zA2DAirXTqJ0TGkpf+8fTLYVCxC3YlPJsO+UUO2QS98="
 
-        registry_manager.send_c2d_message(DEVICE_ID, data, properties=props)
+def iothub_client_init():
+    # Create an IoT Hub client
+    client = IoTHubDeviceClient.create_from_connection_string(CONNECTION_STRING)
+    return client
 
-        try:
-            # Try Python 2.xx first
-            raw_input("Press Enter to continue...\n")
-        except:
-            pass
-            # Use Python 3.xx in the case of exception
-            input("Press Enter to continue...\n")
 
-    except Exception as ex:
-        print ( "Unexpected error {0}" % ex )
-        return
-    except KeyboardInterrupt:
-        print ( "IoT Hub C2D Messaging service sample stopped" )
+class LogServicer(logger_pb2_grpc.LogServicer):
+    """Provides methods that implement functionality of logging server."""
+
+    def __init__(self):
+        self.client = iothub_client_init()
+        pass
+
+    def SendSingleLog(self, request, context):
+        message = Message("[{}]{}".format(request.logtype, request.logstring))
+        print(message)
+        self.client.send_message(message)
+
+        return logger_pb2.Empty()
+
+
+def serve():
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
+    logger_pb2_grpc.add_LogServicer_to_server(LogServicer(), server)
+    server.add_insecure_port('localhost:50051')
+    server.start()
+    time.sleep(1000)
+    server.wait_for_termination()
 
 if __name__ == '__main__':
-    print ( "Starting the Python IoT Hub C2D Messaging service sample..." )
-
-    iothub_messaging_sample_run()
+    serve()
