@@ -23,10 +23,10 @@ func main() {
 	// if you change the port here, please make a correspoding change in device_sdk/downstream.py file
 	var wg sync.WaitGroup
 
-	upstream_grpc_port := 50051;
+	upstream_grpc_port := 50051
 	logger = cl.MakeLogger(upstream_grpc_port)
 
-	downstream_grpc_port := 50052;
+	downstream_grpc_port := 50052
 	
 	var err error
 	fs, err = filesys.MakeFileSystem(4, "./")
