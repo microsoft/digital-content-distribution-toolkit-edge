@@ -248,7 +248,7 @@ func eraseFolder(id string, mediaHouse string) error {
 func createDatabaseConnection() bool {
 	tempDb, err := bolt.Open(databaseFileName, 0600, nil)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Could not open database connection")
 		return false
 	}
 	db = tempDb

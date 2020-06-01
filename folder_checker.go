@@ -30,7 +30,7 @@ func computeSHA256(filePath string) string {
 func check() {
 	for true {
 		time.Sleep(checkingInterval * time.Second)
-		fmt.Println("Checking files' integrity from background thread")
+		fmt.Println("Info", "Checking files integrity from background thread")
 		navigate("root")
 	}
 }
@@ -52,7 +52,7 @@ func navigate(node string) {
 			fmt.Println("Get rid of this folder from the database and delete file contents")
 		}
 	}
-	fmt.Println("==========DONE Checking ", node, " ==========")
+	fmt.Println("Telemetry", "==========DONE Checking "+node+" ==========")
 	children := getChildren("MSR", node)
 	for i := 0; i < len(children); i++ {
 		fmt.Println("CALLING CHECK ON CHILD: ", children[i].ID)
