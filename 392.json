@@ -1,0 +1,117 @@
+{"content": {
+    "editorID": "SES",
+    "data": {"file": [
+        {
+            "filename": "1590603627_9fc0fb00a8994164021542b75587124f_bine_metadata.json",
+            "filesize": 695
+        },
+        {
+            "filename": "1590603627_9fc0fb00a8994164021542b75587124f_genre_cover.jpg",
+            "filesize": 2104
+        },
+        {
+            "filename": "1590603627_d77278eda9332b8dc99a4aa726f6f149_bine_metadata.json",
+            "filesize": 695
+        }
+    ]},
+    "catalog": "ses_REPLACE",
+    "userDefined": {
+        "mediaHouse": "MSR",
+        "genreDescription": "9fc0fb00a8994164021542b75587124f",
+        "description": "d77278eda9332b8dc99a4aa726f6f149",
+        "isDRM": false,
+        "genreTitle": "9fc0fb00a8994164021542b75587124f",
+        "mediaId": "d77278eda9332b8dc99a4aa726f6f149",
+        "title": "d77278eda9332b8dc99a4aa726f6f149",
+        "parentTitle": "9fc0fb00a8994164021542b75587124f",
+        "parentId": "9fc0fb00a8994164021542b75587124f",
+        "metadataFiles": {"file": [
+            {
+                "filename": "62032531_a63c_4078_826d_92d2cf6a2a1b.jpg",
+                "checksum": "ec30655c7627863855a358bc992e89bf8cfe919bef1d546b2b9713b6267fde1a",
+                "filesize": 0,
+                "type": "metadata",
+                "folderId": "d77278eda9332b8dc99a4aa726f6f149"
+            },
+            {
+                "filename": "bine_metadata.json",
+                "checksum": "f32014626da74646773ca543f7c53575511db73a6b7d22079c831e9de1709dba",
+                "filesize": 0,
+                "type": "metadata",
+                "folderId": "d77278eda9332b8dc99a4aa726f6f149"
+            },
+            {
+                "filename": "fc40cd5d_ce7b_4681_82a7_4b210b2f03ab.jpg",
+                "checksum": "6e8505e36c33a0d92476d9726468076e5cec77e8065870f06e0ea92d44d74d43",
+                "filesize": 0,
+                "type": "metadata",
+                "folderId": "d77278eda9332b8dc99a4aa726f6f149"
+            },
+            {
+                "filename": "bine_metadata.json",
+                "checksum": "d74fb9b551558a9687c5d3cf5476e8e5b09b1bad32da5110bc358d969142bf48",
+                "filesize": 0,
+                "type": "metadata",
+                "folderId": "9fc0fb00a8994164021542b75587124f"
+            },
+            {
+                "filename": "genre_cover.jpg",
+                "checksum": "e30913ee1b82e05a708509906dcd5302f253e1075f7a05db063010efcf5a81f0",
+                "filesize": 0,
+                "type": "metadata",
+                "folderId": "9fc0fb00a8994164021542b75587124f"
+            }
+        ]},
+        "pushId": 1590603627,
+        "ancestorIds": {"file": [
+            "root",
+            "9fc0fb00a8994164021542b75587124f"
+        ]},
+        "hierarchyLevels": 2,
+        "bulkFiles": {"file": {
+            "filename": "vod.mp4",
+            "checksum": "85c139b8f294a0d8d421ebe477efb2dbea63f9e6d81829c262fdc8c90658506d",
+            "filesize": 0,
+            "type": "bulkfile",
+            "folderId": "d77278eda9332b8dc99a4aa726f6f149"
+        }}
+    },
+    "description": {
+        "videoVersion": "SD",
+        "shortSummary": "This is a dummy short summary",
+        "series": false,
+        "shortTitle": "This is a dummy short title",
+        "category": "Education"
+    },
+    "videos": {"movie": {
+        "duration": "PT00H17M01S",
+        "file": {
+            "filename": "1590603627_d77278eda9332b8dc99a4aa726f6f149_vod.mp4",
+            "filesize": 38239152
+        }
+    }},
+    "version": 4.5,
+    "VODInfo": {
+        "validityStartDate": "2020-05-27T18:50:26+00:00",
+        "movieID": "BINE_ab92ec09-954c-4b57-8e2c-8dbc94825c0f",
+        "validityEndDate": "2020-05-31T00:50:26+00:00",
+        "revision": 1
+    },
+    "pictures": {
+        "cover": {
+            "file": {
+                "filename": "1590603627_d77278eda9332b8dc99a4aa726f6f149_fc40cd5d_ce7b_4681_82a7_4b210b2f03ab.jpg",
+                "filesize": 46346
+            },
+            "resolution": "640x360"
+        },
+        "thumbnail": {
+            "file": {
+                "filename": "1590603627_d77278eda9332b8dc99a4aa726f6f149_62032531_a63c_4078_826d_92d2cf6a2a1b.jpg",
+                "filesize": 16508
+            },
+            "resolution": "336x188"
+        }
+    },
+    "pushInfo": {"CID": 392}
+}}

@@ -24,7 +24,7 @@
         "resolution": "SD",
         "parentId": "machine_learning",
         "metadataFiles": {
-          "item": [
+          "file": [
             {
               "filename": "cover.png",
               "checksum": "e02d7821816870ee0e58918e35d7f8916144d5359c4b9c02ca5e1b756f87899f",
@@ -62,15 +62,16 @@
               }
           ]
         },
+        "pushId": 10,
         "ancestorIds": {
-          "item": [
+          "file": [
             "root",
             "machine_learning"
           ]
         },
         "hierarchyLevels": 2,
         "bulkFiles": {
-          "item": [
+          "file": 
             {
             "filename": "vod.mp4",
             "checksum": "e754ddcf735de06ac797915b814c933771276831b1d802022036036e0edd4294",
@@ -78,7 +79,7 @@
             "folderId": "machine_learning_lecture1",
             "type": "bulkfile" 
             }
-        ]
+        
         },
         "totalNumberOfLectures": 12
       },
@@ -112,7 +113,7 @@
         "movie": {
           "duration": "PT00H58M39S",
           "file": {
-            "filename": "http://localhost:5000/static/dummyContent/machine_learning_lecture1_vod.mp4",
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_lecture1_vod.mp4",
             "filesize": 168089812,
             "checksum": ""
           }
@@ -129,7 +130,7 @@
       "pictures": {
         "cover": {
           "file": {
-            "filename": "http://localhost:5000/static/dummyContent/machine_learning_lecture1_cover.png",
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_lecture1_cover.png",
             "filesize": 53790,
             "checksum": ""
           },
@@ -137,7 +138,7 @@
         },
         "thumbnail": {
           "file": {
-            "filename": "http://localhost:5000/static/dummyContent/machine_learning_lecture1_thumbnail.jpg",
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_lecture1_thumbnail.jpg",
             "filesize": 9723,
             "checksum": ""
           },
@@ -147,17 +148,17 @@
       "data": {
         "file": [
           {
-            "filename": "http://localhost:5000/static/dummyContent/machine_learning_genre_cover.png",
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_genre_cover.png",
             "filesize": 2104,
             "checksum": ""
           },
           {
-            "filename": "http://localhost:5000/static/dummyContent/machine_learning_metadata.xml",
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_metadata.xml",
             "filesize": 2104,
             "checksum": ""
           },
           {
-            "filename": "http://localhost:5000/static/dummyContent/machine_learning_lecture1_metadata.xml",
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_lecture1_metadata.xml",
             "filesize": 2104,
             "checksum": ""
           }
