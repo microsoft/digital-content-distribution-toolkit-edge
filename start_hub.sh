@@ -13,7 +13,7 @@ sleep 2s
 tmux split-window -h -t bine-session # split the detached tmux session
 sleep 2s
 # tmux send -t bine-session:0.right 'conda activate bine' ENTER
-tmux send -t bine-session:0.right 'PYTHONPATH=./device_sdk/ python ./device_sdk/device_sdk.py' ENTER
+tmux send -t bine-session:0.right 'PYTHONPATH=./device_sdk/ python3 ./device_sdk/device_sdk.py' ENTER
 
 # enusre that python server is started, hacky
 # TODO: write to channel from python and read from that channel here, start gohub only is success 

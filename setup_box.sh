@@ -16,6 +16,7 @@ echo "Installing PIP"
 sudo apt install python3-pip
 echo "Installing python3 modules"
 cd device_sdk
+pip3 install --upgrade setuptools  # required for grpcio sometimes
 pip3 install -r requirements.txt
 
 cd ..
