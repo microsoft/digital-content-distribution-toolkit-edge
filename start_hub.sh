@@ -12,7 +12,7 @@ tmux new-session -d -s bine-session  # start new detached tmux session, run htop
 sleep 2s
 tmux split-window -h -t bine-session # split the detached tmux session
 sleep 2s
-tmux send -t bine-session:0.right 'conda activate bine' ENTER
+# tmux send -t bine-session:0.right 'conda activate bine' ENTER
 tmux send -t bine-session:0.right 'PYTHONPATH=./device_sdk/ python ./device_sdk/device_sdk.py' ENTER
 
 # enusre that python server is started, hacky
