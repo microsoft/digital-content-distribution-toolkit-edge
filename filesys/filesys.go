@@ -26,6 +26,14 @@ func RandStringBytes(n int, homeNode []byte) []byte {
     return b;
 }
 
+func stringInSlice(list []string, a string) bool {
+    for _, b := range list {
+        if b == a {
+            return true
+        }
+    }
+    return false
+}
 
 type FileSystem struct {
 	nodeLength int
@@ -103,35 +111,6 @@ func (fs *FileSystem) InsertNode(node []byte, parent []byte) error {
 		}
 		if err := b.Put(parent, append(children, node...)); err != nil {
 			return fmt.Errorf("[Database][InsertNode] %s", err)
-		}
-
-		return nil;
-	});
-
-	return err;
-}
-
-func (fs *FileSystem) DeleteNodeSubtree(node []byte) error {
-	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("Tree"))
-
-		parent := b.Get(node)[0: fs.nodeLength]
-
-		if err := b.Delete(node); err != nil {
-			return fmt.Errorf("[Database][DeleteNodeSubtree] %s", err)
-		}
-
-		children := b.Get(parent)
-		children_w_node_removed := []byte{}
-		for i := 0; i < len(children); i += fs.nodeLength {
-			if(bytes.Equal(node, children[i: i + fs.nodeLength])) {
-				continue;				
-			} else {
-				children_w_node_removed = append(children_w_node_removed, children[i: i + fs.nodeLength]...)
-			}
-		}
-		if err := b.Put(parent, children_w_node_removed); err != nil {
-			return fmt.Errorf("[Database][DeleteNodeSubtree] %s", err)
 		}
 
 		return nil;
@@ -232,12 +211,43 @@ func (fs *FileSystem) getNodeForPath(hierarchy []string) ([]byte, error) {
 	return root, nil
 }
 
+func (fs *FileSystem) getChildrenNamesForNode(parent []byte) ([]string, error) {
+	children, err := fs.getChildrenForNode(parent)
+	if(err != nil) {
+		return nil, err
+	}
+
+	ans := make([]string, 0)
+	for i := 0; i < len(children); i += fs.nodeLength {
+		if(i == 0) {
+			continue
+		}
+
+		child, err := fs.getFolderNameForNode(children[i: i + fs.nodeLength])
+		if(err != nil) {
+			return nil, err
+		}
+
+		ans = append(ans, child)
+	}
+
+	return ans, nil
+}
+
 func (fs *FileSystem) CreateFolder(hierarchy []string) (string, error) {
 	folder_name := []byte(hierarchy[len(hierarchy) - 1]);
 	node := RandStringBytes(fs.nodeLength, fs.homeNode)
 	parent, err := fs.getNodeForPath(hierarchy[0: len(hierarchy) - 1])
 	if(err != nil) {
 		return "", err
+	}
+
+	current_children, err := fs.getChildrenNamesForNode(parent)
+	if(err != nil) {
+		return "", err
+	}
+	if(stringInSlice(current_children, string(folder_name))) {
+		return "", fmt.Errorf("[Filesys][CreateFolder] %s", "A folder with the same name at the requested level already exists")
 	}
 
 	err = fs.nodesDB.Update(func(tx *bolt.Tx) error {
@@ -265,24 +275,76 @@ func (fs *FileSystem) CreateFolder(hierarchy []string) (string, error) {
 	return string(node), nil
 }
 
-func (fs *FileSystem) DeleteFolder(hierarchy []string) error {
-	node, err := fs.getNodeForPath(hierarchy)
+func (fs *FileSystem) DeleteNodeSubtree(node []byte) error {
+	children, err := fs.getChildrenForNode(node)
 	if(err != nil) {
 		return err
 	}
-	fmt.Println("node to be deleted", string(node))
+	for i := 0; i < len(children); i += fs.nodeLength {
+		if(i == 0) {
+			continue;				
+		} else {
+			fs.DeleteNodeSubtree(children[i: i + fs.nodeLength])
+		}
+	}
 
-	fmt.Println("Removing Folder mapping")
+	err = fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("Tree"))
+
+		if err := b.Delete(node); err != nil {
+			return fmt.Errorf("[Database][DeleteNodeSubtree] %s", err)
+		}
+
+		return nil;
+	});
+	if(err != nil) {
+		return err
+	}
+
 	err = fs.nodesDB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("FolderNameMapping"))
 		if err := b.Delete(node); err != nil {
-			return fmt.Errorf("[Database][DeleteFolder] %s", err)
+			return fmt.Errorf("[Database][DeleteNodeSubtree] %s", err)
 		}
 		return nil
 	})
 	if(err != nil) {
 		return err
 	}
+
+
+	return err;
+}
+
+func (fs *FileSystem) DeleteFolder(hierarchy []string) error {
+	node, err := fs.getNodeForPath(hierarchy)
+	if(err != nil) {
+		return err
+	}
+	fmt.Println("node to be deleted", string(node))
+	
+	// update the parent only for the top most node in the hierarchy
+	err = fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("Tree"))
+
+		parent := b.Get(node)[0: fs.nodeLength]
+
+		children := b.Get(parent)
+		children_w_node_removed := []byte{}
+		for i := 0; i < len(children); i += fs.nodeLength {
+			if(bytes.Equal(node, children[i: i + fs.nodeLength])) {
+				continue;				
+			} else {
+				children_w_node_removed = append(children_w_node_removed, children[i: i + fs.nodeLength]...)
+			}
+		}
+		if err := b.Put(parent, children_w_node_removed); err != nil {
+			return fmt.Errorf("[Database][DeleteNodeSubtree] %s", err)
+		}
+
+		return nil
+	})
+
 
 	fmt.Println("Deleting from Tree")
 	err = fs.DeleteNodeSubtree(node)
@@ -327,12 +389,39 @@ func (fs *FileSystem) RecursiveDeleteFolder(hierarchy []string) error {
 	return nil
 }
 
+func (fs *FileSystem) MoveFile(source_file_path string, destination_folder string, file_type string) error {
+	hierarchy := strings.Split(strings.Trim(destination_folder, "/"), "/")
+	node, err := fs.getNodeForPath(hierarchy)
+
+	if(err != nil) {
+		return err
+	}
+
+	new_file := file_type + "_" + filepath.Base(source_file_path)
+	new_location := filepath.Join(fs.homeDirLocation, string(fs.homeNode), string(node), new_file)
+	err = os.Rename(source_file_path, new_location)
+	if(err != nil) {
+		return err
+	}
+
+	return nil
+}
+
+func (fs *FileSystem) GetFileType(file_name string) (string, error) {
+	temp := strings.Split(file_name, "_")
+	if(len(temp) == 1) {
+		return "", fmt.Errorf("[Filesys][GetFileType] %s", "file does't have a type")
+	}
+
+	return temp[0], nil 
+}
+
 func (fs *FileSystem) GetHomeFolder() string {
 	return filepath.Join(fs.homeDirLocation, string(fs.homeNode))
 }
 func (fs *FileSystem) PrintBuckets() {
 	fs.nodesDB.View(func(tx *bolt.Tx) error {
-		fmt.Println()
+		fmt.Println("--------------------")
 		b := tx.Bucket([]byte("Tree"))
 
 		c := b.Cursor()
@@ -348,7 +437,7 @@ func (fs *FileSystem) PrintBuckets() {
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			fmt.Printf("key=%s, value=%s\n", k, v)
 		}
-		fmt.Println()
+		fmt.Println("--------------------")
 
 		return nil
 	})

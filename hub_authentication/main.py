@@ -28,6 +28,6 @@ def fallback(dummy):
     return redirect(url_for('welcome'))
 
 if __name__ == '__main__':
-    config.read('hub_config.ini')
+    config.read('../hub_config.ini')
     print(config.sections())
     app.run(debug=True, host="0.0.0.0", port=config.getint("HUB_AUTHENTICATION", "FLASK_PORT"))
