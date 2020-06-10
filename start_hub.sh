@@ -1,5 +1,8 @@
+# pre-requisites: golang installation. Please refer to get started. https://golang.org/doc/install
+
 # remove the database file and file system, may not be required in real life but for testing
 # TODO: dynamically see the folder instead of hardcode zzzz/
+# WARNING: THIS IS JUST FOR TESTING PURPOSES. COMMENT IT IN PRODUCTION.
 rm -rf test.db zzzz/
 
 
