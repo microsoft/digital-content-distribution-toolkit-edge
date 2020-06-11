@@ -18,21 +18,9 @@
 ```
 
 ### Running the BINE-HUB
-1. Start hub server 
-    ```
-    go build
-    ./bine-hub
-    ```
-2. Start Python IoT device
-    ```
-    cd device_sdk/upstream
-    python3 upstream.py
-    ```
-3. Populate hub with files (optional, do this when hub is started for the first time. This sends a message to the iot device which then passes it to the file server, refer to the [Code organization](#code-organization) section for more details)
-    ```
-    cd device_sdk/downstream
-    python3 downstream.py
-    ```
+```
+./start_hub.sh
+```
 
 ### Code organization
 There are two main components to the BINE HUB - IoT Edge device written in Python and the file server written in Golang. These components communicate with each other using [ZeroMQ](https://zeromq.org/) sockets.
