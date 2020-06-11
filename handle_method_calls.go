@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	"net"
-	"path/filepath"
 	"strconv"
 
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -51,68 +50,38 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	log.Println(download_params.GetFolderpath())
 	hierarchy := strings.Split(strings.Trim(download_params.GetFolderpath(), "/"), "/")
 	log.Println(hierarchy)
-	// Assuming one node created at a time
-	folderName, err := fs.CreateFolder(hierarchy)
+	folder_name, err := fs.CreateFolder(hierarchy)
 	if err != nil {
 		logger.Log("Error", fmt.Sprintf("%s", err))
 		return &pb.Response{Responsemessage: "Folder not downloaded"}, err
 	}
-	tempFolder := "tmp"
+
 	log.Println("metadata files >")
 	for i, x := range download_params.GetMetadatafiles() {
 		log.Println("\t", (*x).Name)
-		//err := DownloadFile(filepath.Join(fs.GetHomeFolder(), folder_name, fmt.Sprintf("doge_metadata%d.jpg", i)), "https://wallpaperplay.com/walls/full/0/8/0/1532.jpg")
-		err := DownloadFile(filepath.Join(fs.GetHomeDirLocation(), tempFolder, (*x).Name), (*x).Cdn, (*x).Hashsum)
+		err := DownloadFile(filepath.Join(fs.GetHomeFolder(), folder_name, fmt.Sprintf("doge_metadata%d.jpg", i)), "https://wallpaperplay.com/walls/full/0/8/0/1532.jpg")
 		if err != nil {
 			logger.Log("Error", fmt.Sprintf("%s", err))
-			//delete temp folder
-			delete_folder(filepath.Join(fs.GetHomeDirLocation(), tempFolder))
 			return &pb.Response{Responsemessage: "Folder not downloaded"}, err
 		}
-	}
-	//movefile
-	if err := moveFiles(filepath.Join(fs.GetHomeDirLocation(), tempFolder), download_params.GetFolderpath(), "metadatafile"); err != nil {
-		logger.Log("Error", fmt.Sprintf("%s", err))
-		return &pb.Response{Responsemessage: "Could mot move temp folder to filsys"}, err
 	}
 
 	log.Println("bulk files >")
 	for i, x := range download_params.GetBulkfiles() {
 		log.Println("\t", (*x).Name)
-		err := DownloadFile(filepath.Join(fs.GetHomeDirLocation(), tempFolder, (*x).Name), (*x).Cdn, (*x).Hashsum)
+		err := DownloadFile(filepath.Join(fs.GetHomeFolder(), folder_name, fmt.Sprintf("doge_bulk%d.jpg", i)), "https://wallpaperplay.com/walls/full/0/8/0/1532.jpg")
 		if err != nil {
 			logger.Log("Error", fmt.Sprintf("%s", err))
-			delete_folder(filepath.Join(fs.GetHomeDirLocation(), tempFolder))
 			return &pb.Response{Responsemessage: "Folder not downloaded"}, err
 		}
 	}
-	if err := moveFiles(tempFolder, download_params.GetFolderpath(), "bulkfile"); err != nil {
-		logger.Log("Error", fmt.Sprintf("%s", err))
-		return &pb.Response{Responsemessage: "Could not move temp folder to filsys"}, err
-	}
+
 	log.Println("")
 	fs.PrintBuckets()
 	fs.PrintFileSystem()
 	log.Println("")
 
 	return &pb.Response{Responsemessage: "Folder downloaded"}, nil
-}
-func moveFiles(sourceFolder, destFolder, fileType string) error {
-	files, err := ioutil.ReadDir(sourceFolder)
-	if err != nil {
-		return err
-	}
-	for _, file := range files {
-		err := fs.MoveFile(filepath.Join(sourceFolder, file.Name()), destFolder, fileType)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-func delete_folder(path string) error {
-	err := os.RemoveAll(path)
-	return err
 }
 
 func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.DeleteParams) (*pb.Response, error) {

@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"gopkg.in/ini.v1"
 
 	filesys "./filesys"
 	cl "./logger"
@@ -19,31 +21,34 @@ var logger cl.Logger
 var fs *filesys.FileSystem
 
 func main() {
-	// if you change the port here, please make a correspoding change in device_sdk/downstream.py file
+	cfg, err := ini.Load("hub_config.ini")
+	if err != nil {
+		fmt.Printf("Fail to read config file: %v", err)
+		os.Exit(1)
+	}
+
 	var wg sync.WaitGroup
 
-	upstream_grpc_port := 50051
+	upstream_grpc_port, err := cfg.Section("GRPC").Key("UPSTREAM_PORT").Int()
 	logger = cl.MakeLogger(upstream_grpc_port)
 
-	downstream_grpc_port := 50052
+	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
 
-	var err error
-	fs, err = filesys.MakeFileSystem(4, "./")
+	name_length, err := cfg.Section("FILE_SYSTEM").Key("NAME_LENGTH").Int()
+	home_dir_location := cfg.Section("FILE_SYSTEM").Key("HOME_DIR_LOCATION").String()
+	boltdb_location := cfg.Section("FILE_SYSTEM").Key("BOLTDB_LOCATION").String()
+	fs, err = filesys.MakeFileSystem(name_length, home_dir_location, boltdb_location)
 	if err != nil {
 		logger.Log("Error", fmt.Sprintf("%s", err))
+		os.Exit(1)
 	}
 	defer fs.Close()
 
-	// fmt.Println("Creating buckets...")
-	fs.CreateBucket("Tree")
-	fs.CreateBucket("FolderNameMapping")
-
-	err = fs.CreateHome()
+	err = fs.InitFileSystem()
 	if err != nil {
 		logger.Log("Error", fmt.Sprintf("%s", err))
+		os.Exit(1)
 	}
-	fs.PrintBuckets()
-	fs.PrintFileSystem()
 
 	logger.Log("Info", "All first level info being sent to iot-hub...")
 
@@ -66,7 +71,8 @@ func main() {
 	setupRoutes(router)
 	fmt.Println("Server starting ....")
 
-	// start the web server at port 5000
-	router.Run("0.0.0.0:5000")
+	// start the gin web server
+	gin_port, err := cfg.Section("GIN").Key("PORT").Int()
+	router.Run(fmt.Sprintf("0.0.0.0:%d", gin_port))
 	wg.Wait()
 }

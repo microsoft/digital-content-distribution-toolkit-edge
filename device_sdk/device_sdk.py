@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import configparser
 from concurrent import futures
 from multiprocessing import Process
 import time
@@ -14,13 +15,12 @@ import commands_pb2_grpc
 from azure.iot.device import IoTHubDeviceClient, Message
 from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
 
-
-
-CONNECTION_STRING = "HostName=gohub.azure-devices.net;DeviceId=MyPythonDevice;SharedAccessKey=zA2DAirXTqJ0TGkpf+8fTLYVCxC3YlPJsO+UUO2QS98="
+config = configparser.ConfigParser()
+# CONNECTION_STRING = "HostName=gohub.azure-devices.net;DeviceId=MyPythonDevice;SharedAccessKey=zA2DAirXTqJ0TGkpf+8fTLYVCxC3YlPJsO+UUO2QS98="
 
 def iothub_client_init():
     # Create an IoT Hub client
-    client = IoTHubDeviceClient.create_from_connection_string(CONNECTION_STRING)
+    client = IoTHubDeviceClient.create_from_connection_string(config.get("DEVICE_INFO", "IOT_DEVICE_CONNECTION_STRING"))
     return client
 
 
@@ -42,7 +42,7 @@ def send_upstream_messages(iot_client):
     print("Starting telemetry...")
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
     logger_pb2_grpc.add_LogServicer_to_server(LogServicer(iot_client), server)
-    server.add_insecure_port('localhost:50051')
+    server.add_insecure_port('localhost:{}'.format(config.getint("GRPC", "UPSTREAM_PORT")))
     server.start()
     print("server started")
     time.sleep(1000)
@@ -50,7 +50,7 @@ def send_upstream_messages(iot_client):
 
 def listen_for_method_calls(iot_client):
     print("Listening for method calls...")
-    with grpc.insecure_channel('localhost:50052') as channel:
+    with grpc.insecure_channel('localhost:{}'.format(config.getint("GRPC", "DOWNSTREAM_PORT"))) as channel:
         stub = commands_pb2_grpc.RelayCommandStub(channel)
 
         while True:
@@ -128,15 +128,10 @@ def listen_for_method_calls(iot_client):
             iot_client.send_method_response(method_response)
 
 if __name__ == '__main__':
+    config.read('hub_config.ini')
+    print(config.sections())
     iot_client = iothub_client_init()
     telemetry_pool = futures.ThreadPoolExecutor(1)
     telemetry_pool.submit(send_upstream_messages, iot_client)
-    # p = Process(target=send_upstream_messages, args=(iot_client,))
-    # p.start()
-    # send_upstream_messages(iot_client)
-    # time.sleep(10)
     print("came here...")
-    # telemetry_pool.submit(listen_for_method_calls, iot_client)
-    # telemetry_pool = futures.ThreadPoolExecutor(1)
-    # telemetry_pool.submit(listen_for_method_calls, iot_client)
     listen_for_method_calls(iot_client)

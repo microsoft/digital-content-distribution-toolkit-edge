@@ -1,5 +1,8 @@
+# pre-requisites: golang installation. Please refer to get started. https://golang.org/doc/install
+
 # remove the database file and file system, may not be required in real life but for testing
 # TODO: dynamically see the folder instead of hardcode zzzz/
+# WARNING: THIS IS JUST FOR TESTING PURPOSES. COMMENT IT IN PRODUCTION.
 rm -rf test.db zzzz/
 
 
@@ -12,8 +15,8 @@ tmux new-session -d -s bine-session  # start new detached tmux session, run htop
 sleep 2s
 tmux split-window -h -t bine-session # split the detached tmux session
 sleep 2s
-tmux send -t bine-session:0.right 'conda activate bine' ENTER
-tmux send -t bine-session:0.right 'PYTHONPATH=./device_sdk/ python ./device_sdk/device_sdk.py' ENTER
+# tmux send -t bine-session:0.right 'conda activate bine' ENTER
+tmux send -t bine-session:0.right 'PYTHONPATH=./device_sdk/ python3 ./device_sdk/device_sdk.py' ENTER
 
 # enusre that python server is started, hacky
 # TODO: write to channel from python and read from that channel here, start gohub only is success 
