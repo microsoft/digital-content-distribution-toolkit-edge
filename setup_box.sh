@@ -10,6 +10,7 @@ go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
 go get -u google.golang.org/grpc
 go get github.com/boltdb/bolt/...
 go get -u github.com/gin-gonic/gin
+go get gopkg.in/ini.v1v1
 
 # python
 echo "Installing PIP"
