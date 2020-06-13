@@ -59,7 +59,8 @@ def listen_for_method_calls(iot_client):
             method_request = iot_client.receive_method_request()
             print (
                 "\nMethod callback called with:\nmethodName = {method_name}\npayload = {payload}".format(
-                    method_name=method_request.name,
+                    # method_name=method_request.name,
+                    method_name="Download",
                     payload=method_request.payload
                 )
             )
@@ -77,9 +78,10 @@ def listen_for_method_calls(iot_client):
                 payload = eval(method_request.payload)
 
                 try:
-                    _folder_path = payload["folder_path"]
-                    _metadata_files = [commands_pb2.File(name="cover.jpg", cdn="cdn1", hashsum="asdfasdf"), commands_pb2.File(name="rating.txt", cdn="cdn1", hashsum="asdfasdf")];
-                    _bulk_files = [commands_pb2.File(name="A song of ice and fire", cdn="cdn1", hashsum="asdfasdf")];
+                    # _folder_path = payload["folder_path"]
+                    _folder_path = "ML"
+                    _metadata_files = [commands_pb2.File(name="cover.jpg", cdn="https://binemsr.azureedge.net/microsoft-research-cambridge-ai-summer-school-2017/data/02c95fd8-c074-4da5-8695-09fae0bc0536.jpg", hashsum="697509b9e150500b67e109030e148bcb2327e1829f78c92ef53777bc5bcaf861"), commands_pb2.File(name="thumbnail.jpg", cdn="https://binemsr.azureedge.net/microsoft-research-cambridge-ai-summer-school-2017/data/4acb35db-2faa-445b-9434-69cbd5a59c44.jpg", hashsum="c76c43402262ae4faecab8488d5266d6cbd9c4c74da5c81e5baca647dcd08150")];
+                    _bulk_files = [commands_pb2.File(name="vod.mp4", cdn="https://binemsr.azureedge.net/microsoft-research-cambridge-ai-summer-school-2017/videos/Counterfactual-Multi-Agent-Policy-Gradients.mp4", hashsum="eb9f42faa7417ff7e5ab74b939c70dc8e371ff92c6b03f06c11a1a59f51308a6")];
                     
                     _channels = [commands_pb2.Channel(channelname=x) for x in payload["channels"].split(";")]
                     _deadline = int(payload["deadline"])

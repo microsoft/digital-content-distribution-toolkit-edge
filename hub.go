@@ -51,7 +51,7 @@ func main() {
 	}
 
 	logger.Log("Info", "All first level info being sent to iot-hub...")
-
+	fmt.Println("Info", "All first level info being sent to iot-hub...")
 	// Instantiate database connection to serve requests
 	if !createDatabaseConnection() {
 		//logger.Log("Critical", "Could not create database connection, no point starting the server")
