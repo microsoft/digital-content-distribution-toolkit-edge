@@ -1,7 +1,8 @@
 {
-    "folderpath" : "ML",
+    "folderpath" : "ML/Lecture2",
     "deadline" : 10,
     "channels" : "SES;LAN",
+    "additionalfiles": false,
     "metadatafiles" : [
         {
             "name" : "cover.jpg",
