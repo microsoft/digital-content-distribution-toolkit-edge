@@ -26,7 +26,8 @@ type relayCommandServer struct {
 
 func DownloadFile(filepath, url string) error {
 	// This is just a place holder, Archie will replace it
-	println("Downloading file from : " + url)
+	fmt.Println("Downloading file from : " + url)
+	fmt.Println("Downloading to::::", filepath)
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -49,6 +50,13 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	log.Println(download_params.GetFolderpath())
 	hierarchy := strings.Split(strings.Trim(download_params.GetFolderpath(), "/"), "/")
 	log.Println(hierarchy)
+	//
+	fmt.Println("Printing buckets")
+	fs.PrintBuckets()
+	fmt.Println("Printing file sys")
+	fs.PrintFileSystem()
+	fmt.Println("====================")
+	//
 	metafilesLen := len(download_params.GetMetadatafiles())
 	bulkfilesLen := len(download_params.GetBulkfiles())
 	fileInfos := make([][]string, metafilesLen+bulkfilesLen)
@@ -58,7 +66,7 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		fileInfos[i][0] = (*x).Name
 		fileInfos[i][1] = (*x).Cdn
 		fileInfos[i][2] = (*x).Hashsum
-		fileInfos[i][3] = "metadatafile"
+		fileInfos[i][3] = "metadata"
 	}
 	for i, x := range download_params.GetBulkfiles() {
 		log.Println("\t", (*x).Name)
@@ -85,7 +93,7 @@ func downloadFiles(filePath string, fileInfos [][]string) error {
 	for _, x := range fileInfos {
 		var downloadpath string
 		switch x[3] {
-		case "metadatafile":
+		case "metadata":
 			downloadpath = filepath.Join(filePath, "metadatafiles", x[0])
 		case "bulkfile":
 			downloadpath = filepath.Join(filePath, "bulkfiles", x[0])
@@ -93,19 +101,26 @@ func downloadFiles(filePath string, fileInfos [][]string) error {
 			log.Println("Invalid File type: ", x[0])
 			continue
 		}
+		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
+			logger.Log("Error", fmt.Sprintf("%s", err))
+			return err
+		}
 		err := DownloadFile(downloadpath, x[1])
 		if err != nil {
 			logger.Log("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		calculatedHash, err := calculateSHA256(downloadpath)
+		// fmt.Println("calculated hash:", calculatedHash)
+		// fmt.Println("actual hash:", x[2])
 		if err != nil || calculatedHash != x[2] {
 			logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
 			return err
 		}
 		//store it in a file
 		if err := storeHashsum(downloadpath, calculatedHash); err != nil {
-			log.Println("Could not store Hashsum in the text file")
+			logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+			//return err
 		}
 	}
 	return nil
