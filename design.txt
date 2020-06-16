@@ -1,0 +1,24 @@
+Step 1:
+
+Get Metadata.xml from the cloud syncing service. That will have VODInfo.MovieID which is the unique ID (confirm this)
+
+Step 2:
+
+Get links to download files and their hashsums mentioned in the Metadata.xml from the cloud Sync service and download them. Evict files if the cache size is full (need to use two step process here, mark for eviction and then evict). Verify the checksums.
+
+Step 3:
+Add the VOD to the local DB and mention it's parent. Parent can be Movie category for movies or show name for series. Parent ID for show names and movies will be "root". Mark if each entry in this is a folder or VOD. Have an entry for the Metadata.xml file of this VOD. 
+
+ID|Metadata File path|Parent
+
+Step 4: 
+Spawn a background thread which monitors files and checks if none of the files are tampered with. Fix the database if files are tampered. Spawn another background service which syncs with the syncing cloud to manage new files. 
+
+Step 5:
+Write a separate thread safe class to access The database. 
+
+Step 6:
+two routes -
+	/list/files/root - returns list of folders or files and their metadata as JSON objects and files all encoded as a byte stream.
+
+	/static/path - return the static file. Mark this folder as recently used in LRU cache.

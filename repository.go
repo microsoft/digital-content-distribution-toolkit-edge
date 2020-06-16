@@ -49,6 +49,7 @@ func getFilePath(mediaHouse string, folderID string, fileName string) string {
 
 func getFolderPath(mediaHouse string, folderID string) string {
 	return path.Join("static", mediaHouse, folderID)
+	//return path.Join(mediaHouse, folderID)
 }
 
 func getFolderSize(mediaHouse string, folderID string) int64 {

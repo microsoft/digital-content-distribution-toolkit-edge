@@ -138,14 +138,14 @@ func getChildrenEntries(mediaHouse string, parent string) []FolderStructureEntry
 			return nil
 		}
 		cursor := parentBucket.Cursor()
-		// fmt.Println("==============Children==============")
+		fmt.Println("===========" + parent + ":===Children==============")
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
-			// fmt.Printf("key=%s, value=%s\n", k, v)
+			fmt.Printf("key=%s, value=%s\n", k, v)
 			target := new(FolderStructureEntry)
 			json.Unmarshal(v, target)
 			result = append(result, *target)
 		}
-		// fmt.Println("====================================")
+		fmt.Println("====================================")
 		return nil
 	})
 	return result
@@ -281,6 +281,26 @@ func setupDbForTesting() {
 	addBulkFiles("MSR", "FS01E01", []FileEntry{FileEntry{Name: "vod.mp4", HashSum: "e754ddcf735de06ac797915b814c933771276831b1d802022036036e0edd4294"}})
 
 	addBulkFiles("MSR", "FS02E01", []FileEntry{FileEntry{Name: "vod.mp4", HashSum: "e754ddcf735de06ac797915b814c933771276831b1d802022036036e0edd4294"}})
+}
+
+func KeyExistsInDb(mediaHouse string, parent string, id string) (bool, error) {
+	var haskey = false
+	err := db.View(func(tx *bolt.Tx) error {
+		mediaHouseBucket := getMediaHouseBucket(folderStructureBucketName, mediaHouse, tx)
+		if mediaHouseBucket == nil {
+			return nil
+		}
+		parentBucket := mediaHouseBucket.Bucket(getByteString(parent))
+		if parentBucket == nil {
+			return nil
+		}
+		if v := parentBucket.Get(getByteString(id)); v != nil {
+			haskey = true
+		}
+		return nil
+	})
+
+	return haskey, err
 }
 
 // Directory structure
