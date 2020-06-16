@@ -44,7 +44,7 @@ func main() {
 	}
 	defer fs.Close()
 
-	initflag, err := cfg.Section("DEVICE_INFO").Key("INITFILESYSTEM").Bool()
+	initflag, err := cfg.Section("DEVICE_INFO").Key("INIT_FILE_SYSTEM").Bool()
 	if initflag {
 		err = fs.InitFileSystem()
 		if err != nil {

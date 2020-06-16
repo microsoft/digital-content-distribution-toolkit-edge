@@ -25,7 +25,6 @@ type relayCommandServer struct {
 }
 
 func DownloadFile(filepath, url string) error {
-	// This is just a place holder, Archie will replace it
 	fmt.Println("Downloading file from : " + url)
 	fmt.Println("Downloading to::::", filepath)
 	resp, err := http.Get(url)

@@ -1,5 +1,5 @@
 {
-    "folderpath" : "ML/Lecture2",
+    "folderpath" : "NLP",
     "deadline" : 10,
     "channels" : "SES;LAN",
     "additionalfiles": false,
@@ -14,6 +14,7 @@
             "cdn" : "https://binemsr.azureedge.net/microsoft-research-cambridge-ai-summer-school-2017/data/4acb35db-2faa-445b-9434-69cbd5a59c44.jpg",
             "hashsum" : "c76c43402262ae4faecab8488d5266d6cbd9c4c74da5c81e5baca647dcd08150"
         }
+
     ],
     "bulkfiles" : [
         {
