@@ -25,8 +25,6 @@ type relayCommandServer struct {
 }
 
 func DownloadFile(filepath, url string) error {
-	fmt.Println("Downloading file from : " + url)
-	fmt.Println("Downloading to::::", filepath)
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -38,6 +36,8 @@ func DownloadFile(filepath, url string) error {
 		return err
 	}
 	defer f.Close()
+	fmt.Println("Downloading file from : " + url)
+	fmt.Println("Downloading to::::", filepath)
 	fileLen, err := strconv.Atoi(resp.Header.Get("Content-Length"))
 	progressWriter := &ProgressWriter{}
 	progressWriter.Total = int64(fileLen / 1024 / 1024)
@@ -46,6 +46,7 @@ func DownloadFile(filepath, url string) error {
 }
 
 func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.DownloadParams) (*pb.Response, error) {
+	//for _, download_param := range download_params
 	log.Println(download_params.GetFolderpath())
 	hierarchy := strings.Split(strings.Trim(download_params.GetFolderpath(), "/"), "/")
 	log.Println(hierarchy)
@@ -80,11 +81,16 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		logger.Log("Error", fmt.Sprintf("%s", err))
 		return &pb.Response{Responsemessage: "Folder not downloaded"}, err
 	}
-
 	log.Println("")
 	fs.PrintBuckets()
 	fs.PrintFileSystem()
 	log.Println("")
+
+	//???
+	if len(fileInfos) == 0 {
+		logger.Log("Info", "Folder created. Download request does not have file infos ")
+		return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
+	}
 
 	return &pb.Response{Responsemessage: "Folder downloaded"}, nil
 }
@@ -110,8 +116,6 @@ func downloadFiles(filePath string, fileInfos [][]string) error {
 			return err
 		}
 		calculatedHash, err := calculateSHA256(downloadpath)
-		// fmt.Println("calculated hash:", calculatedHash)
-		// fmt.Println("actual hash:", x[2])
 		if err != nil || calculatedHash != x[2] {
 			logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
 			return err
@@ -119,7 +123,7 @@ func downloadFiles(filePath string, fileInfos [][]string) error {
 		//store it in a file
 		if err := storeHashsum(downloadpath, calculatedHash); err != nil {
 			logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
-			//return err
+			return err
 		}
 	}
 	return nil

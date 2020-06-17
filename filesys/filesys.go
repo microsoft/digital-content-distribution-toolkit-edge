@@ -473,9 +473,9 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 	// downlaod the files, check hashsum is done in dfunc
 	err = dfunc(actual_path, downloadParams)
 	if err != nil {
-		err = os.RemoveAll(actual_path)
-		if err != nil {
-			return err
+		f_err := os.RemoveAll(actual_path)
+		if f_err != nil {
+			return f_err
 		}
 		return err
 	}
