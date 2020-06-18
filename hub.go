@@ -66,7 +66,8 @@ func main() {
 	// start a concurrent background service which checks if the files on the device are tampered with
 	wg.Add(1)
 	go handle_method_calls(downstream_grpc_port, wg)
-	go check()
+	//go check()
+	go checkForVOD()
 
 	// set up the web server and routes
 	router := gin.Default()

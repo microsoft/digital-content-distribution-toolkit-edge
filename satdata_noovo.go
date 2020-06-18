@@ -194,10 +194,10 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 			fileInfos[i][3] = "metadata"
 		}
 		for i, x := range folderBulkFilesMap[folder] {
-			fileInfos[i][0] = x.Name
-			fileInfos[i][1] = filesURLMap[pushId+"_"+folder+"_"+x.Name]
-			fileInfos[i][2] = x.Hashsum
-			fileInfos[i][3] = "bulkfile"
+			fileInfos[metafilesLen+i][0] = x.Name
+			fileInfos[metafilesLen+i][1] = filesURLMap[pushId+"_"+folder+"_"+x.Name]
+			fileInfos[metafilesLen+i][2] = x.Hashsum
+			fileInfos[metafilesLen+i][3] = "bulkfile"
 		}
 		subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
 		err := fs.CreateDownloadNewFolder(subpathA, DownloadFiles, fileInfos)
