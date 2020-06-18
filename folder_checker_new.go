@@ -11,6 +11,10 @@ func checkIntegrity() {
 	for true {
 		time.Sleep(_interval * time.Second)
 		fmt.Println("Info", "Checking files integrity from background thread")
-		navigate("root")
+		navigate("home")
 	}
 }
+
+// func navigate(node string) {
+
+// }

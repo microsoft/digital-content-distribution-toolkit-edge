@@ -76,7 +76,7 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		fileInfos[metafilesLen+i][2] = (*x).Hashsum
 		fileInfos[metafilesLen+i][3] = "bulkfile"
 	}
-	err := fs.CreateDownloadNewFolder(hierarchy, downloadFiles, fileInfos)
+	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos)
 	if err != nil {
 		logger.Log("Error", fmt.Sprintf("%s", err))
 		return &pb.Response{Responsemessage: "Folder not downloaded"}, err
@@ -91,10 +91,10 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		logger.Log("Info", "Folder created. Download request does not have file infos ")
 		return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
 	}
-
+	//TODO: add telemetry
 	return &pb.Response{Responsemessage: "Folder downloaded"}, nil
 }
-func downloadFiles(filePath string, fileInfos [][]string) error {
+func DownloadFiles(filePath string, fileInfos [][]string) error {
 	for _, x := range fileInfos {
 		var downloadpath string
 		switch x[3] {

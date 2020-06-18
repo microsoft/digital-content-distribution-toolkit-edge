@@ -12,6 +12,14 @@ import (
 	bolt "github.com/boltdb/bolt"
 )
 
+type FolderExistError struct {
+	Err error
+}
+
+func (e *FolderExistError) Error() string {
+	return e.Err.Error()
+}
+
 const letterBytes = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func RandStringBytes(n int, homeNode []byte) []byte {
@@ -461,6 +469,7 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 	}
 	if stringInSlice(current_children, string(folder_name)) {
 		return fmt.Errorf("[Filesystem][CreateFolder] %s", "A folder with the same name at the requested level already exists")
+		//return &FolderExistError{fmt.Errorf("[Filesystem][CreateFolder] %s", "A folder with the same name at the requested level already exists")}
 	}
 
 	// create the actual folder

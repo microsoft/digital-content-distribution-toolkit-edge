@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -13,6 +14,9 @@ import (
 type ProgressWriter struct {
 	Counter int64
 	Total   int64
+}
+type FileInfo struct {
+	Name, Hashsum string
 }
 
 func (pw *ProgressWriter) Write(b []byte) (int, error) {
@@ -39,4 +43,16 @@ func calculateSHA256(filePath string) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+func getDirSizeinMB(path string) int64 {
+	var size int64 = 0
+	calcsize := func(_ string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			size += info.Size()
+		}
+		return err
+	}
+	filepath.Walk(filepath.Join(path, "bulkfiles"), calcsize)
+	filepath.Walk(filepath.Join(path, "metadatafiles"), calcsize)
+	return (size) / 1024.0 / 1024.0
 }
