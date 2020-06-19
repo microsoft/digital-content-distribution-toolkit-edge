@@ -118,8 +118,8 @@ def listen_for_method_calls(iot_client):
 
                     response = stub.Download(download_params)
                     print(response)
-                except:
-                    response_payload = {"Response": "Invalid parameter"}
+                except Exception as ex:
+                    response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
                     response_status = 400
                 else:
                     response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
@@ -139,8 +139,8 @@ def listen_for_method_calls(iot_client):
 
                     response = stub.Delete(delete_params)
                     print(response)
-                except:
-                    response_payload = {"Response": "Invalid parameter"}
+                except Exception as ex:
+                    response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
                     response_status = 400
                 else:
                     response_payload = {"Response": "Executed method  call {}".format(method_request.name)}

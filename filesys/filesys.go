@@ -36,6 +36,7 @@ func stringInSlice(list []string, a string) bool {
 }
 
 type downloadFunc func(string, [][]string) error
+type process_child_func func(string) ([]interface{}, error)
 
 type FileSystem struct {
 	nodeLength      int
@@ -504,9 +505,52 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 func (fs *FileSystem) GetHomeFolder() string {
 	return filepath.Join(fs.homeDirLocation, string(fs.homeNode))
 }
+
 func (fs *FileSystem) GetHomeDirLocation() string {
 	return fs.homeDirLocation
 }
+
+func (fs *FileSystem) GetChildrenInfo(path string, pfunc process_child_func) ([][]interface{}, error) {
+	hierarchy := strings.Split(strings.Trim(path, "/"), "/")
+
+	node, err := fs.getNodeForPath(hierarchy)
+	if(err != nil) {
+		return nil, err
+	}
+
+	children, err := fs.getChildrenForNode(node)
+	if(err != nil) {
+		return nil, err
+	}
+
+	children_info := make([][]interface{}, (len(children) / fs.nodeLength) - 1)
+	for i := 0; i < len(children_info); i += 1 {
+		child := children[(i + 1) * fs.nodeLength: (i + 2) * fs.nodeLength]
+		actual_path := filepath.Join(fs.homeDirLocation, string(fs.homeNode), string(child))
+
+		children_info[i] = make([]interface{}, 0)
+		folder_name, err := fs.getFolderNameForNode(child)
+		children_info[i] = append(children_info[i], folder_name)
+
+		child_ret, err := pfunc(actual_path)
+		if(err != nil) {
+			return nil, err
+		}
+		children_info[i] = append(children_info[i], child_ret...)
+	}
+
+	return children_info, nil
+}
+
+func (fs *FileSystem) IsLeaf(actual_path_folder string) (bool, error) {
+	children, err := fs.getChildrenForNode([]byte(actual_path_folder))
+	if(err != nil) {
+		return false, err
+	}
+
+	return len(children) == fs.nodeLength, nil
+}
+
 func (fs *FileSystem) PrintBuckets() {
 	fs.nodesDB.View(func(tx *bolt.Tx) error {
 		fmt.Println("--------------------")
