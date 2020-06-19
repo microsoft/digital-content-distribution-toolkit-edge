@@ -44,13 +44,10 @@ func main() {
 	}
 	defer fs.Close()
 
-	initflag, err := cfg.Section("DEVICE_INFO").Key("INITFILESYSTEM").Bool()
-	if initflag {
-		err = fs.InitFileSystem()
-		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
-			os.Exit(1)
-		}
+	err = fs.InitFileSystem()
+	if err != nil {
+		logger.Log("Error", fmt.Sprintf("%s", err))
+		os.Exit(1)
 	}
 
 	logger.Log("Info", "All first level info being sent to iot-hub...")
@@ -66,7 +63,7 @@ func main() {
 	// start a concurrent background service which checks if the files on the device are tampered with
 	wg.Add(1)
 	go handle_method_calls(downstream_grpc_port, wg)
-	//go check()
+	go check()
 
 	// set up the web server and routes
 	router := gin.Default()

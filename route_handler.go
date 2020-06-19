@@ -22,6 +22,10 @@ func setupRoutes(ginEngine *gin.Engine) {
 	ginEngine.GET("/download/files/:mediaHouse/:folderID/:fileName", serveFile)
 }
 
+func errorResponse(context *gin.Context, response ...interface{}) {
+	context.String(400, "", response)
+}
+
 func serveSingleMetadata(context *gin.Context) {
 	mediaHouse := context.Param("mediaHouse")
 	folderID := context.Param("id")
@@ -34,11 +38,23 @@ func serveSingleMetadata(context *gin.Context) {
 }
 
 func serveFile(context *gin.Context) {
-	mediaHouse := context.Param("mediaHouse")
-	folderID := context.Param("folderID")
-	fileName := context.Param("fileName")
+	queryParams := context.Request.URL.Query()
+	var path string
+	path = queryParams.Get("path")
+	if len(path) < 0 {
+		logger.Log("Error", "Path passed in serveFile by incoming request is invalid: "+path)
+		errorResponse(context, "Invalid path supplied in query: ", path)
+		return
+	}
+	actualPath, err := fs.GetActualPathForAbstractedPath(path)
+	if err != nil {
+		logger.Log("Error", "Could not get actual path for abstract path "+path)
+		errorResponse(context, "Invalid path")
+		return
+	}
+	logger.Log("Info", "Redirecting: "+path+" to actual: "+actualPath)
 	// redirect to this path
-	context.Redirect(http.StatusTemporaryRedirect, "/static/"+mediaHouse+"/"+folderID+"/"+fileName)
+	context.Redirect(http.StatusTemporaryRedirect, actualPath)
 }
 
 //Route handler for /list/files/:parent
@@ -73,6 +89,7 @@ func serveMetadata(context *gin.Context) {
 		// return if this child has children
 		// 1 - yes, 0 - no
 		// TODO: Change this to a single byte
+		// How do I know which file is the metadata file in the actual folder path
 		hasChildren := 0
 		if children[i].HasChildren {
 			hasChildren = 1
