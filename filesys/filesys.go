@@ -3,6 +3,7 @@ package filesys
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -94,14 +95,20 @@ func (fs *FileSystem) CreateHome() error {
 	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("Tree"))
 
-		if err := b.Put(fs.homeNode, fs.homeNode); err != nil {
-			return fmt.Errorf("[Filesystem][CreateHome] %s", err)
+		if b.Get(fs.homeNode) == nil {
+			fmt.Println("Home noe is empty in Tree, therefore creating new")
+			if err := b.Put(fs.homeNode, fs.homeNode); err != nil {
+				return fmt.Errorf("[Filesystem][CreateHome] %s", err)
+			}
 		}
 
 		b = tx.Bucket([]byte("FolderNameMapping"))
 
-		if err := b.Put(fs.homeNode, []byte("home")); err != nil {
-			return fmt.Errorf("[Filesystem][CreateHome] %s", err)
+		if b.Get(fs.homeNode) == nil {
+			fmt.Println("Home node is nil, therefore creating new")
+			if err := b.Put(fs.homeNode, []byte("home")); err != nil {
+				return fmt.Errorf("[Filesystem][CreateHome] %s", err)
+			}
 		}
 
 		return nil
@@ -474,9 +481,9 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 	// downlaod the files, check hashsum is done in dfunc
 	err = dfunc(actual_path, downloadParams)
 	if err != nil {
-		err = os.RemoveAll(actual_path)
-		if err != nil {
-			return err
+		f_err := os.RemoveAll(actual_path)
+		if f_err != nil {
+			return f_err
 		}
 		return err
 	}
@@ -512,20 +519,20 @@ func (fs *FileSystem) GetHomeDirLocation() string {
 
 func (fs *FileSystem) GetChildrenInfo(path string, pfunc process_child_func) ([][]interface{}, error) {
 	hierarchy := strings.Split(strings.Trim(path, "/"), "/")
-
+	fmt.Println("trying to find hierarchy", strings.Trim(path, "/"))
 	node, err := fs.getNodeForPath(hierarchy)
-	if(err != nil) {
+	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("String node: ", string(node))
 	children, err := fs.getChildrenForNode(node)
-	if(err != nil) {
+	if err != nil {
 		return nil, err
 	}
 
-	children_info := make([][]interface{}, (len(children) / fs.nodeLength) - 1)
+	children_info := make([][]interface{}, (len(children)/fs.nodeLength)-1)
 	for i := 0; i < len(children_info); i += 1 {
-		child := children[(i + 1) * fs.nodeLength: (i + 2) * fs.nodeLength]
+		child := children[(i+1)*fs.nodeLength : (i+2)*fs.nodeLength]
 		actual_path := filepath.Join(fs.homeDirLocation, string(fs.homeNode), string(child))
 
 		children_info[i] = make([]interface{}, 0)
@@ -533,7 +540,7 @@ func (fs *FileSystem) GetChildrenInfo(path string, pfunc process_child_func) ([]
 		children_info[i] = append(children_info[i], folder_name)
 
 		child_ret, err := pfunc(actual_path)
-		if(err != nil) {
+		if err != nil {
 			return nil, err
 		}
 		children_info[i] = append(children_info[i], child_ret...)
@@ -543,8 +550,13 @@ func (fs *FileSystem) GetChildrenInfo(path string, pfunc process_child_func) ([]
 }
 
 func (fs *FileSystem) IsLeaf(actual_path_folder string) (bool, error) {
-	children, err := fs.getChildrenForNode([]byte(actual_path_folder))
-	if(err != nil) {
+	fmt.Println("Checking IsLeaf for ", actual_path_folder)
+	paths := strings.Split(actual_path_folder, "/")
+	if len(paths) < 2 {
+		return false, errors.New("Invalid path: " + actual_path_folder)
+	}
+	children, err := fs.getChildrenForNode([]byte(paths[1]))
+	if err != nil {
 		return false, err
 	}
 
