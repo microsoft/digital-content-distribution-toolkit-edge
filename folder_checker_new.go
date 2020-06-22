@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const _interval time.Duration = 20
+const _interval time.Duration = 120
 
 func checkIntegrity() {
 	for true {

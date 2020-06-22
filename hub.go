@@ -69,8 +69,7 @@ func main() {
 	wg.Add(1)
 	// go handle_method_calls(downstream_grpc_port, wg)
 	go checkIntegrity()
-	//go checkForVODViaMstore()
-	//testMstore()
+	go pollMstore()
 	//testMstore()
 	// set up the web server and routes
 	router := gin.Default()
