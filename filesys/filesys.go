@@ -148,10 +148,10 @@ func (fs *FileSystem) InsertNode(node []byte, parent []byte) error {
 }
 
 func (fs *FileSystem) recursivelyPrintNode(root []byte, level int) {
-	folder_name, _ := fs.getFolderNameForNode(root)
+	folder_name, _ := fs.GetFolderNameForNode(root)
 	fmt.Println(strings.Repeat("\t", level) + folder_name)
 
-	children, _ := fs.getChildrenForNode(root)
+	children, _ := fs.GetChildrenForNode(root)
 
 	for i := 0; i < len(children); i += fs.nodeLength {
 		if i == 0 {
@@ -165,14 +165,14 @@ func (fs *FileSystem) PrintFileSystem() {
 	fs.recursivelyPrintNode(fs.homeNode, 0)
 }
 
-func (fs *FileSystem) getFolderNameForNode(node []byte) (string, error) {
+func (fs *FileSystem) GetFolderNameForNode(node []byte) (string, error) {
 	var folder_name string
 	err := fs.nodesDB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("FolderNameMapping"))
 
 		_temp := b.Get(node)
 		if _temp == nil {
-			return fmt.Errorf("[Filesystem][getFolderNameForNode] can't find node %s in FolderNameMapping Bucket", string(_temp))
+			return fmt.Errorf("[Filesystem][GetFolderNameForNode] can't find node %s in FolderNameMapping Bucket", string(_temp))
 		}
 		folder_name = string(_temp)
 		return nil
@@ -185,14 +185,14 @@ func (fs *FileSystem) getFolderNameForNode(node []byte) (string, error) {
 	return string(folder_name), nil
 }
 
-func (fs *FileSystem) getChildrenForNode(root []byte) ([]byte, error) {
+func (fs *FileSystem) GetChildrenForNode(root []byte) ([]byte, error) {
 	var children []byte
 	err := fs.nodesDB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("Tree"))
 
 		_temp := b.Get(root)
 		if _temp == nil {
-			return fmt.Errorf("[Filesystem][getChildrenForNode] can't find node %s in Tree Bucket", string(_temp))
+			return fmt.Errorf("[Filesystem][GetChildrenForNode] can't find node %s in Tree Bucket", string(_temp))
 		}
 		children = append([]byte{}, _temp...)
 
@@ -209,7 +209,7 @@ func (fs *FileSystem) getChildrenForNode(root []byte) ([]byte, error) {
 func (fs *FileSystem) getNodeForPath(hierarchy []string) ([]byte, error) {
 	root := fs.homeNode
 	for _, folder := range hierarchy {
-		children, err := fs.getChildrenForNode(root)
+		children, err := fs.GetChildrenForNode(root)
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +220,7 @@ func (fs *FileSystem) getNodeForPath(hierarchy []string) ([]byte, error) {
 				continue
 			}
 
-			_folder, err := fs.getFolderNameForNode(children[i : i+fs.nodeLength])
+			_folder, err := fs.GetFolderNameForNode(children[i : i+fs.nodeLength])
 			if err != nil {
 				return nil, err
 			}
@@ -232,7 +232,7 @@ func (fs *FileSystem) getNodeForPath(hierarchy []string) ([]byte, error) {
 		}
 
 		if !found {
-			return nil, fmt.Errorf("[Filesystem][getFolderNameForNode] can't find the node for folder %s in the hierarchy", folder)
+			return nil, fmt.Errorf("[Filesystem][GetFolderNameForNode] can't find the node for folder %s in the hierarchy", folder)
 		}
 	}
 
@@ -240,7 +240,7 @@ func (fs *FileSystem) getNodeForPath(hierarchy []string) ([]byte, error) {
 }
 
 func (fs *FileSystem) getChildrenNamesForNode(parent []byte) ([]string, error) {
-	children, err := fs.getChildrenForNode(parent)
+	children, err := fs.GetChildrenForNode(parent)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func (fs *FileSystem) getChildrenNamesForNode(parent []byte) ([]string, error) {
 			continue
 		}
 
-		child, err := fs.getFolderNameForNode(children[i : i+fs.nodeLength])
+		child, err := fs.GetFolderNameForNode(children[i : i+fs.nodeLength])
 		if err != nil {
 			return nil, err
 		}
@@ -304,7 +304,7 @@ func (fs *FileSystem) CreateFolder(hierarchy []string) (string, error) {
 }
 
 func (fs *FileSystem) DeleteNodeSubtree(node []byte) error {
-	children, err := fs.getChildrenForNode(node)
+	children, err := fs.GetChildrenForNode(node)
 	if err != nil {
 		return err
 	}
@@ -398,7 +398,7 @@ func (fs *FileSystem) RecursiveDeleteFolder(hierarchy []string) error {
 			return err
 		}
 
-		children, err := fs.getChildrenForNode(node)
+		children, err := fs.GetChildrenForNode(node)
 		if err != nil {
 			return err
 		}
@@ -513,8 +513,14 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 func (fs *FileSystem) GetHomeFolder() string {
 	return filepath.Join(fs.homeDirLocation, string(fs.homeNode))
 }
+func (fs *FileSystem) GetHomeNode() []byte {
+	return fs.homeNode
+}
 func (fs *FileSystem) GetHomeDirLocation() string {
 	return fs.homeDirLocation
+}
+func (fs *FileSystem) GetNodeLength() int {
+	return fs.nodeLength
 }
 func (fs *FileSystem) PrintBuckets() {
 	fs.nodesDB.View(func(tx *bolt.Tx) error {

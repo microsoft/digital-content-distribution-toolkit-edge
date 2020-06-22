@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sync"
 
@@ -9,7 +10,6 @@ import (
 	"gopkg.in/ini.v1"
 
 	filesys "./filesys"
-	cl "./logger"
 )
 
 // TODO: Implement remote update of code
@@ -17,7 +17,7 @@ import (
 // TODO: Implement Acknowledgement of content update
 // TODO: Have HUB ID (speak to Cloud which Vinod will write)
 // TODO: Add unit tests to go functions
-var logger cl.Logger
+// var logger cl.Logger
 var fs *filesys.FileSystem
 
 func main() {
@@ -29,17 +29,18 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	upstream_grpc_port, err := cfg.Section("GRPC").Key("UPSTREAM_PORT").Int()
-	logger = cl.MakeLogger(upstream_grpc_port)
+	//upstream_grpc_port, err := cfg.Section("GRPC").Key("UPSTREAM_PORT").Int()
+	// logger = cl.MakeLogger(upstream_grpc_port)
 
-	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
+	//downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
 
 	name_length, err := cfg.Section("FILE_SYSTEM").Key("NAME_LENGTH").Int()
 	home_dir_location := cfg.Section("FILE_SYSTEM").Key("HOME_DIR_LOCATION").String()
 	boltdb_location := cfg.Section("FILE_SYSTEM").Key("BOLTDB_LOCATION").String()
 	fs, err = filesys.MakeFileSystem(name_length, home_dir_location, boltdb_location)
 	if err != nil {
-		logger.Log("Error", fmt.Sprintf("%s", err))
+		//logger.Log("Error", fmt.Sprintf("%s", err))
+		log.Println("Error", fmt.Sprintf("%s", err))
 		os.Exit(1)
 	}
 	defer fs.Close()
@@ -48,12 +49,13 @@ func main() {
 	if initflag {
 		err = fs.InitFileSystem()
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			log.Println("Error", fmt.Sprintf("%s", err))
 			os.Exit(1)
 		}
 	}
 
-	logger.Log("Info", "All first level info being sent to iot-hub...")
+	// logger.Log("Info", "All first level info being sent to iot-hub...")
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
 	// Instantiate database connection to serve requests
 	if !createDatabaseConnection() {
@@ -65,10 +67,11 @@ func main() {
 	// testCloudSyncServiceDownload()
 	// start a concurrent background service which checks if the files on the device are tampered with
 	wg.Add(1)
-	go handle_method_calls(downstream_grpc_port, wg)
-	//go check()
-	go checkForVOD()
-
+	// go handle_method_calls(downstream_grpc_port, wg)
+	go checkIntegrity()
+	//go checkForVODViaMstore()
+	//testMstore()
+	//testMstore()
 	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type VodList struct {
@@ -64,6 +65,16 @@ type VodInfo struct {
 	} `json:"metadata"`
 }
 
+func pollMstrore() {
+	for true {
+		fmt.Println("==================Polling MStore API ==============")
+		if err := checkForVODViaMstore(); err != nil {
+			log.Println(err)
+			//logger.Log("Error", err.Error())
+		}
+		time.Sleep(interval * time.Minute)
+	}
+}
 func checkForVODViaMstore() error {
 	res, err := http.Get("http://localhost:8134/listcontents")
 	if err != nil {
@@ -86,7 +97,7 @@ func checkForVODViaMstore() error {
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
 			log.Println(err)
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
 			//return err
 			continue
 		}
@@ -131,10 +142,10 @@ func getMstoreFiles(vod VodInfo) error {
 	}
 	_heirarchy = _heirarchy + vod.Metadata.UserDefined.MediaId + "/"
 	path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
-	if path != "" {
-		log.Println(_heirarchy + " already exist.")
-		return errors.New(_heirarchy + " already exist.")
-	}
+	// if path != "" {
+	// 	log.Println(_heirarchy + " already exist.")
+	// 	return errors.New(_heirarchy + " already exist.")
+	// }
 	filepathMap := make(map[string]string)
 	filepathMap[filepath.Base(vod.Metadata.ThumbnailFilename)] = vod.Metadata.ThumbnailFilename
 	filepathMap[filepath.Base(vod.Metadata.CoverFilename)] = vod.Metadata.CoverFilename
@@ -154,7 +165,7 @@ func getMstoreFiles(vod VodInfo) error {
 
 	fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
-	log.Println(hierarchy)
+	log.Println("heirarchy:", hierarchy)
 	subpath := ""
 	for _, folder := range hierarchy {
 		subpath = subpath + folder + "/"
@@ -163,16 +174,18 @@ func getMstoreFiles(vod VodInfo) error {
 		fmt.Println("Printing file sys")
 		fs.PrintFileSystem()
 		fmt.Println("====================")
-		fmt.Println(subpath)
+		fmt.Println("subpath: ", subpath)
 		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
 		fileInfos := make([][]string, metafilesLen+bulkfilesLen)
 		for i, x := range folderMetadataFilesMap[folder] {
+			fileInfos[i] = make([]string, 4)
 			fileInfos[i][0] = x.Name
 			fileInfos[i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
 			fileInfos[i][2] = x.Hashsum
 			fileInfos[i][3] = "metadata"
 		}
 		for i, x := range folderBulkFilesMap[folder] {
+			fileInfos[metafilesLen+i] = make([]string, 4)
 			fileInfos[metafilesLen+i][0] = x.Name
 			fileInfos[metafilesLen+i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
 			fileInfos[metafilesLen+i][2] = x.Hashsum
@@ -185,10 +198,11 @@ func getMstoreFiles(vod VodInfo) error {
 			// if eval, ok := err.(*fs.FolderExistError); ok {
 			// 	continue
 			// }
-			if err.Error() == "[Filesystem][CreateFolder]A folder with the same name at the requested level already exists" {
+			if err.Error() == "[Filesystem][CreateFolder] A folder with the same name at the requested level already exists" {
 				continue
 			}
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		log.Println("")
@@ -197,9 +211,12 @@ func getMstoreFiles(vod VodInfo) error {
 		log.Println("")
 	}
 	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-	logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
-	logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
-	logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+	// logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
+	// logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+	// logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"MB downloaded on the Hub")
+	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 	return nil
 }
 
@@ -215,23 +232,28 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 			log.Println("Invalid File type: ", x[0])
 			continue
 		}
+		fmt.Println(downloadpath)
 		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err := copySingleFile(downloadpath, x[1])
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
-		calculatedHash, err := calculateSHA256(downloadpath)
-		if err != nil || calculatedHash != x[2] {
-			logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
+		err = matchSHA256(downloadpath, x[2])
+		if err != nil {
+			//logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
+			fmt.Println("Error", fmt.Sprintf(err.Error()))
 			return err
 		}
 		//store it in a file
-		if err := storeHashsum(downloadpath, calculatedHash); err != nil {
-			logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+		if err := storeHashsum(downloadpath, x[2]); err != nil {
+			//logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+			fmt.Println("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 			return err
 		}
 	}
@@ -240,6 +262,7 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 
 func copySingleFile(dest, source string) error {
 	//TODO: handle if the source does not exist
+	fmt.Println("SOURCE:", source)
 	sfile, err := os.Open(source)
 	if err != nil {
 		return err
@@ -258,7 +281,7 @@ func copySingleFile(dest, source string) error {
 
 func testMstore() error {
 	fmt.Println("TEST")
-	file, err := os.Open("resp3.json")
+	file, err := os.Open("test/resp3.json")
 	if err != nil {
 		fmt.Println(err)
 		return err

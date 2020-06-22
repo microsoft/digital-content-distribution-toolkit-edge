@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -31,18 +32,22 @@ func (pw *ProgressWriter) print() {
 	fmt.Printf("\rDownloaded: %d MB of %d MB", (pw.Counter / 1024 / 1024), pw.Total)
 }
 
-func calculateSHA256(filePath string) (string, error) {
+func matchSHA256(filePath string, trueSHA string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer f.Close()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
-		return "", err
+		return err
 	}
-	return hex.EncodeToString(h.Sum(nil)), nil
+	actual := hex.EncodeToString(h.Sum(nil))
+	if actual == trueSHA {
+		return nil
+	}
+	return errors.New("hashsum did not match")
 }
 func getDirSizeinMB(path string) int64 {
 	var size int64 = 0

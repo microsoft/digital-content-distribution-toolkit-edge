@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const interval time.Duration = 2
+const interval time.Duration = 20
 const source string = "mstore"
 
 type VodObj struct {
@@ -85,10 +85,10 @@ type VodObj struct {
 func checkForVOD() {
 	for true {
 		fmt.Println("==================Polling NOOVO API for the content==============")
-		logger.Log("Info", "Polling NOOVO API for the new content on the SAT")
+		//logger.Log("Info", "Polling NOOVO API for the new content on the SAT")
 		if err := callNoovoAPI(); err != nil {
 			log.Println(err)
-			logger.Log("Error", err.Error())
+			//logger.Log("Error", err.Error())
 		}
 		time.Sleep(interval * time.Minute)
 	}
@@ -128,14 +128,14 @@ func callNoovoAPI() error {
 			}
 			if err := downloadContent(vod, _heirarchy); err != nil {
 				log.Println(err)
-				logger.Log("Error", fmt.Sprintf("%s", err))
-				logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: FAILED")
+				//logger.Log("Error", fmt.Sprintf("%s", err))
+				//logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: FAILED")
 				continue
 			}
 			path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-			logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
-			logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
-			logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+			// logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
+			// logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+			// logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 		}
 	}
 	return nil
@@ -151,7 +151,7 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 	// 	_heirarchy = _heirarchy + x + "/"
 	// }
 	// _heirarchy = _heirarchy + vod.Content.UserDefined.MediaId + "/"
-	logger.Log("Info", "Downloading files for  "+_heirarchy+" via SES channel")
+	//logger.Log("Info", "Downloading files for  "+_heirarchy+" via SES channel")
 	// filesUrlMap of the files with the url
 	filesURLMap := make(map[string]string)
 	filesURLMap[filepath.Base(vod.Content.Pictures.Thumbnail.File.Filename)] = vod.Content.Pictures.Thumbnail.File.Filename
@@ -188,12 +188,14 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
 		fileInfos := make([][]string, metafilesLen+bulkfilesLen)
 		for i, x := range folderMetadataFilesMap[folder] {
+			fileInfos[i] = make([]string, 4)
 			fileInfos[i][0] = x.Name
 			fileInfos[i][1] = filesURLMap[pushId+"_"+folder+"_"+x.Name]
 			fileInfos[i][2] = x.Hashsum
 			fileInfos[i][3] = "metadata"
 		}
 		for i, x := range folderBulkFilesMap[folder] {
+			fileInfos[i] = make([]string, 4)
 			fileInfos[metafilesLen+i][0] = x.Name
 			fileInfos[metafilesLen+i][1] = filesURLMap[pushId+"_"+folder+"_"+x.Name]
 			fileInfos[metafilesLen+i][2] = x.Hashsum
@@ -209,7 +211,8 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 			if err.Error() == "[Filesystem][CreateFolder]A folder with the same name at the requested level already exists" {
 				continue
 			}
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			log.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		log.Println("")

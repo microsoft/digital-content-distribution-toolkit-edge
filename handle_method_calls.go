@@ -78,7 +78,8 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	}
 	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos)
 	if err != nil {
-		logger.Log("Error", fmt.Sprintf("%s", err))
+		//logger.Log("Error", fmt.Sprintf("%s", err))
+		log.Println("Error", fmt.Sprintf("%s", err))
 		return &pb.Response{Responsemessage: "Folder not downloaded"}, err
 	}
 	log.Println("")
@@ -88,7 +89,7 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 
 	//???
 	if len(fileInfos) == 0 {
-		logger.Log("Info", "Folder created. Download request does not have file infos ")
+		//logger.Log("Info", "Folder created. Download request does not have file infos ")
 		return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
 	}
 	//TODO: add telemetry
@@ -107,22 +108,26 @@ func DownloadFiles(filePath string, fileInfos [][]string) error {
 			continue
 		}
 		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			log.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err := DownloadFile(downloadpath, x[1])
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			log.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
-		calculatedHash, err := calculateSHA256(downloadpath)
-		if err != nil || calculatedHash != x[2] {
-			logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
+		err = matchSHA256(downloadpath, x[2])
+		if err != nil {
+			//logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
+			log.Println("Error", fmt.Sprintf("Hashsum did not match: %s", err.Error()))
 			return err
 		}
 		//store it in a file
-		if err := storeHashsum(downloadpath, calculatedHash); err != nil {
-			logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+		if err := storeHashsum(downloadpath, x[2]); err != nil {
+			//logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+			log.Println("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 			return err
 		}
 	}
@@ -149,13 +154,15 @@ func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.Delet
 	if delete_params.GetRecursive() {
 		err := fs.RecursiveDeleteFolder(strings.Split(folder_path, "/"))
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			log.Println("Error", fmt.Sprintf("%s", err))
 			return &pb.Response{Responsemessage: "Folder not deleted"}, err
 		}
 	} else {
 		err := fs.DeleteFolder(strings.Split(folder_path, "/"))
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			log.Println("Error", fmt.Sprintf("%s", err))
 			return &pb.Response{Responsemessage: "Folder not deleted"}, err
 		}
 	}
