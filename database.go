@@ -261,11 +261,11 @@ func setupDbForTesting() {
 
 	// create entries for testing
 	// Create directory strucutre
-	addFolder("MSR", "root", FolderStructureEntry{"FRIENDS", true, "metadata.xml"})
-	addFolder("MSR", "FRIENDS", FolderStructureEntry{"FS01", true, "metadata.xml"})
-	addFolder("MSR", "FRIENDS", FolderStructureEntry{"FS02", true, "metadata.xml"})
-	addFolder("MSR", "FS01", FolderStructureEntry{"FS01E01", false, "metadata.xml"})
-	addFolder("MSR", "FS02", FolderStructureEntry{"FS02E01", false, "metadata.xml"})
+	// addFolder("MSR", "root", FolderStructureEntry{"FRIENDS", true, "metadata.xml"})
+	// addFolder("MSR", "FRIENDS", FolderStructureEntry{"FS01", true, "metadata.xml"})
+	// addFolder("MSR", "FRIENDS", FolderStructureEntry{"FS02", true, "metadata.xml"})
+	// addFolder("MSR", "FS01", FolderStructureEntry{"FS01E01", false, "metadata.xml"})
+	// addFolder("MSR", "FS02", FolderStructureEntry{"FS02E01", false, "metadata.xml"})
 
 	// Create MetadataFile entries
 	addMetadataFiles("MSR", "FRIENDS", []FileEntry{FileEntry{Name: "cover.jpg", HashSum: "7440c1695f713cfc40e02c1f7f246cad718a0377d759fd298f7aed351edd4b3a"}, FileEntry{Name: "metadata.xml", HashSum: "7b4bb8b01c333e7fa8145bcec20244197c7763786ef47c9de962effb017d01de"}})
@@ -311,6 +311,8 @@ type FolderStructureEntry struct {
 	ID                   string
 	HasChildren          bool
 	InfoMetadataFileName string
+	Size                 int64
+	MetadataFiles        []string
 }
 
 //FileEntry File Information
