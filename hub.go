@@ -29,10 +29,10 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	//upstream_grpc_port, err := cfg.Section("GRPC").Key("UPSTREAM_PORT").Int()
-	// logger = cl.MakeLogger(upstream_grpc_port)
+	upstream_grpc_port, err := cfg.Section("GRPC").Key("UPSTREAM_PORT").Int()
+	logger = cl.MakeLogger(upstream_grpc_port)
 
-	//downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
+	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
 
 	name_length, err := cfg.Section("FILE_SYSTEM").Key("NAME_LENGTH").Int()
 	home_dir_location := cfg.Section("FILE_SYSTEM").Key("HOME_DIR_LOCATION").String()
@@ -59,7 +59,7 @@ func main() {
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
 	// Instantiate database connection to serve requests
 	if !createDatabaseConnection() {
-		//logger.Log("Critical", "Could not create database connection, no point starting the server")
+		logger.Log("Critical", "Could not create database connection, no point starting the server")
 		fmt.Println("Critical", "Could not create database connection, no point starting the server")
 		return
 	}
@@ -67,10 +67,12 @@ func main() {
 	// testCloudSyncServiceDownload()
 	// start a concurrent background service which checks if the files on the device are tampered with
 	wg.Add(1)
-	// go handle_method_calls(downstream_grpc_port, wg)
+	go handle_method_calls(downstream_grpc_port, wg)
 	go checkIntegrity()
 	go pollMstore()
 	//testMstore()
+	//go check()
+
 	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")
