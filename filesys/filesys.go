@@ -3,6 +3,7 @@ package filesys
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -11,14 +12,6 @@ import (
 
 	bolt "github.com/boltdb/bolt"
 )
-
-type FolderExistError struct {
-	Err error
-}
-
-func (e *FolderExistError) Error() string {
-	return e.Err.Error()
-}
 
 const letterBytes = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -476,7 +469,6 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 	}
 	if stringInSlice(current_children, string(folder_name)) {
 		return fmt.Errorf("[Filesystem][CreateFolder] %s", "A folder with the same name at the requested level already exists")
-		//return &FolderExistError{fmt.Errorf("[Filesystem][CreateFolder] %s", "A folder with the same name at the requested level already exists")}
 	}
 
 	// create the actual folder
@@ -529,6 +521,53 @@ func (fs *FileSystem) GetHomeDirLocation() string {
 func (fs *FileSystem) GetNodeLength() int {
 	return fs.nodeLength
 }
+
+func (fs *FileSystem) GetChildrenInfo(path string, pfunc process_child_func) ([][]interface{}, error) {
+	hierarchy := strings.Split(strings.Trim(path, "/"), "/")
+	fmt.Println("trying to find hierarchy", strings.Trim(path, "/"))
+	node, err := fs.getNodeForPath(hierarchy)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("String node: ", string(node))
+	children, err := fs.GetChildrenForNode(node)
+	if err != nil {
+		return nil, err
+	}
+
+	children_info := make([][]interface{}, (len(children)/fs.nodeLength)-1)
+	for i := 0; i < len(children_info); i += 1 {
+		child := children[(i+1)*fs.nodeLength : (i+2)*fs.nodeLength]
+		actual_path := filepath.Join(fs.homeDirLocation, string(fs.homeNode), string(child))
+
+		children_info[i] = make([]interface{}, 0)
+		folder_name, err := fs.GetFolderNameForNode(child)
+		children_info[i] = append(children_info[i], folder_name)
+
+		child_ret, err := pfunc(actual_path)
+		if err != nil {
+			return nil, err
+		}
+		children_info[i] = append(children_info[i], child_ret...)
+	}
+
+	return children_info, nil
+}
+
+func (fs *FileSystem) IsLeaf(actual_path_folder string) (bool, error) {
+	fmt.Println("Checking IsLeaf for ", actual_path_folder)
+	paths := strings.Split(actual_path_folder, "/")
+	if len(paths) < 2 {
+		return false, errors.New("Invalid path: " + actual_path_folder)
+	}
+	children, err := fs.GetChildrenForNode([]byte(paths[1]))
+	if err != nil {
+		return false, err
+	}
+
+	return len(children) == fs.nodeLength, nil
+}
+
 func (fs *FileSystem) PrintBuckets() {
 	fs.nodesDB.View(func(tx *bolt.Tx) error {
 		fmt.Println("--------------------")
