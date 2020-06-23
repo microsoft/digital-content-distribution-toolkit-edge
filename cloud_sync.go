@@ -87,7 +87,7 @@ func downloadFolder(downloadCommandBytes []byte) error {
 		if downloadCommand.HasChildren {
 			println(downloadCommand.ID + " has children")
 		}
-		err = addFolder(downloadCommand.MediaHouse, parentNode.Level, FolderStructureEntry{downloadCommand.ID, downloadCommand.HasChildren, ""})
+		err = addFolder(downloadCommand.MediaHouse, parentNode.Level, FolderStructureEntry{downloadCommand.ID, downloadCommand.HasChildren, "", 0, []string{}})
 		if err != nil {
 			return err
 		}
