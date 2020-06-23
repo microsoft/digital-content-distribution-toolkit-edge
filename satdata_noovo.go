@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const interval time.Duration = 20
+//const interval time.Duration = 20
 const source string = "mstore"
 
 type VodObj struct {
@@ -82,7 +82,7 @@ type VodObj struct {
 	} `json:"content"`
 }
 
-func checkForVOD() {
+func pollNoovo(interval time.Duration) {
 	for true {
 		fmt.Println("==================Polling NOOVO API for the content==============")
 		//logger.Log("Info", "Polling NOOVO API for the new content on the SAT")

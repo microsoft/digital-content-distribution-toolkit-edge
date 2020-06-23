@@ -65,12 +65,12 @@ type VodInfo struct {
 	} `json:"metadata"`
 }
 
-func pollMstrore() {
+func pollMstore(interval time.Duration) {
 	for true {
 		fmt.Println("==================Polling MStore API ==============")
 		if err := checkForVODViaMstore(); err != nil {
 			log.Println(err)
-			//logger.Log("Error", err.Error())
+			logger.Log("Error", err.Error())
 		}
 		time.Sleep(interval * time.Minute)
 	}
@@ -97,7 +97,7 @@ func checkForVODViaMstore() error {
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
 			log.Println(err)
-			//logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", fmt.Sprintf("%s", err))
 			//return err
 			continue
 		}
@@ -142,10 +142,10 @@ func getMstoreFiles(vod VodInfo) error {
 	}
 	_heirarchy = _heirarchy + vod.Metadata.UserDefined.MediaId + "/"
 	path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
-	// if path != "" {
-	// 	log.Println(_heirarchy + " already exist.")
-	// 	return errors.New(_heirarchy + " already exist.")
-	// }
+	if path != "" {
+		log.Println(_heirarchy + " already exist.")
+		return errors.New(_heirarchy + " already exist.")
+	}
 	filepathMap := make(map[string]string)
 	filepathMap[filepath.Base(vod.Metadata.ThumbnailFilename)] = vod.Metadata.ThumbnailFilename
 	filepathMap[filepath.Base(vod.Metadata.CoverFilename)] = vod.Metadata.CoverFilename
@@ -201,7 +201,7 @@ func getMstoreFiles(vod VodInfo) error {
 			if err.Error() == "[Filesystem][CreateFolder] A folder with the same name at the requested level already exists" {
 				continue
 			}
-			//logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", fmt.Sprintf("%s", err))
 			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
@@ -211,9 +211,9 @@ func getMstoreFiles(vod VodInfo) error {
 		log.Println("")
 	}
 	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-	// logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
-	// logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
-	// logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+	logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
+	logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+	logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"MB downloaded on the Hub")
 	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
 	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
@@ -234,25 +234,25 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 		}
 		fmt.Println(downloadpath)
 		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
-			//logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", fmt.Sprintf("%s", err))
 			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err := copySingleFile(downloadpath, x[1])
 		if err != nil {
-			//logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", fmt.Sprintf("%s", err))
 			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err = matchSHA256(downloadpath, x[2])
 		if err != nil {
-			//logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
+			logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
 			fmt.Println("Error", fmt.Sprintf(err.Error()))
 			return err
 		}
 		//store it in a file
 		if err := storeHashsum(downloadpath, x[2]); err != nil {
-			//logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+			logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 			fmt.Println("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 			return err
 		}

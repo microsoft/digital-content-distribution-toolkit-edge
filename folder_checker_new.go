@@ -12,11 +12,11 @@ import (
 	"time"
 )
 
-const _interval time.Duration = 120
+//const _interval time.Duration = 120
 
-func checkIntegrity() {
+func checkIntegrity(interval time.Duration) {
 	for true {
-		time.Sleep(_interval * time.Second)
+		time.Sleep(interval * time.Minute)
 		fmt.Println("Info", "Checking files integrity from background thread")
 		fmt.Println("------------------------------------------------")
 		children, _ := fs.GetChildrenForNode(fs.GetHomeNode())
@@ -33,8 +33,8 @@ func checkIntegrity() {
 			//fmt.Println(c, t)
 			fmt.Println("Telemetry", "[IntegityStats] "+folder_name+" :Total no. of files checked: "+strconv.Itoa(t))
 			fmt.Println("Telemetry", "[IntegityStats] "+folder_name+" :No. of files corrupted: "+strconv.Itoa(c))
-			// logger.Log("Telemetry", "[IntegityStats] "+folder_name+" Total no. of files checked: "+strconv.Itoa(t))
-			// logger.Log("Telemetry", "[IntegityStats] "+folder_name+" No. of files corrupted: "+strconv.Itoa(c))
+			logger.Log("Telemetry", "[IntegityStats] "+folder_name+" Total no. of files checked: "+strconv.Itoa(t))
+			logger.Log("Telemetry", "[IntegityStats] "+folder_name+" No. of files corrupted: "+strconv.Itoa(c))
 		}
 	}
 }
@@ -66,13 +66,13 @@ func checkfiles(folderpath string) int {
 		if f_err != nil {
 			fmt.Println("Could not open hashsum.txt file", f_err)
 		}
-		fmt.Println(hashsummap)
+		//fmt.Println(hashsummap)
 		files, _ := ioutil.ReadDir(filepath.Join(folderpath, "metadatafiles"))
 		for _, file := range files {
 			if file.Name() == "hashsum.txt" {
 				continue
 			}
-			fmt.Println(filepath.Join(folderpath, "metadatafiles", file.Name()))
+			//fmt.Println(filepath.Join(folderpath, "metadatafiles", file.Name()))
 			err = matchSHA256(filepath.Join(folderpath, "metadatafiles", file.Name()), hashsummap[file.Name()])
 			if err != nil {
 				fmt.Println("Telemetry", "[IntegrityStats] "+filepath.Join(folderpath, "metadatafiles", file.Name())+" marked for deletion")
@@ -86,7 +86,7 @@ func checkfiles(folderpath string) int {
 		if f_err != nil {
 			fmt.Println("Could not open hashsum.txt file", f_err)
 		}
-		fmt.Println(hashsummap)
+		//fmt.Println(hashsummap)
 		files, _ := ioutil.ReadDir(filepath.Join(folderpath, "bulkfiles"))
 		for _, file := range files {
 			if file.Name() == "hashsum.txt" {
@@ -113,9 +113,7 @@ func gethashsum(folderpath string) (map[string]string, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
-		//fmt.Println(line)
 		linestrA := regexp.MustCompile(`[=>]`).Split(line, -1)
-		//fmt.Println(linestrA)
 		hashmap[linestrA[0]] = linestrA[2]
 	}
 	return hashmap, nil

@@ -10,6 +10,7 @@ import (
 	"gopkg.in/ini.v1"
 
 	filesys "./filesys"
+	cl "./logger"
 )
 
 // TODO: Implement remote update of code
@@ -17,7 +18,7 @@ import (
 // TODO: Implement Acknowledgement of content update
 // TODO: Have HUB ID (speak to Cloud which Vinod will write)
 // TODO: Add unit tests to go functions
-// var logger cl.Logger
+var logger cl.Logger
 var fs *filesys.FileSystem
 
 func main() {
@@ -63,13 +64,23 @@ func main() {
 		fmt.Println("Critical", "Could not create database connection, no point starting the server")
 		return
 	}
+
 	//setupDbForTesting()
 	// testCloudSyncServiceDownload()
 	// start a concurrent background service which checks if the files on the device are tampered with
 	wg.Add(1)
 	go handle_method_calls(downstream_grpc_port, wg)
-	go checkIntegrity()
-	go pollMstore()
+	integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Duration()
+	go checkIntegrity(integrityCheckInterval)
+	satApiCmd := cfg.Section("DEVICE_INFO").Key("SAT_API_SWITCH").String()
+	getdata_interval, err := cfg.Section("DEVICE_INFO").Key("MSTORE_SCHEDULER").Duration()
+	switch satApiCmd {
+	case "noovo":
+		go pollNoovo(getdata_interval)
+	case "mstore":
+		go pollMstore(getdata_interval)
+	}
+	//go pollMstore()
 	//testMstore()
 	//go check()
 
