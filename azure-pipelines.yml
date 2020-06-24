@@ -16,7 +16,12 @@ steps:
 - task: Go@0
   inputs:
     command: 'get'
-    arguments: '-u github.com/golang/protobuf/{proto,protoc-gen-go}'
+    arguments: '-u github.com/golang/protobuf/proto'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: '-u github.com/golang/protobuf/protoc-gen-go'
     workingDirectory: '$(System.DefaultWorkingDirectory)'
 - task: Go@0
   inputs:
