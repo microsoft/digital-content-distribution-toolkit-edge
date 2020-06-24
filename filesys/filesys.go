@@ -3,7 +3,6 @@ package filesys
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -555,18 +554,42 @@ func (fs *FileSystem) GetChildrenInfo(path string, pfunc process_child_func) ([]
 }
 
 func (fs *FileSystem) IsLeaf(actual_path_folder string) (bool, error) {
-	fmt.Println("Checking IsLeaf for ", actual_path_folder)
-	paths := strings.Split(actual_path_folder, "/")
-	if len(paths) < 2 {
-		return false, errors.New("Invalid path: " + actual_path_folder)
+	if _, err := os.Stat(actual_path_folder); os.IsNotExist(err) {
+		return false, fmt.Errorf("[Filesystem][IsLeaf] %s", err)
 	}
-	children, err := fs.GetChildrenForNode([]byte(paths[1]))
-	if err != nil {
+
+	hierarchy := strings.Split(strings.Trim(actual_path_folder, "/"), "/")
+	children, err := fs.GetChildrenForNode([]byte(hierarchy[len(hierarchy) - 1]))
+	if(err != nil) {
 		return false, err
 	}
 
 	return len(children) == fs.nodeLength, nil
 }
+
+func (fs *FileSystem) postOrderTraversal(root []byte) []string {
+	folder_name, _ := fs.GetFolderNameForNode(root)
+
+	children, _ := fs.GetChildrenForNode(root)
+
+	if len(children) == fs.nodeLength {
+		return []string{folder_name}
+	}
+
+	ans := []string{}
+	for i := 0; i < len(children); i += fs.nodeLength {
+		if(i == 0) {
+			continue
+		}
+		ans = append(ans, fs.postOrderTraversal(children[i: i + fs.nodeLength])...)
+	}
+
+	return ans;
+}
+
+func (fs *FileSystem) GetLeavesList() []string {
+	return fs.postOrderTraversal(fs.homeNode)
+} 
 
 func (fs *FileSystem) PrintBuckets() {
 	fs.nodesDB.View(func(tx *bolt.Tx) error {
