@@ -15,12 +15,16 @@ import commands_pb2_grpc
 from azure.iot.device import IoTHubDeviceClient, Message
 from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
 
+from provision import *
+
 config = configparser.ConfigParser()
 # CONNECTION_STRING = "HostName=gohub.azure-devices.net;DeviceId=MyPythonDevice;SharedAccessKey=zA2DAirXTqJ0TGkpf+8fTLYVCxC3YlPJsO+UUO2QS98="
 
-def iothub_client_init():
+async def iothub_client_init():
     # Create an IoT Hub client
-    client = IoTHubDeviceClient.create_from_connection_string(config.get("DEVICE_INFO", "IOT_DEVICE_CONNECTION_STRING"))
+    # client = IoTHubDeviceClient.create_from_connection_string(config.get("DEVICE_INFO", "IOT_DEVICE_CONNECTION_STRING"))
+    # return client
+    client = await provision()
     return client
 
 
@@ -31,6 +35,7 @@ class LogServicer(logger_pb2_grpc.LogServicer):
         self.iot_client = iot_client
 
     def SendSingleLog(self, request, context):
+        print(f'Sending telemetry from the provisioned device')
         message = Message("[{}]{}".format(request.logtype, request.logstring))
         print(message)
         self.iot_client.send_message(message)
@@ -130,7 +135,7 @@ def listen_for_method_calls(iot_client):
 if __name__ == '__main__':
     config.read('hub_config.ini')
     print(config.sections())
-    iot_client = iothub_client_init()
+    iot_client = asyncio.run(iothub_client_init())
     telemetry_pool = futures.ThreadPoolExecutor(1)
     telemetry_pool.submit(send_upstream_messages, iot_client)
     print("came here...")

@@ -1,17 +1,32 @@
 <html>
   <head>
-    <title>Flask Intro - login page</title>
+    <title>Login page</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="static/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="static/bootstrap.min.css" rel="stylesheet" media="screen">  
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
   </head>
   <body>
     <div class="container">
-      <h1>Please login</h1>
+	    <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+             <h1 class="navbar-brand">Please Register</h1>
+	    </nav>
       <br>
       <form action="" method="post">
-        <!-- <input type="text" placeholder="Phone Number" name="username" value="{{request.form.username }}"> -->
-         <input type="password" placeholder="Password" name="password" value="{{request.form.password }}">
-        <input class="btn btn-default" type="submit" value="Login">
+	      <div class="form-group">
+		   <input type="text" class="form-control"  placeholder="Store Name" name="name" value="{{request.form.name }}">
+	      </div>
+	      <div class="form-group">
+                   <input type="text" class="form-control" placeholder="Store Location" name="location" value="{{request.form.location }}">
+              </div>
+	      <div class="form-group">
+                   <input type="text" class="form-control" placeholder="Phone Number" name="phonenumber" value="{{request.form.phonenumber }}">
+              </div>
+	       <div>
+		   <input class="btn btn-primary" type="submit" value="Register">
+              </div>
       </form>
       {% if error %}
         <p class="error"><strong>Error:</strong> {{ error }}

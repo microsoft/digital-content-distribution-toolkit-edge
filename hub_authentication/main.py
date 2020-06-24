@@ -17,9 +17,22 @@ def home():
 def start():
     error = None
     if request.method == 'POST':
-        if request.form['password'] != config.get("HUB_AUTHENTICATION", "HUB_TOKEN"):
-            error = 'Invalid Credentials. Please try again.'
+        if len(request.form['name']) == 0 or len(request.form['location']) == 0 or len(request.form['phonenumber']) == 0 :
+            error = 'Invalid Name or Store location or Phone Number'
         else:
+            name = request.form['name']
+            location = request.form['location']
+            phonenumber = request.form['phonenumber']
+            hubDetails = open('../device_sdk/hubdetails.ini', 'w+') 
+            name_config = f'customer_name={name}\n'
+            location_config = f'location={location}\n'
+            phonenumber_config = f'phonenumber={phonenumber}\n'
+            hubDetails.write("[customer_details]\n") 
+            hubDetails.write(name_config)
+            hubDetails.write(location_config)
+            hubDetails.write(phonenumber_config)
+            hubDetails.close() 
+            error = None
             return redirect(url_for('home'))
     return render_template('login.html', error=error)
 
