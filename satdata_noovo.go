@@ -224,13 +224,7 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 	return nil
 
 }
-func lastString(text string, separator string) string {
-	last := strings.Split(text, separator)
-	if len(last) > 0 {
-		return last[len(last)-1]
-	}
-	return ""
-}
+
 func dummyTest() error {
 	fmt.Println("TEST")
 	file, err := os.Open("test/sampleResp.json")

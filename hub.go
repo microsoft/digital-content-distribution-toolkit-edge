@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/ini.v1"
 
 	filesys "./filesys"
+	keymanager "./keymanager"
 	cl "./logger"
 )
 
@@ -20,11 +21,12 @@ import (
 // TODO: Add unit tests to go functions
 var logger cl.Logger
 var fs *filesys.FileSystem
+var km *keymanager.KeyManager
 
 func main() {
 	cfg, err := ini.Load("hub_config.ini")
 	if err != nil {
-		fmt.Printf("Fail to read config file: %v", err)
+		fmt.Printf("Failed to read config file: %v", err)
 		os.Exit(1)
 	}
 
@@ -40,8 +42,7 @@ func main() {
 	boltdb_location := cfg.Section("FILE_SYSTEM").Key("BOLTDB_LOCATION").String()
 	fs, err = filesys.MakeFileSystem(name_length, home_dir_location, boltdb_location)
 	if err != nil {
-		//logger.Log("Error", fmt.Sprintf("%s", err))
-		log.Println("Error", fmt.Sprintf("%s", err))
+		logger.Log("Error", fmt.Sprintf("Failed to setup filesys: %s", err))
 		os.Exit(1)
 	}
 	defer fs.Close()
@@ -50,8 +51,7 @@ func main() {
 	if initflag {
 		err = fs.InitFileSystem()
 		if err != nil {
-			//logger.Log("Error", fmt.Sprintf("%s", err))
-			log.Println("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", fmt.Sprintf("Failed to setup filesys: %s", err))
 			os.Exit(1)
 		}
 	}
@@ -83,6 +83,23 @@ func main() {
 	//go pollMstore()
 	//testMstore()
 	//go check()
+
+	// setup key manager and load keys
+	pubkeys_dir := cfg.Section("APP_AUTHENTICATION").Key("PUBLIC_KEY_STORE_PATH").String()
+	keys_cache_size, err := cfg.Section("APP_AUTHENTICATION").Key("KEY_MANAGER_CACHE_SIZE").Int()
+
+	km, _ = keymanager.MakeKeyManager(keys_cache_size)
+	err = filepath.Walk(pubkeys_dir, func(path string, info os.FileInfo, err error) error {
+		if filepath.Ext(path) == ".pem" {
+			km.AddKey(path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		logger.Log("Error", fmt.Sprintf("Failed to setup keymanager: %s", err))
+		os.Exit(1)
+	}
 
 	// set up the web server and routes
 	router := gin.Default()
