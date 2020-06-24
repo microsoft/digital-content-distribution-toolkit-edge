@@ -1,0 +1,22 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- script: |
+    echo ${{ variables.GOARCH }}
+    echo ${{ variables.GOOS }}
+    echo '##vso[task.setvariable variable=GOARCH]arm64'
+    echo '##vso[task.setvariable variable=GOOS]linux'
+  displayName: "Setting Go build environment variables"
+- task: Go@0
+  inputs:
+    command: 'build'
+    arguments: '-o bine_arm'
