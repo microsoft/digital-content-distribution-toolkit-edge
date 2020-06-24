@@ -19,9 +19,9 @@ const lengthOfInt64Bytes int = 8
 // Route 1: "/list/files/:parent" returns the children and their metadata of :parent
 func setupRoutes(ginEngine *gin.Engine) {
 	ginEngine.Static("/static", "./")
-	ginEngine.GET("/metadata/", serveSingleMetadata)
-	ginEngine.GET("/list/files/", serveMetadata)
-	ginEngine.GET("/download/files", serveFile)
+	ginEngine.GET("/metadata/", AuthRequiredMiddleware, serveSingleMetadata)
+	ginEngine.GET("/list/files/", AuthRequiredMiddleware, serveMetadata)
+	ginEngine.GET("/download/files", AuthRequiredMiddleware, serveFile)
 	fs.PrintFileSystem()
 }
 

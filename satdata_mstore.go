@@ -196,13 +196,13 @@ func getMstoreFiles(vod VodInfo) error {
 			}
 		}
 		if !present {
-			if err := addFolder(mediaHouse, ancestorIds[i], FolderStructureEntry{ancestorIds[i+1], true, "bine_metadata.json"}); err != nil {
+			if err := addFolder(mediaHouse, ancestorIds[i], FolderStructureEntry{ancestorIds[i+1], true, "bine_metadata.json", 0, []string{}}); err != nil {
 				return err
 			}
 		}
 	}
 	// update dir str for the VOD(leaf node)
-	if err := addFolder(mediaHouse, ancestorIds[len(ancestorIds)-1], FolderStructureEntry{id, false, "bine_metadata.json"}); err != nil {
+	if err := addFolder(mediaHouse, ancestorIds[len(ancestorIds)-1], FolderStructureEntry{id, false, "bine_metadata.json", 0, []string{}}); err != nil {
 		return err
 	}
 	return nil
