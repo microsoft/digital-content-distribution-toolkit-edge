@@ -10,6 +10,9 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
+- task: GoTool@0
+  inputs:
+    version: '1.14.2'
 - task: Go@0
   inputs:
     command: 'get'
