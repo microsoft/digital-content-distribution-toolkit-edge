@@ -52,6 +52,8 @@ steps:
 - script: |
     echo ${{ variables.GOARCH }}
     echo ${{ variables.GOOS }}
+    echo $GOARCH
+    echo $GOOS
   displayName: "Setting Go build environment variables"
 - task: Go@0 
   inputs:
