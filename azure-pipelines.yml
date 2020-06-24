@@ -43,12 +43,13 @@ steps:
     command: 'get'
     arguments: 'gopkg.in/ini.v1'
     workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: '-u github.com/dgrijalva/jwt-go'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
 
 - script: |
-    echo ${{ variables.GOARCH }}
-    echo ${{ variables.GOOS }}
-    echo '##vso[task.setvariable variable=GOARCH]arm64'
-    echo '##vso[task.setvariable variable=GOOS]linux'
     echo ${{ variables.GOARCH }}
     echo ${{ variables.GOOS }}
   displayName: "Setting Go build environment variables"
