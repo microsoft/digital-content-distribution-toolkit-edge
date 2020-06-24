@@ -25,9 +25,6 @@ type relayCommandServer struct {
 }
 
 func DownloadFile(filepath, url string) error {
-	// This is just a place holder, Archie will replace it
-	fmt.Println("Downloading file from : " + url)
-	fmt.Println("Downloading to::::", filepath)
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -39,6 +36,8 @@ func DownloadFile(filepath, url string) error {
 		return err
 	}
 	defer f.Close()
+	fmt.Println("Downloading file from : " + url)
+	fmt.Println("Downloading to::::", filepath)
 	fileLen, err := strconv.Atoi(resp.Header.Get("Content-Length"))
 	progressWriter := &ProgressWriter{}
 	progressWriter.Total = int64(fileLen / 1024 / 1024)
@@ -47,6 +46,7 @@ func DownloadFile(filepath, url string) error {
 }
 
 func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.DownloadParams) (*pb.Response, error) {
+	//for _, download_param := range download_params
 	log.Println(download_params.GetFolderpath())
 	hierarchy := strings.Split(strings.Trim(download_params.GetFolderpath(), "/"), "/")
 	log.Println(hierarchy)
@@ -76,20 +76,26 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		fileInfos[metafilesLen+i][2] = (*x).Hashsum
 		fileInfos[metafilesLen+i][3] = "bulkfile"
 	}
-	err := fs.CreateDownloadNewFolder(hierarchy, downloadFiles, fileInfos)
+	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos)
 	if err != nil {
-		logger.Log("Error", fmt.Sprintf("%s", err))
+		//logger.Log("Error", fmt.Sprintf("%s", err))
+		log.Println("Error", fmt.Sprintf("%s", err))
 		return &pb.Response{Responsemessage: "Folder not downloaded"}, err
 	}
-
 	log.Println("")
 	fs.PrintBuckets()
 	fs.PrintFileSystem()
 	log.Println("")
 
+	//???
+	if len(fileInfos) == 0 {
+		//logger.Log("Info", "Folder created. Download request does not have file infos ")
+		return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
+	}
+	//TODO: add telemetry
 	return &pb.Response{Responsemessage: "Folder downloaded"}, nil
 }
-func downloadFiles(filePath string, fileInfos [][]string) error {
+func DownloadFiles(filePath string, fileInfos [][]string) error {
 	for _, x := range fileInfos {
 		var downloadpath string
 		switch x[3] {
@@ -102,25 +108,27 @@ func downloadFiles(filePath string, fileInfos [][]string) error {
 			continue
 		}
 		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			log.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err := DownloadFile(downloadpath, x[1])
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			log.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
-		calculatedHash, err := calculateSHA256(downloadpath)
-		// fmt.Println("calculated hash:", calculatedHash)
-		// fmt.Println("actual hash:", x[2])
-		if err != nil || calculatedHash != x[2] {
-			logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
+		err = matchSHA256(downloadpath, x[2])
+		if err != nil {
+			//logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
+			log.Println("Error", fmt.Sprintf("Hashsum did not match: %s", err.Error()))
 			return err
 		}
 		//store it in a file
-		if err := storeHashsum(downloadpath, calculatedHash); err != nil {
-			logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
-			//return err
+		if err := storeHashsum(downloadpath, x[2]); err != nil {
+			//logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+			log.Println("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+			return err
 		}
 	}
 	return nil
@@ -146,13 +154,15 @@ func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.Delet
 	if delete_params.GetRecursive() {
 		err := fs.RecursiveDeleteFolder(strings.Split(folder_path, "/"))
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			log.Println("Error", fmt.Sprintf("%s", err))
 			return &pb.Response{Responsemessage: "Folder not deleted"}, err
 		}
 	} else {
 		err := fs.DeleteFolder(strings.Split(folder_path, "/"))
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			//logger.Log("Error", fmt.Sprintf("%s", err))
+			log.Println("Error", fmt.Sprintf("%s", err))
 			return &pb.Response{Responsemessage: "Folder not deleted"}, err
 		}
 	}

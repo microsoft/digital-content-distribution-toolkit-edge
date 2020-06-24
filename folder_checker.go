@@ -53,6 +53,7 @@ func navigate(node string) {
 		}
 	}
 	fmt.Println("Telemetry", "==========DONE Checking "+node+" ==========")
+	//logger.Log("Telemetry", "==========DONE Checking "+node+" ==========")
 	children := getChildren("MSR", node)
 	for i := 0; i < len(children); i++ {
 		fmt.Println("CALLING CHECK ON CHILD: ", children[i].ID)

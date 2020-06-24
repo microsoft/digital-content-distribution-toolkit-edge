@@ -3,15 +3,15 @@ package main
 import (
 	"fmt"
 	"os"
-	"sync"
 	"path/filepath"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/ini.v1"
 
 	filesys "./filesys"
-	cl "./logger"
 	keymanager "./keymanager"
+	cl "./logger"
 )
 
 // TODO: Implement remote update of code
@@ -47,39 +47,55 @@ func main() {
 	}
 	defer fs.Close()
 
-	err = fs.InitFileSystem()
-	if err != nil {
-		logger.Log("Error", fmt.Sprintf("Failed to setup filesys: %s", err))
-		os.Exit(1)
+	initflag, err := cfg.Section("DEVICE_INFO").Key("INIT_FILE_SYSTEM").Bool()
+	if initflag {
+		err = fs.InitFileSystem()
+		if err != nil {
+			logger.Log("Error", fmt.Sprintf("Failed to setup filesys: %s", err))
+			os.Exit(1)
+		}
 	}
 
-	logger.Log("Info", "All first level info being sent to iot-hub...")
+	// logger.Log("Info", "All first level info being sent to iot-hub...")
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
 	// Instantiate database connection to serve requests
 	if !createDatabaseConnection() {
-		//logger.Log("Critical", "Could not create database connection, no point starting the server")
+		logger.Log("Critical", "Could not create database connection, no point starting the server")
 		fmt.Println("Critical", "Could not create database connection, no point starting the server")
 		return
 	}
+
 	//setupDbForTesting()
 	// testCloudSyncServiceDownload()
 	// start a concurrent background service which checks if the files on the device are tampered with
 	wg.Add(1)
 	go handle_method_calls(downstream_grpc_port, wg)
-	go check()
+	integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Duration()
+	go checkIntegrity(integrityCheckInterval)
+	satApiCmd := cfg.Section("DEVICE_INFO").Key("SAT_API_SWITCH").String()
+	getdata_interval, err := cfg.Section("DEVICE_INFO").Key("MSTORE_SCHEDULER").Duration()
+	switch satApiCmd {
+	case "noovo":
+		go pollNoovo(getdata_interval)
+	case "mstore":
+		go pollMstore(getdata_interval)
+	}
+	//go pollMstore()
+	//testMstore()
+	//go check()
 
 	// setup key manager and load keys
 	pubkeys_dir := cfg.Section("APP_AUTHENTICATION").Key("PUBLIC_KEY_STORE_PATH").String()
 	keys_cache_size, err := cfg.Section("APP_AUTHENTICATION").Key("KEY_MANAGER_CACHE_SIZE").Int()
-	
+
 	km, _ = keymanager.MakeKeyManager(keys_cache_size)
 	err = filepath.Walk(pubkeys_dir, func(path string, info os.FileInfo, err error) error {
 		if filepath.Ext(path) == ".pem" {
 			km.AddKey(path)
 		}
-        return nil
+		return nil
 	})
-	
+
 	if err != nil {
 		logger.Log("Error", fmt.Sprintf("Failed to setup keymanager: %s", err))
 		os.Exit(1)

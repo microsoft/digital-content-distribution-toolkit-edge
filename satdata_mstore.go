@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 )
 
 type VodList struct {
@@ -22,60 +25,58 @@ type VodList struct {
 type VodInfo struct {
 	Status   string `json:"status"`
 	Metadata struct {
-		EditorID              string `json:"editorID"`
-		DisplayedName         string `json:"displayedName"`
-		Category              string `json:"category"`
-		ShortSummary          string `json:"shortSummary"`
-		ProductionNationality string `json:"productionNationality"`
-		ShortTitle            string `json:"shortTitle"`
-		LongTitle             string `json:"longTitle"`
-		Series                string `json:"series"`
-		UserDefined           struct {
-			MediaHouse       string `json:"mediaHouse"`
-			GenreDescription string `json:"genreDescription"`
-			Description      string `json:"description"`
-			IsDRM            bool   `json:"isDRM"`
-			GenreTitle       string `json:"genreTitle"`
-			MediaId          string `json:"mediaId"`
-			ParentId         string `json:"parentId"`
-			Title            string `json:"title"`
-			ParentTitle      string `json:"parentTitle"`
-			MetadataFiles    struct {
-				File []struct {
-					Filename string `json:"filename"`
-					Checksum string `json:"checksum"`
-					Filesize int    `json:"filesize"`
-					FolderId string `json:"folderId"`
-					Type     string `json:"type"`
-				} `json:"file"`
-			} `json:"metadataFiles"`
-			PushId      int `json:"pushId"`
+		UserDefined struct {
+			MediaId     string `json:"mediaId"`
+			MediaHouse  string `json:"mediaHouse"`
 			AncestorIds struct {
 				File []string `json:"file"`
 			} `json:"ancestorIds"`
-			HierarchyLevels int `json:"hierarchyLevels"`
-			BulkFiles       struct {
+			MetadataFiles struct {
+				File []struct {
+					Filename string `json:"filename"`
+					Filesize int    `json:"filesize"`
+					Checksum string `json:"checksum"`
+					FolderId string `json:"folderId"`
+				} `json:"file"`
+			} `json:"metadataFiles"`
+			BulkFiles struct {
 				File struct {
 					Filename string `json:"filename"`
-					Checksum string `json:"checksum"`
 					Filesize int    `json:"filesize"`
+					Checksum string `json:"checksum"`
 					FolderId string `json:"folderId"`
-					Type     string `json:"type"`
 				} `json:"file"`
 			} `json:"bulkFiles"`
+			PushId int `json:"pushId"`
 		} `json:"userDefined"`
-		MovieId           string `json:"movieID"`
-		Price             string `json:"price"`
-		CID               string `json:"CID"`
-		VideoFilename     string `json:"video filename"`
-		TrailerFilename   string `json:"trailer filename"`
-		CoverFilename     string `json:"cover filename"`
+		MovieId         string `json:"movieID"`
+		CID             string `json:"CID"`
+		VideoFilename   string `json:"video filename"`
+		TrailerFilename string `json:"trailer filename"`
+		CoverFilename   string `json:"cover filename"`
+		URLForDataFiles string `json:"urlForDataFiles"`
+		DataFiles       struct {
+			File []struct {
+				Filename string `json:"filename"`
+				Filesize int    `json:"filesize"`
+			} `json:"file"`
+		} `json:"dataFiles"`
 		ThumbnailFilename string `json:"thumbnail filename"`
 	} `json:"metadata"`
 }
 
+func pollMstore(interval time.Duration) {
+	for true {
+		fmt.Println("==================Polling MStore API ==============")
+		if err := checkForVODViaMstore(); err != nil {
+			log.Println(err)
+			logger.Log("Error", err.Error())
+		}
+		time.Sleep(interval * time.Minute)
+	}
+}
 func checkForVODViaMstore() error {
-	res, err := http.Get("http://localhost:8134/listcontentsbycategory/MSR")
+	res, err := http.Get("http://localhost:8134/listcontents")
 	if err != nil {
 		return err
 	}
@@ -95,7 +96,8 @@ func checkForVODViaMstore() error {
 		fmt.Println("======= Processing for CID=======", id.ContentID)
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
+			logger.Log("Error", fmt.Sprintf("%s", err))
 			//return err
 			continue
 		}
@@ -130,108 +132,129 @@ func getMetadataAPI(contentId string) error {
 }
 
 func getMstoreFiles(vod VodInfo) error {
-	id := vod.Metadata.UserDefined.MediaId
-	mediaHouse := vod.Metadata.UserDefined.MediaHouse
 	pushId := strconv.Itoa(vod.Metadata.UserDefined.PushId)
+	_heirarchy := vod.Metadata.UserDefined.MediaHouse + "/"
+	for i, x := range vod.Metadata.UserDefined.AncestorIds.File {
+		if i == 0 {
+			continue
+		}
+		_heirarchy = _heirarchy + x + "/"
+	}
+	_heirarchy = _heirarchy + vod.Metadata.UserDefined.MediaId + "/"
+	path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
+	if path != "" {
+		log.Println(_heirarchy + " already exist.")
+		return errors.New(_heirarchy + " already exist.")
+	}
 	filepathMap := make(map[string]string)
-	//TODO: Check if id already exist or not
-	fmt.Println("Downloading files for MediaHouse:: ", mediaHouse, " Content ID::", id)
-	filepathMap[lastString(vod.Metadata.ThumbnailFilename, "/")] = vod.Metadata.ThumbnailFilename
-	filepathMap[lastString(vod.Metadata.CoverFilename, "/")] = vod.Metadata.CoverFilename
-	filepathMap[lastString(vod.Metadata.VideoFilename, "/")] = vod.Metadata.VideoFilename
+	filepathMap[filepath.Base(vod.Metadata.ThumbnailFilename)] = vod.Metadata.ThumbnailFilename
+	filepathMap[filepath.Base(vod.Metadata.CoverFilename)] = vod.Metadata.CoverFilename
+	filepathMap[filepath.Base(vod.Metadata.VideoFilename)] = vod.Metadata.VideoFilename
 	// add data section filepaths
-	folderMetadataFilesMap := make(map[string][]FileEntry)
+	for _, datafile := range vod.Metadata.DataFiles.File {
+		filepathMap[filepath.Base(datafile.Filename)] = vod.Metadata.URLForDataFiles + datafile.Filename
+	}
+	folderMetadataFilesMap := make(map[string][]FileInfo)
 	for _, metadatafileEntry := range vod.Metadata.UserDefined.MetadataFiles.File {
-		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileEntry{metadatafileEntry.Filename, metadatafileEntry.Checksum})
+		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileInfo{metadatafileEntry.Filename, metadatafileEntry.Checksum})
 		//fmt.Println("MAP APPENDED:::::", folderMetadataFilesMap[metadatafileEntry.FolderId])
 	}
 	fmt.Println(folderMetadataFilesMap)
-	folderBulkFilesMap := make(map[string][]FileEntry)
-	folderBulkFilesMap[vod.Metadata.UserDefined.BulkFiles.File.FolderId] = []FileEntry{FileEntry{vod.Metadata.UserDefined.BulkFiles.File.Filename, vod.Metadata.UserDefined.BulkFiles.File.Checksum}}
+	folderBulkFilesMap := make(map[string][]FileInfo)
+	folderBulkFilesMap[vod.Metadata.UserDefined.BulkFiles.File.FolderId] = []FileInfo{FileInfo{vod.Metadata.UserDefined.BulkFiles.File.Filename, vod.Metadata.UserDefined.BulkFiles.File.Checksum}}
 
 	fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
-
-	for k, v := range folderMetadataFilesMap {
-		fmt.Println("KEY---------------", k)
-		//TODO: to be removed
-		if k != id {
-			continue
+	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
+	log.Println("heirarchy:", hierarchy)
+	subpath := ""
+	for _, folder := range hierarchy {
+		subpath = subpath + folder + "/"
+		fmt.Println("Printing buckets")
+		fs.PrintBuckets()
+		fmt.Println("Printing file sys")
+		fs.PrintFileSystem()
+		fmt.Println("====================")
+		fmt.Println("subpath: ", subpath)
+		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
+		fileInfos := make([][]string, metafilesLen+bulkfilesLen)
+		for i, x := range folderMetadataFilesMap[folder] {
+			fileInfos[i] = make([]string, 4)
+			fileInfos[i][0] = x.Name
+			fileInfos[i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
+			fileInfos[i][2] = x.Hashsum
+			fileInfos[i][3] = "metadata"
 		}
-		metadataFiles := getMetadataFiles(mediaHouse, k)
-		if len(metadataFiles) > 0 {
-			fmt.Println("Files for FolderId: ", k, " already exist.")
-			continue
+		for i, x := range folderBulkFilesMap[folder] {
+			fileInfos[metafilesLen+i] = make([]string, 4)
+			fileInfos[metafilesLen+i][0] = x.Name
+			fileInfos[metafilesLen+i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
+			fileInfos[metafilesLen+i][2] = x.Hashsum
+			fileInfos[metafilesLen+i][3] = "bulkfile"
 		}
-		fmt.Println("Downloading metadata files")
-		err := copyFiles(mediaHouse, pushId, k, v, filepathMap)
+		subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
+		err := fs.CreateDownloadNewFolder(subpathA, copyFiles, fileInfos)
 		if err != nil {
-			return errors.New("Could not download metadta files for FolderId ::: " + k + ">>>>>" + err.Error())
-		}
-		//update db
-		err = addMetadataFiles(mediaHouse, k, v)
-		if err != nil {
+			log.Println(err)
+			// if eval, ok := err.(*fs.FolderExistError); ok {
+			// 	continue
+			// }
+			if err.Error() == "[Filesystem][CreateFolder] A folder with the same name at the requested level already exists" {
+				continue
+			}
+			logger.Log("Error", fmt.Sprintf("%s", err))
+			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
-		fmt.Println("Updated the DB::::::: for ", k)
+		log.Println("")
+		fs.PrintBuckets()
+		fs.PrintFileSystem()
+		log.Println("")
 	}
-	for k, v := range folderBulkFilesMap {
-		fmt.Println("Downloading Bulk files")
-		err := copyFiles(mediaHouse, pushId, k, v, filepathMap)
-		if err != nil {
-			return errors.New("Could not download bulk files for FolderId ::: " + k + ">>>>>" + err.Error())
-		}
-		if err = addBulkFiles(mediaHouse, k, v); err != nil {
-			return err
-		}
-	}
-	fmt.Println("adding heirarchy")
-	ancestorIds := vod.Metadata.UserDefined.AncestorIds.File
-	for i := 0; i < len(ancestorIds)-1; i++ {
-		children := getChildren(mediaHouse, ancestorIds[i])
-		present := false
-		for _, child := range children {
-			if child.ID == ancestorIds[i+1] {
-				present = true
-				break
-			}
-		}
-		if !present {
-			if err := addFolder(mediaHouse, ancestorIds[i], FolderStructureEntry{ancestorIds[i+1], true, "bine_metadata.json", 0, []string{}}); err != nil {
-				return err
-			}
-		}
-	}
-	// update dir str for the VOD(leaf node)
-	if err := addFolder(mediaHouse, ancestorIds[len(ancestorIds)-1], FolderStructureEntry{id, false, "bine_metadata.json", 0, []string{}}); err != nil {
-		return err
-	}
+	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
+	logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
+	logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+	logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"MB downloaded on the Hub")
+	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 	return nil
 }
 
-func copyFiles(mediaHouse, pushId, folderId string, fileEntries []FileEntry, filepathMap map[string]string) error {
-	folderDir := path.Join(".", mediaHouse, folderId)
-	if err := os.MkdirAll(folderDir, 0700); err != nil {
-		return err
-	}
-	fmt.Println("=========CREATED FOLDER AT=======", folderDir)
-	for _, fileEntry := range fileEntries {
-		destpath := path.Join(folderDir, fileEntry.Name)
-		sourcepath := filepathMap[pushId+"_"+folderId+"_"+fileEntry.Name]
-		//TODO: to be removed
-		if sourcepath == "" {
+func copyFiles(filePath string, fileInfos [][]string) error {
+	for _, x := range fileInfos {
+		var downloadpath string
+		switch x[3] {
+		case "metadata":
+			downloadpath = filepath.Join(filePath, "metadatafiles", x[0])
+		case "bulkfile":
+			downloadpath = filepath.Join(filePath, "bulkfiles", x[0])
+		default:
+			log.Println("Invalid File type: ", x[0])
 			continue
 		}
-		actualHash := fileEntry.HashSum
-		if err := copySingleFile(destpath, sourcepath); err != nil {
+		fmt.Println(downloadpath)
+		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
+			logger.Log("Error", fmt.Sprintf("%s", err))
+			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
-		} else {
-			fmt.Println("========CHECKING CHECKSUM=========")
-			computedHash := computeSHA256(destpath)
-			if computedHash != actualHash {
-				//TODO: delete the folder????
-				return errors.New("Checksum did not match for: " + pushId + "_" + folderId + "_" + fileEntry.Name)
-			}
-			fmt.Println("Checksum matched for FILE::: ", pushId+"_"+folderId+"_"+fileEntry.Name)
+		}
+		err := copySingleFile(downloadpath, x[1])
+		if err != nil {
+			logger.Log("Error", fmt.Sprintf("%s", err))
+			fmt.Println("Error", fmt.Sprintf("%s", err))
+			return err
+		}
+		err = matchSHA256(downloadpath, x[2])
+		if err != nil {
+			logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
+			fmt.Println("Error", fmt.Sprintf(err.Error()))
+			return err
+		}
+		//store it in a file
+		if err := storeHashsum(downloadpath, x[2]); err != nil {
+			logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+			fmt.Println("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+			return err
 		}
 	}
 	return nil
@@ -239,6 +262,7 @@ func copyFiles(mediaHouse, pushId, folderId string, fileEntries []FileEntry, fil
 
 func copySingleFile(dest, source string) error {
 	//TODO: handle if the source does not exist
+	fmt.Println("SOURCE:", source)
 	sfile, err := os.Open(source)
 	if err != nil {
 		return err
@@ -257,7 +281,7 @@ func copySingleFile(dest, source string) error {
 
 func testMstore() error {
 	fmt.Println("TEST")
-	file, err := os.Open("resp3.json")
+	file, err := os.Open("test/resp3.json")
 	if err != nil {
 		fmt.Println(err)
 		return err
