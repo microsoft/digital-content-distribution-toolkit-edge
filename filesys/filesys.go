@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	bolt "github.com/boltdb/bolt"
 )
@@ -454,7 +455,7 @@ func (fs *FileSystem) GetActualPathForAbstractedPath(path string) (string, error
 	return actual_path, nil
 }
 
-func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc downloadFunc, downloadParams [][]string) error {
+func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc downloadFunc, downloadParams [][]string, deadline time.Time) error {
 	// check if folder creation is a valid operation
 	folder_name := []byte(hierarchy[len(hierarchy)-1])
 	node := RandStringBytes(fs.nodeLength, fs.homeNode)
@@ -477,7 +478,16 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 	if err != nil {
 		return err
 	}
-
+	// store the deadline for the created folder
+	f, err := os.OpenFile(filepath.Join(actual_path, "deadline.txt"), os.O_RDWR|os.O_CREATE, 0700)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(deadline.String())
+	if err != nil {
+		return err
+	}
 	// downlaod the files, check hashsum is done in dfunc
 	err = dfunc(actual_path, downloadParams)
 	if err != nil {

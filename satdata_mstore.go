@@ -26,11 +26,9 @@ type VodInfo struct {
 	Status   string `json:"status"`
 	Metadata struct {
 		UserDefined struct {
-			MediaId     string `json:"mediaId"`
-			MediaHouse  string `json:"mediaHouse"`
-			AncestorIds struct {
-				File []string `json:"file"`
-			} `json:"ancestorIds"`
+			MediaId       string `json:"mediaId"`
+			MediaHouse    string `json:"mediaHouse"`
+			AncestorIds   string `json:"ancestorIds"`
 			MetadataFiles struct {
 				File []struct {
 					Filename string `json:"filename"`
@@ -49,12 +47,13 @@ type VodInfo struct {
 			} `json:"bulkFiles"`
 			PushId int `json:"pushId"`
 		} `json:"userDefined"`
-		MovieId         string `json:"movieID"`
-		CID             string `json:"CID"`
-		VideoFilename   string `json:"video filename"`
-		TrailerFilename string `json:"trailer filename"`
-		CoverFilename   string `json:"cover filename"`
-		URLForDataFiles string `json:"urlForDataFiles"`
+		MovieId         string    `json:"movieID"`
+		CID             string    `json:"CID"`
+		ValidityEndDate time.Time `json:"validityEndDate"`
+		VideoFilename   string    `json:"video filename"`
+		TrailerFilename string    `json:"trailer filename"`
+		CoverFilename   string    `json:"cover filename"`
+		URLForDataFiles string    `json:"urlForDataFiles"`
 		DataFiles       struct {
 			File []struct {
 				Filename string `json:"filename"`
@@ -65,14 +64,14 @@ type VodInfo struct {
 	} `json:"metadata"`
 }
 
-func pollMstore(interval time.Duration) {
+func pollMstore(interval int) {
 	for true {
 		fmt.Println("==================Polling MStore API ==============")
 		if err := checkForVODViaMstore(); err != nil {
 			log.Println(err)
 			logger.Log("Error", err.Error())
 		}
-		time.Sleep(interval * time.Minute)
+		time.Sleep(time.Duration(interval) * time.Minute)
 	}
 }
 func checkForVODViaMstore() error {
@@ -133,14 +132,15 @@ func getMetadataAPI(contentId string) error {
 
 func getMstoreFiles(vod VodInfo) error {
 	pushId := strconv.Itoa(vod.Metadata.UserDefined.PushId)
-	_heirarchy := vod.Metadata.UserDefined.MediaHouse + "/"
-	for i, x := range vod.Metadata.UserDefined.AncestorIds.File {
-		if i == 0 {
-			continue
-		}
-		_heirarchy = _heirarchy + x + "/"
-	}
-	_heirarchy = _heirarchy + vod.Metadata.UserDefined.MediaId + "/"
+	deadline := vod.Metadata.ValidityEndDate
+	_heirarchy := vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
+	// for i, x := range vod.Metadata.UserDefined.AncestorIds.File {
+	// 	if i == 0 {
+	// 		continue
+	// 	}
+	// 	_heirarchy = _heirarchy + x + "/"
+	// }
+	//_heirarchy = _heirarchy + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
 	path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
 	if path != "" {
 		log.Println(_heirarchy + " already exist.")
@@ -165,7 +165,7 @@ func getMstoreFiles(vod VodInfo) error {
 
 	fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
-	log.Println("heirarchy:", hierarchy)
+	log.Println("heirarchy: ", hierarchy)
 	subpath := ""
 	for _, folder := range hierarchy {
 		subpath = subpath + folder + "/"
@@ -192,7 +192,7 @@ func getMstoreFiles(vod VodInfo) error {
 			fileInfos[metafilesLen+i][3] = "bulkfile"
 		}
 		subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
-		err := fs.CreateDownloadNewFolder(subpathA, copyFiles, fileInfos)
+		err := fs.CreateDownloadNewFolder(subpathA, copyFiles, fileInfos, deadline)
 		if err != nil {
 			log.Println(err)
 			// if eval, ok := err.(*fs.FolderExistError); ok {
@@ -211,12 +211,12 @@ func getMstoreFiles(vod VodInfo) error {
 		log.Println("")
 	}
 	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-	logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
+	logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+" MB downloaded on the Hub")
 	logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
-	logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
-	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"MB downloaded on the Hub")
+	//logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+" MB downloaded on the Hub")
 	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
-	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+	//fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 	return nil
 }
 
