@@ -567,13 +567,13 @@ func (fs *FileSystem) IsLeaf(actual_path_folder string) (bool, error) {
 	return len(children) == fs.nodeLength, nil
 }
 
-func (fs *FileSystem) postOrderTraversal(root []byte) []string {
+func (fs *FileSystem) preOrderTraversal(root []byte, prefix string) []string {
 	folder_name, _ := fs.GetFolderNameForNode(root)
 
 	children, _ := fs.GetChildrenForNode(root)
 
 	if len(children) == fs.nodeLength {
-		return []string{folder_name}
+		return []string{prefix + "/" + folder_name}
 	}
 
 	ans := []string{}
@@ -581,14 +581,20 @@ func (fs *FileSystem) postOrderTraversal(root []byte) []string {
 		if(i == 0) {
 			continue
 		}
-		ans = append(ans, fs.postOrderTraversal(children[i: i + fs.nodeLength])...)
+		ans = append(ans, fs.preOrderTraversal(children[i: i + fs.nodeLength], prefix + "/" + folder_name)...)
 	}
 
 	return ans;
 }
 
 func (fs *FileSystem) GetLeavesList() []string {
-	return fs.postOrderTraversal(fs.homeNode)
+	homeNodeName, _ := fs.GetFolderNameForNode(fs.homeNode)
+	temp := fs.preOrderTraversal(fs.homeNode, "")
+	for i, _ := range temp {
+		temp[i] = temp[i][len(homeNodeName) + 1:]
+	}
+
+	return temp
 } 
 
 func (fs *FileSystem) PrintBuckets() {
