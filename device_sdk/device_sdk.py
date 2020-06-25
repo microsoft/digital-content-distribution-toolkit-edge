@@ -11,18 +11,23 @@ import commands_pb2
 import commands_pb2_grpc
 from azure.iot.device import IoTHubDeviceClient, Message
 from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
+
+
 config = configparser.ConfigParser()
 # CONNECTION_STRING = "HostName=gohub.azure-devices.net;DeviceId=MyPythonDevice;SharedAccessKey=zA2DAirXTqJ0TGkpf+8fTLYVCxC3YlPJsO+UUO2QS98="
+
+
 def iothub_client_init():
     # Create an IoT Hub client
     client = IoTHubDeviceClient.create_from_connection_string(config.get("DEVICE_INFO", "IOT_DEVICE_CONNECTION_STRING"))
     return client
+
 class LogServicer(logger_pb2_grpc.LogServicer):
     """Provides methods that implement functionality of logging server."""
     def __init__(self, iot_client):
         self.iot_client = iot_client
     def SendSingleLog(self, request, context):
-        message = Message("[{}]{}".format(request.logtype, request.logstring))
+        message = Message("[{}][{}]{}".format(config.get("DEVICE_INFO", "DEVICE_NAME"), request.logtype, request.logstring))
         print(message)
         self.iot_client.send_message(message)
         return logger_pb2.Empty()
@@ -36,6 +41,7 @@ def send_upstream_messages(iot_client):
     print("server started")
     time.sleep(1000)
     server.wait_for_termination()
+
 def getFileParams(param):
     fileparams = []
     if param is not None:
@@ -116,6 +122,7 @@ def listen_for_method_calls(iot_client):
                 response_status = 404
             method_response = MethodResponse(method_request.request_id, response_status, payload=response_payload)
             iot_client.send_method_response(method_response)
+
 if __name__ == '__main__':
     config.read('hub_config.ini')
     print(config.sections())
