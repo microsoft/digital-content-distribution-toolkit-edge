@@ -119,6 +119,8 @@ func vanillaJSON(input interface{}) (string, error) {
 	err := encoder.Encode(input)
 	if err == nil {
 		return string(buffer.Bytes()), nil
+	} else {
+		logger.Log("ERROR", fmt.Sprintf("[route_handler][vanillaJSON] error while encoding %s", err.Error()))
 	}
 	return "", err
 }

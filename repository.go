@@ -195,8 +195,12 @@ func getAvailableFolders() []AvailableFolder {
 
 						availableFolder := AvailableFolder{ID: parts[len(parts)-1], Metadata: folderMetadata}
 						result = append(result, availableFolder)
+					} else {
+						logger.Log("ERROR", fmt.Sprintf("[Repository][GetAvailableFolders] metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error()))
 					}
 				}
+			} else {
+				logger.Log("ERROR", fmt.Sprintf("[Repository][GetAvailableFolders] metadata directory %s for abstract path %s threw error %s", metadataFilesDirectory, leaf, err.Error()))
 			}
 		}
 	}
