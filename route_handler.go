@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -21,6 +23,7 @@ func setupRoutes(ginEngine *gin.Engine) {
 	ginEngine.Static("/static", "./")
 	ginEngine.GET("/metadata/", AuthRequiredMiddleware, serveSingleMetadata)
 	ginEngine.GET("/list/files/", AuthRequiredMiddleware, serveMetadata)
+	ginEngine.GET("/list/leaves/", AuthRequiredMiddleware, serveLeaves)
 	ginEngine.GET("/download/files", AuthRequiredMiddleware, serveFile)
 	fs.PrintFileSystem()
 }
@@ -49,36 +52,6 @@ func serveSingleMetadata(context *gin.Context) {
 		return
 	}
 	writeMetadataFiles(context, folderInfo.MetadataFiles, mediaHouse, parts[len(parts)-1])
-}
-
-func serveFile(context *gin.Context) {
-	queryParams := context.Request.URL.Query()
-	mediaHouse := queryParams.Get("mediaHouse")
-	path := queryParams.Get("path")
-	if strings.HasPrefix(path, "/") {
-		path = path[1:]
-	}
-	fileName := queryParams.Get("file")
-	if strings.HasPrefix(fileName, "/") {
-		fileName = fileName[1:]
-	}
-	abstractFilePath := mediaHouse + "/" + path
-	fmt.Println("abastract file path: ", abstractFilePath)
-	actualPath, err := fs.GetActualPathForAbstractedPath(abstractFilePath)
-	fmt.Println("Actual path: ", actualPath)
-	if err != nil {
-		fmt.Println(err)
-		logger.Log("Error", "Could not get actual path for abstract path "+path)
-		errorResponse(context, "Invalid path")
-		return
-	}
-	logger.Log("Info", "Redirecting: "+path+" to actual: "+actualPath+"/"+fileName)
-	fmt.Println("Redirecting: " + path + " to actual: " + actualPath + "/" + fileName)
-	// redirect to this path
-	if strings.HasPrefix(actualPath, "/") {
-		actualPath = actualPath[1:]
-	}
-	context.Redirect(http.StatusTemporaryRedirect, "/static/"+actualPath+"/"+fileName)
 }
 
 //Route handler for /list/files/:parent
@@ -137,6 +110,55 @@ func serveMetadata(context *gin.Context) {
 			fmt.Println("Could not write metadata files for ID: " + children[i].ID)
 		}
 	}
+}
+
+func vanillaJSON(input interface{}) (string, error) {
+	buffer := &bytes.Buffer{}
+	encoder := json.NewEncoder(buffer)
+	encoder.SetEscapeHTML(false)
+	err := encoder.Encode(input)
+	if err == nil {
+		return string(buffer.Bytes()), nil
+	}
+	return "", err
+}
+
+func serveLeaves(context *gin.Context) {
+	if val, err := vanillaJSON(getAvailableFolders()); err == nil {
+		context.String(200, string(val))
+		return
+	}
+	errorResponse(context, "Leaves not found")
+}
+
+func serveFile(context *gin.Context) {
+	queryParams := context.Request.URL.Query()
+	mediaHouse := queryParams.Get("mediaHouse")
+	path := queryParams.Get("path")
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
+	fileName := queryParams.Get("file")
+	if strings.HasPrefix(fileName, "/") {
+		fileName = fileName[1:]
+	}
+	abstractFilePath := mediaHouse + "/" + path
+	fmt.Println("abastract file path: ", abstractFilePath)
+	actualPath, err := fs.GetActualPathForAbstractedPath(abstractFilePath)
+	fmt.Println("Actual path: ", actualPath)
+	if err != nil {
+		fmt.Println(err)
+		logger.Log("Error", "Could not get actual path for abstract path "+path)
+		errorResponse(context, "Invalid path")
+		return
+	}
+	logger.Log("Info", "Redirecting: "+path+" to actual: "+actualPath+"/"+fileName)
+	fmt.Println("Redirecting: " + path + " to actual: " + actualPath + "/" + fileName)
+	// redirect to this path
+	if strings.HasPrefix(actualPath, "/") {
+		actualPath = actualPath[1:]
+	}
+	context.Redirect(http.StatusTemporaryRedirect, "/static/"+actualPath+"/"+fileName)
 }
 
 func writeMetadataFiles(context *gin.Context, metadataFiles []string, mediaHouse string, id string) int {
@@ -250,4 +272,24 @@ func writeFile(context *gin.Context, fileHandle *os.File, fileSize int64) int64 
 		written += int64(fileBytesRead)
 	}
 	return written
+}
+
+//FolderMetadata ... represents metadata of an available folder on the hub
+type FolderMetadata struct {
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	VideoFiles  []string `json:"videoFiles"`
+	AudioFiles  []string `json:"audioFiles"`
+	Thumbnail   string   `json:"thumbnail"`
+	Thumbnail2X string   `json:"thumbnail_2x"`
+	Language    string   `json:"language"`
+	Size        string   `json:"size"`
+	Duration    string   `json:"duration"`
+	Path        string   `json:"path"`
+}
+
+//AvailableFolder ... represents folders on the hub
+type AvailableFolder struct {
+	ID       string          `json:"id"`
+	Metadata *FolderMetadata `json:"metadata"`
 }

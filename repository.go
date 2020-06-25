@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -140,6 +143,64 @@ func getFolderSizeParser(actualPath string) int64 {
 
 func getFolderSize(mediaHouse string, path string) int64 {
 	return 0
+}
+
+func getDownloadableURL(abstractFolderPath string, abstractFilePath string) string {
+	abstractFilePath = strings.ReplaceAll(abstractFilePath, "-", "_") // TODO: Replace this hack with fix in DB after demo
+	return fmt.Sprintf("http://{HUB_IP}:5000/download/files?mediaHouse=MSR&path=%s&file=%s", (abstractFolderPath), (abstractFilePath))
+}
+
+func getMetadataStruct(filePath string) (*FolderMetadata, error) {
+	file, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	data := FolderMetadata{}
+	err = json.Unmarshal([]byte(file), &data)
+	if err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+func getAvailableFolders() []AvailableFolder {
+	leaves := fs.GetLeavesList()
+	var result []AvailableFolder
+	for _, leaf := range leaves {
+		osFsPath, err := fs.GetActualPathForAbstractedPath(leaf)
+		fmt.Println("Os file path: ", osFsPath)
+		leaf = strings.Replace(leaf, "MSR", "", 1)
+		leaf = strings.Replace(leaf, "//", "/", 1)
+		if err == nil {
+			metadataFilesDirectory := path.Join(osFsPath, "metadatafiles")
+			if _, err := os.Stat(metadataFilesDirectory); err == nil {
+				fmt.Println("Metadata files directory for: ", metadataFilesDirectory, " exists")
+				metadataJSONFilePath := path.Join(metadataFilesDirectory, "bine_metadata.json")
+				if _, err := os.Stat(metadataJSONFilePath); err == nil {
+					fmt.Println("Metadata bine_json also exists at: ", metadataJSONFilePath)
+					folderMetadata, err := getMetadataStruct(metadataJSONFilePath)
+					if err == nil {
+						folderSize := getFolderSizeParser(osFsPath)
+						folderMetadata.Size = strconv.FormatInt(folderSize, 10)
+						folderMetadata.Duration = "60"
+
+						folderMetadata.Thumbnail = getDownloadableURL(leaf, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail))
+						fmt.Println("Thumbnail URL: ", folderMetadata.Thumbnail)
+						folderMetadata.Thumbnail2X = getDownloadableURL(leaf, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail2X))
+						folderMetadata.Language = "English"
+						folderMetadata.Path = leaf
+
+						fmt.Println("Folder size is: ", folderSize)
+						parts := strings.Split(leaf, "/")
+
+						availableFolder := AvailableFolder{ID: parts[len(parts)-1], Metadata: folderMetadata}
+						result = append(result, availableFolder)
+					}
+				}
+			}
+		}
+	}
+	return result
 }
 
 //FileToCheck Struct with file path and it's hashsum (sha256)
