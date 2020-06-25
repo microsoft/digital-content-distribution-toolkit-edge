@@ -161,15 +161,6 @@ async def provision():
           *[settings[setting](patch[setting], patch['$version']) for setting in to_update]
         )
   
-
-  # Define behavior for halting the application
-  def stdin_listener():
-    while True:
-      selection = input('Press Q to quit\n')
-      if selection == 'Q' or selection == 'q':
-        print('Quitting...')
-        break
-  
   device_client = await connect_device()
   await init_device()
   
@@ -183,11 +174,11 @@ async def provision():
         )
         
         # Run the stdin listener in the event loop
-        loop = asyncio.get_running_loop()
-        user_finished = loop.run_in_executor(None, stdin_listener)
+        # loop = asyncio.get_running_loop()
+        # user_finished = loop.run_in_executor(None, stdin_listener)
 
         # Wait for user to indicate they are done listening for method calls
-        await user_finished
+        # await user_finished
         
         # Cancel tasks
         tasks.add_done_callback(lambda r: r.exception())
