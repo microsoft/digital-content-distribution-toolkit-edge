@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -137,10 +138,19 @@ func serveFile(context *gin.Context) {
 	queryParams := context.Request.URL.Query()
 	mediaHouse := queryParams.Get("mediaHouse")
 	path := queryParams.Get("path")
+	path, err := url.QueryUnescape(path)
+	if err != nil {
+		fmt.Println("Failed path resolution")
+	}
+	fmt.Println(path)
 	if strings.HasPrefix(path, "/") {
 		path = path[1:]
 	}
 	fileName := queryParams.Get("file")
+	fileName, err = url.QueryUnescape(fileName)
+	if err != nil {
+		fmt.Println("Failed filname resolution")
+	}
 	if strings.HasPrefix(fileName, "/") {
 		fileName = fileName[1:]
 	}
