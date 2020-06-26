@@ -135,10 +135,10 @@ func getMstoreFiles(vod VodInfo) error {
 	deadline := vod.Metadata.ValidityEndDate
 	var _heirarchy string
 	if vod.Metadata.UserDefined.AncestorIds != "" {
-		_heirarchy := vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
+		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
 	}
 	else{
-		_heirarchy := vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.MediaId
+		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.MediaId
 	}
 	//_heirarchy := vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
 	// for i, x := range vod.Metadata.UserDefined.AncestorIds.File {
