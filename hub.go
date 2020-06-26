@@ -19,7 +19,7 @@ import (
 // TODO: Implement Acknowledgement of content update
 // TODO: Have HUB ID (speak to Cloud which Vinod will write)
 // TODO: Add unit tests to go functions
-var logger cl.Logger
+var logger *cl.Logger
 var fs *filesys.FileSystem
 var km *keymanager.KeyManager
 
@@ -32,8 +32,9 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	upstream_grpc_port, err := cfg.Section("GRPC").Key("UPSTREAM_PORT").Int()
-	logger = cl.MakeLogger(upstream_grpc_port)
+	logFile := cfg.Section("LOGGER").Key("LOG_FILE_PATH").String()
+	bufferSize, err := cfg.Section("LOGGER").Key("MEM_BUFFER_SIZE").Int()
+	logger = cl.MakeLogger(logFile, bufferSize)
 
 	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
 
@@ -56,24 +57,18 @@ func main() {
 		}
 	}
 
-	// logger.Log("Info", "All first level info being sent to iot-hub...")
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
-	// Instantiate database connection to serve requests
-	if !createDatabaseConnection() {
-		logger.Log("Critical", "Could not create database connection, no point starting the server")
-		fmt.Println("Critical", "Could not create database connection, no point starting the server")
-		return
-	}
-
-	//setupDbForTesting()
-	// testCloudSyncServiceDownload()
-	// start a concurrent background service which checks if the files on the device are tampered with
+	
+	// launch a goroutine to handle method calls
 	wg.Add(1)
 	go handle_method_calls(downstream_grpc_port, wg)
-	integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Duration()
+	
+	// start a concurrent background service which checks if the files on the device are tampered with
+	integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Int()
 	go checkIntegrity(integrityCheckInterval)
+	
 	satApiCmd := cfg.Section("DEVICE_INFO").Key("SAT_API_SWITCH").String()
-	getdata_interval, err := cfg.Section("DEVICE_INFO").Key("MSTORE_SCHEDULER").Duration()
+	getdata_interval, err := cfg.Section("DEVICE_INFO").Key("MSTORE_SCHEDULER").Int()
 	switch satApiCmd {
 	case "noovo":
 		go pollNoovo(getdata_interval)

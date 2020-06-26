@@ -65,14 +65,14 @@ type VodInfo struct {
 	} `json:"metadata"`
 }
 
-func pollMstore(interval time.Duration) {
+func pollMstore(interval int) {
 	for true {
 		fmt.Println("==================Polling MStore API ==============")
 		if err := checkForVODViaMstore(); err != nil {
 			log.Println(err)
 			logger.Log("Error", err.Error())
 		}
-		time.Sleep(interval * time.Minute)
+		time.Sleep(time.Duration(interval) * time.Minute)
 	}
 }
 func checkForVODViaMstore() error {

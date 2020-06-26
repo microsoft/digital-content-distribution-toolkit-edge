@@ -82,7 +82,7 @@ type VodObj struct {
 	} `json:"content"`
 }
 
-func pollNoovo(interval time.Duration) {
+func pollNoovo(interval int) {
 	for true {
 		fmt.Println("==================Polling NOOVO API for the content==============")
 		//logger.Log("Info", "Polling NOOVO API for the new content on the SAT")
@@ -90,7 +90,7 @@ func pollNoovo(interval time.Duration) {
 			log.Println(err)
 			//logger.Log("Error", err.Error())
 		}
-		time.Sleep(interval * time.Minute)
+		time.Sleep(time.Duration(interval) * time.Minute)
 	}
 }
 
