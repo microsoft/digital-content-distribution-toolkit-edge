@@ -136,8 +136,7 @@ func getMstoreFiles(vod VodInfo) error {
 	var _heirarchy string
 	if vod.Metadata.UserDefined.AncestorIds != "" {
 		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
-	}
-	else{
+	} else {
 		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.MediaId
 	}
 	//_heirarchy := vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
