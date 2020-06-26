@@ -133,7 +133,13 @@ func getMetadataAPI(contentId string) error {
 func getMstoreFiles(vod VodInfo) error {
 	pushId := strconv.Itoa(vod.Metadata.UserDefined.PushId)
 	deadline := vod.Metadata.ValidityEndDate
-	_heirarchy := vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
+	var _heirarchy string
+	if vod.Metadata.UserDefined.AncestorIds != "" {
+		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
+	} else {
+		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.MediaId
+	}
+	//_heirarchy := vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
 	// for i, x := range vod.Metadata.UserDefined.AncestorIds.File {
 	// 	if i == 0 {
 	// 		continue
