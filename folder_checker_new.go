@@ -16,6 +16,7 @@ import (
 
 func checkIntegrity(interval int) {
 	for true {
+		logger.Log("Telemetry", "[Liveness] "+"STATUS:ALIVE")
 		time.Sleep(time.Duration(interval) * time.Second)
 		fmt.Println("Info", "Checking files integrity from background thread")
 		fmt.Println("------------------------------------------------")
@@ -39,7 +40,7 @@ func checkIntegrity(interval int) {
 	}
 }
 func checkheirarchy(node []byte, c, t int) (int, int) {
-	fmt.Println("NODE__", string(node))
+	//fmt.Println("NODE__", string(node))
 	children, err := fs.GetChildrenForNode(node)
 	if err != nil {
 		log.Println(err)
@@ -92,7 +93,7 @@ func checkfiles(folderpath string) int {
 			if file.Name() == "hashsum.txt" {
 				continue
 			}
-			fmt.Println(filepath.Join(folderpath, "bulkfiles", file.Name()))
+			//fmt.Println(filepath.Join(folderpath, "bulkfiles", file.Name()))
 			err = matchSHA256(filepath.Join(folderpath, "bulkfiles", file.Name()), hashsummap[file.Name()])
 			if err != nil {
 				fmt.Println("Telemetry", "[IntegrityStats] "+filepath.Join(folderpath, "bulkfiles", file.Name())+" marked for deletion")

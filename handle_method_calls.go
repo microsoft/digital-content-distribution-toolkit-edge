@@ -5,6 +5,7 @@ import (
 	"net"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"fmt"
 	"log"
@@ -47,6 +48,7 @@ func DownloadFile(filepath, url string) error {
 
 func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.DownloadParams) (*pb.Response, error) {
 	//for _, download_param := range download_params
+	deadline := time.Now()
 	log.Println(download_params.GetFolderpath())
 	hierarchy := strings.Split(strings.Trim(download_params.GetFolderpath(), "/"), "/")
 	log.Println(hierarchy)
@@ -76,7 +78,7 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		fileInfos[metafilesLen+i][2] = (*x).Hashsum
 		fileInfos[metafilesLen+i][3] = "bulkfile"
 	}
-	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos)
+	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos, deadline)
 	if err != nil {
 		//logger.Log("Error", fmt.Sprintf("%s", err))
 		log.Println("Error", fmt.Sprintf("%s", err))

@@ -36,11 +36,9 @@ type VodObj struct {
 					FolderId string `json:"folderId"`
 				} `json:"file"`
 			} `json:"metadataFiles"`
-			PushId      int `json:"pushId"`
-			AncestorIds struct {
-				File []string `json:"file"`
-			} `json:"ancestorIds"`
-			BulkFiles struct {
+			PushId      int    `json:"pushId"`
+			AncestorIds string `json:"ancestorIds"`
+			BulkFiles   struct {
 				File struct {
 					Filename string `json:"filename"`
 					Checksum string `json:"checksum"`
@@ -58,7 +56,8 @@ type VodObj struct {
 			} `json:"movie"`
 		} `json:"videos"`
 		VODInfo struct {
-			MovieID string `json:"movieID"`
+			MovieID         string    `json:"movieID"`
+			ValidityEndDate time.Time `json:"validityEndDate"`
 		} `json:"VODInfo"`
 		Pictures struct {
 			Cover struct {
@@ -113,14 +112,7 @@ func callNoovoAPI() error {
 	fmt.Println(":::::::::::::::::NO. OF CONTENTS:::::::::::", len(vods))
 	for _, vod := range vods {
 		if matched, _ := regexp.MatchString(`^BINE.`, vod.Content.VODInfo.MovieID); matched {
-			_heirarchy := vod.Content.UserDefined.MediaHouse + "/"
-			for i, x := range vod.Content.UserDefined.AncestorIds.File {
-				if i == 0 {
-					continue
-				}
-				_heirarchy = _heirarchy + x + "/"
-			}
-			_heirarchy = _heirarchy + vod.Content.UserDefined.MediaId + "/"
+			_heirarchy := vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.AncestorIds + "/" + vod.Content.UserDefined.MediaId
 			path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
 			if path != "" {
 				log.Println(_heirarchy + " already exist.")
@@ -143,6 +135,7 @@ func callNoovoAPI() error {
 
 func downloadContent(vod VodObj, _heirarchy string) error {
 	pushId := strconv.Itoa(vod.Content.UserDefined.PushId)
+	deadline := vod.Content.VODInfo.ValidityEndDate
 	// _heirarchy := vod.Content.UserDefined.MediaHouse + "/"
 	// for i, x := range vod.Content.UserDefined.AncestorIds.File {
 	// 	if i == 0 {
@@ -202,7 +195,7 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 			fileInfos[metafilesLen+i][3] = "bulkfile"
 		}
 		subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
-		err := fs.CreateDownloadNewFolder(subpathA, DownloadFiles, fileInfos)
+		err := fs.CreateDownloadNewFolder(subpathA, DownloadFiles, fileInfos, deadline)
 		if err != nil {
 			log.Println(err)
 			// if eval, ok := err.(*fs.FolderExistError); ok {
