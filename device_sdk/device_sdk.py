@@ -2,7 +2,8 @@ from __future__ import print_function
 
 import configparser
 from concurrent import futures
-from multiprocessing import Process
+# from multiprocessing import Process
+import threading
 import time
 import sys
 import fcntl
@@ -74,6 +75,7 @@ def send_upstream_messages(iot_client):
                 fout.write("")
                 fout.truncate()
             
+            # print(temp)
             for x in temp:
                 if(len(x) != 0):
                     message = Message(x)
@@ -128,12 +130,13 @@ def listen_for_method_calls(iot_client):
                     # print(_metadata_files)
                     _channels = [commands_pb2.Channel(channelname=x) for x in payload["channels"].split(";")]
                     _deadline = int(payload["deadline"])
+                    _add_to_existing = bool(payload["add_to_existing"])
                     print(dict(folderpath=_folder_path, metadatafiles=_metadata_files,
-                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline
-                    ))
+                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline, 
+                    addtoexisting=_add_to_existing))
                     
                     download_params = commands_pb2.DownloadParams(folderpath=_folder_path, metadatafiles=_metadata_files,
-                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline)
+                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline, addtoexisting=_add_to_existing)
                     response = stub.Download(download_params)
                     print(response)
                 except Exception as ex:
@@ -171,9 +174,11 @@ if __name__ == '__main__':
     print(config.sections())
     iot_client = iothub_client_init()
     
-    telemetry_pool = futures.ThreadPoolExecutor(1)
-    telemetry_pool.submit(send_upstream_messages, iot_client)
+    # telemetry_pool = futures.ThreadPoolExecutor(1)
+    # telemetry_pool.submit(listen_for_method_calls, iot_client)
+    t = threading.Thread(target=listen_for_method_calls, args=[iot_client])
+    t.daemon = True
+    t.start()
     
-    send_upstream_messages(iot_client)
     print("came here...")
-    listen_for_method_calls(iot_client)
+    send_upstream_messages(iot_client)
