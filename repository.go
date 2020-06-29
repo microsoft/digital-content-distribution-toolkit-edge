@@ -96,7 +96,7 @@ func getMetdataFileParser(actualPath string) []string {
 	parentDirectory := actualPath + "/metadatafiles"
 	files, err := ioutil.ReadDir(parentDirectory)
 	if err != nil {
-		logger.Log("Error", "Error while finding files in "+actualPath+" "+err.Error())
+		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in "+actualPath+" "+err.Error()})
 		return result
 	}
 	for _, file := range files {
@@ -128,7 +128,7 @@ func getFolderSizeParser(actualPath string) int64 {
 	files, err := ioutil.ReadDir(actualPath + "/bulkfiles")
 	fmt.Println("Actual path for folder size parse: ", actualPath)
 	if err != nil {
-		logger.Log("Error", "Error while finding files in "+actualPath+" "+err.Error())
+		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in "+actualPath+" "+err.Error()})
 		return 0
 	}
 	var size int64 = 0
@@ -196,11 +196,11 @@ func getAvailableFolders() []AvailableFolder {
 						availableFolder := AvailableFolder{ID: parts[len(parts)-1], Metadata: folderMetadata}
 						result = append(result, availableFolder)
 					} else {
-						logger.Log("ERROR", fmt.Sprintf("[Repository][GetAvailableFolders] metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error()))
+						logger.Log("Error", "RouteHander", map[string]string{"Function":"GetAvailableFolders", "Message": fmt.Sprintf("metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error())})
 					}
 				}
 			} else {
-				logger.Log("ERROR", fmt.Sprintf("[Repository][GetAvailableFolders] metadata directory %s for abstract path %s threw error %s", metadataFilesDirectory, leaf, err.Error()))
+				logger.Log("Error", "RouteHander", map[string]string{"Function":"GetAvailableFolders", "Message": fmt.Sprintf("metadata directory %s for abstract path %s threw error %s", metadataFilesDirectory, leaf, err.Error())})
 			}
 		}
 	}

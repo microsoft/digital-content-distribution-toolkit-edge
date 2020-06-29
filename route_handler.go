@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -69,8 +70,8 @@ func serveMetadata(context *gin.Context) {
 	// get List of children
 	// need to get this and metadata file list from Database
 	children := getChildren(mediaHouse, parent)
-	logger.Log("Info", "Length of children for "+parent+" is ")
-	fmt.Println("Length is", len(children))
+	log.Println("Info", "Length of children for "+parent+" is ")
+	log.Println("Length is", len(children))
 	// return number of children
 	if writeInt32(context, len(children)) < 0 {
 		fmt.Println("Could not write to response stream")
@@ -121,7 +122,7 @@ func vanillaJSON(input interface{}) (string, error) {
 	if err == nil {
 		return string(buffer.Bytes()), nil
 	} else {
-		logger.Log("ERROR", fmt.Sprintf("[route_handler][vanillaJSON] error while encoding %s", err.Error()))
+		logger.Log("Error", "RouteHandler", map[string]string{"Function": "vanillaJSON", "Message": fmt.Sprintf("error while encoding %s", err.Error())})
 	}
 	return "", err
 }
@@ -160,11 +161,11 @@ func serveFile(context *gin.Context) {
 	fmt.Println("Actual path: ", actualPath)
 	if err != nil {
 		fmt.Println(err)
-		logger.Log("Error", "Could not get actual path for abstract path "+path)
+		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Could not get actual path for abstract path "+path})
 		errorResponse(context, "Invalid path")
 		return
 	}
-	logger.Log("Info", "Redirecting: "+path+" to actual: "+actualPath+"/"+fileName)
+	logger.Log("Info", "RouteHandler", map[string]string{"Message": "Redirecting: "+path+" to actual: "+actualPath+"/"+fileName})
 	fmt.Println("Redirecting: " + path + " to actual: " + actualPath + "/" + fileName)
 	// redirect to this path
 	if strings.HasPrefix(actualPath, "/") {

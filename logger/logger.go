@@ -2,18 +2,24 @@
 package logger
 
 import (
-    "fmt"
+	// "io"
+	"fmt"
     "log"
+	"os"
+	"bufio"
+	"encoding/json"
+    "syscall"
     "time"
-    "context"
-    "errors"
-
-    "google.golang.org/grpc"
-
-    pb "./pblogger"
 )
-
 type LogType string;
+
+type Message struct {
+	DeviceId string
+	MessageType string
+	MessageSubType string
+	TimeStamp string
+	MessageBody map[string]string
+}
 
 const (
     Telemetry LogType = "Telemetry"
@@ -29,39 +35,81 @@ func (lt LogType) isValid() error {
     case Telemetry, Debug, Info, Warning, Error, Critical:
         return nil
     }
-    return errors.New(fmt.Sprintf("Inalid log type %v", string(lt)))
+    return fmt.Errorf("Inalid log type %v", string(lt))
 }
 
 
 type Logger struct{
-    client pb.LogClient
+	deviceId string
+	file *os.File
+	writer *bufio.Writer
 }
 
-func MakeLogger(port int) Logger {
-    connection_string := fmt.Sprintf("localhost:%v", port)
-    conn, err := grpc.Dial(connection_string, grpc.WithInsecure())
+func MakeLogger(deviceId string, logFilePath string, bufferSize int) *Logger {
+	fmt.Println(">>>>>>", deviceId, logFilePath, bufferSize)
+	file, err := os.OpenFile(logFilePath, syscall.O_CREAT|syscall.O_WRONLY|syscall.O_APPEND, 0666)
     if err != nil {
-        log.Fatalf("Logger Error: failed to dial: %v", err)
-    }
+        log.Fatalf("[Logger]error in opening file: %s", logFilePath)
+	}
+	
+	writer := bufio.NewWriterSize(file, bufferSize)
+	l := Logger{deviceId, file, writer}
 
-    client := pb.NewLogClient(conn)
-
-    return Logger{client}
+	return &l
 }
 
-func (l Logger) Log(log_type LogType, log_string string) {
-    if err := log_type.isValid(); err != nil{
-        log.Fatalf("Logger Error: %v", err)
-    }
+func (l *Logger) Close() {
+	l.writer.Flush()
+	l.file.Sync()
+	l.file.Close()
+}
 
-    ctx := context.Background()
-    request := pb.SingleLog{Logtype: string(log_type), Logstring: time.Now().String() + " " + log_string}
+func (l *Logger) lockFile() error {
+	err := syscall.Flock(int(l.file.Fd()), syscall.LOCK_EX)
+	if err != nil {
+		return err
+	}
 
-    // ignore the reponse
-    _, err2 := l.client.SendSingleLog(ctx, &request)
-    if err2 != nil {
-        log.Fatalf("Logger Error: %v", err2)
-    }
+	return nil
+}
+
+func (l *Logger) unlockFile() error {
+	err := syscall.Flock(int(l.file.Fd()), syscall.LOCK_UN)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (l *Logger) Log(messageType string, messageSubType string, messageBody map[string]string) {
+    if err := LogType(messageType).isValid(); err != nil{
+        fmt.Errorf("[Logger]invalid message type %s", messageType)
+	}
+	
+	msg := Message{l.deviceId, messageType, messageSubType, fmt.Sprintf("%d", time.Now().Unix()), messageBody}
+	b, err := json.Marshal(msg)
+	if err != nil {
+		log.Println(fmt.Sprintf("[Logger] error in creating message: %v", err))
+	}
+	msgString := string(b)
+	fmt.Println(msgString)
+
+	err = l.lockFile()
+	if err != nil {
+		log.Println("[Logger] error in locking file")
+	}
+
+	l.writer.WriteString(msgString+"\n")
+	if(messageType == "Telemetry" || messageType == "Critical" || messageType == "Error") {
+		l.writer.Flush()
+		l.file.Sync()
+	}
+
+	err = l.unlockFile()
+	if err != nil {
+		log.Println("[Logger] error in unlocking file")
+	}
 }
 
 // Standalone testing of logger module:

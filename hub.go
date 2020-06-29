@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"log"
 	"path/filepath"
 	"sync"
 
@@ -19,21 +20,23 @@ import (
 // TODO: Implement Acknowledgement of content update
 // TODO: Have HUB ID (speak to Cloud which Vinod will write)
 // TODO: Add unit tests to go functions
-var logger cl.Logger
+var logger *cl.Logger
 var fs *filesys.FileSystem
 var km *keymanager.KeyManager
 
 func main() {
 	cfg, err := ini.Load("hub_config.ini")
 	if err != nil {
-		fmt.Printf("Failed to read config file: %v", err)
+		fmt.Println("Failed to read config file: %v", err)
 		os.Exit(1)
 	}
 
 	var wg sync.WaitGroup
 
-	upstream_grpc_port, err := cfg.Section("GRPC").Key("UPSTREAM_PORT").Int()
-	logger = cl.MakeLogger(upstream_grpc_port)
+	logFile := cfg.Section("LOGGER").Key("LOG_FILE_PATH").String()
+	bufferSize, err := cfg.Section("LOGGER").Key("MEM_BUFFER_SIZE").Int()
+	deviceId := cfg.Section("DEVICE_INFO").Key("DEVICE_NAME").String()
+	logger = cl.MakeLogger(deviceId, logFile, bufferSize)
 
 	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
 
@@ -42,7 +45,8 @@ func main() {
 	boltdb_location := cfg.Section("FILE_SYSTEM").Key("BOLTDB_LOCATION").String()
 	fs, err = filesys.MakeFileSystem(name_length, home_dir_location, boltdb_location)
 	if err != nil {
-		logger.Log("Error", fmt.Sprintf("Failed to setup filesys: %s", err))
+		logger.Log("Error", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
+		log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
 		os.Exit(1)
 	}
 	defer fs.Close()
@@ -51,27 +55,22 @@ func main() {
 	if initflag {
 		err = fs.InitFileSystem()
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("Failed to setup filesys: %s", err))
+			logger.Log("Error", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
+			log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
 			os.Exit(1)
 		}
 	}
 
-	// logger.Log("Info", "All first level info being sent to iot-hub...")
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
-	// Instantiate database connection to serve requests
-	if !createDatabaseConnection() {
-		logger.Log("Critical", "Could not create database connection, no point starting the server")
-		fmt.Println("Critical", "Could not create database connection, no point starting the server")
-		return
-	}
-
-	//setupDbForTesting()
-	// testCloudSyncServiceDownload()
-	// start a concurrent background service which checks if the files on the device are tampered with
+	
+	// launch a goroutine to handle method calls
 	wg.Add(1)
 	go handle_method_calls(downstream_grpc_port, wg)
+	
+	// start a concurrent background service which checks if the files on the device are tampered with
 	integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Int()
 	go checkIntegrity(integrityCheckInterval)
+	
 	satApiCmd := cfg.Section("DEVICE_INFO").Key("SAT_API_SWITCH").String()
 	getdata_interval, err := cfg.Section("DEVICE_INFO").Key("MSTORE_SCHEDULER").Int()
 	switch satApiCmd {
@@ -97,7 +96,8 @@ func main() {
 	})
 
 	if err != nil {
-		logger.Log("Error", fmt.Sprintf("Failed to setup keymanager: %s", err))
+		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
+		log.Println(fmt.Sprintf("Failed to setup keymanager: %v", err))
 		os.Exit(1)
 	}
 
