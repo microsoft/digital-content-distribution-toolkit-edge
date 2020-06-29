@@ -62,7 +62,6 @@ def listen_for_method_calls(iot_client):
             print("hello")
             time.sleep(2)
             method_request = iot_client.receive_method_request()
-            
             print (
                 "\nMethod callback called with:\nmethodName = {method_name}\npayload = {payload}".format(
                     method_name=method_request.name,
