@@ -17,7 +17,7 @@ import (
 func checkIntegrity(interval int) {
 	for true {
 		logger.Log("Telemetry", "[Liveness] "+"STATUS:ALIVE")
-		time.Sleep(time.Duration(interval) * time.Minute)
+		time.Sleep(time.Duration(interval) * time.Second)
 		fmt.Println("Info", "Checking files integrity from background thread")
 		fmt.Println("------------------------------------------------")
 		children, _ := fs.GetChildrenForNode(fs.GetHomeNode())
@@ -130,4 +130,10 @@ func getTotalFiles(folderpath string) int {
 		t += len(files) - 1
 	}
 	return t
+}
+func liveness(interval int) {
+	for true {
+		logger.Log("Telemetry", "[Liveness] "+"STATUS:ALIVE")
+		time.Sleep(time.Duration(interval) * time.Second)
+	}
 }

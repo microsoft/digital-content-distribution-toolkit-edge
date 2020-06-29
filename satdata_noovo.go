@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-//const interval time.Duration = 20
 const source string = "mstore"
 
 type VodObj struct {
@@ -87,9 +86,9 @@ func pollNoovo(interval int) {
 		//logger.Log("Info", "Polling NOOVO API for the new content on the SAT")
 		if err := callNoovoAPI(); err != nil {
 			log.Println(err)
-			//logger.Log("Error", err.Error())
+			logger.Log("Error", err.Error())
 		}
-		time.Sleep(time.Duration(interval) * time.Minute)
+		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }
 
@@ -120,13 +119,13 @@ func callNoovoAPI() error {
 			}
 			if err := downloadContent(vod, _heirarchy); err != nil {
 				log.Println(err)
-				//logger.Log("Error", fmt.Sprintf("%s", err))
-				//logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: FAILED")
+				logger.Log("Error", fmt.Sprintf("%s", err))
+				logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: FAILED")
 				continue
 			}
 			path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-			// logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
-			// logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+			logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
+			logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
 			// logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 		}
 	}
@@ -179,23 +178,27 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 		fmt.Println("====================")
 		fmt.Println(subpath)
 		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
-		fileInfos := make([][]string, metafilesLen+bulkfilesLen)
+		fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
 		for i, x := range folderMetadataFilesMap[folder] {
-			fileInfos[i] = make([]string, 4)
+			fileInfos[i] = make([]string, 5)
 			fileInfos[i][0] = x.Name
 			fileInfos[i][1] = filesURLMap[pushId+"_"+folder+"_"+x.Name]
 			fileInfos[i][2] = x.Hashsum
 			fileInfos[i][3] = "metadata"
+			fileInfos[i][4] = strconv.FormatInt(deadline.Unix(), 10)
 		}
 		for i, x := range folderBulkFilesMap[folder] {
-			fileInfos[i] = make([]string, 4)
+			fileInfos[i] = make([]string, 5)
 			fileInfos[metafilesLen+i][0] = x.Name
 			fileInfos[metafilesLen+i][1] = filesURLMap[pushId+"_"+folder+"_"+x.Name]
 			fileInfos[metafilesLen+i][2] = x.Hashsum
 			fileInfos[metafilesLen+i][3] = "bulkfile"
+			fileInfos[metafilesLen+i][4] = strconv.FormatInt(deadline.Unix(), 10)
 		}
+		fileInfos[metafilesLen+bulkfilesLen] = make([]string, 5)
+		fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline.Unix(), 10)
 		subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
-		err := fs.CreateDownloadNewFolder(subpathA, DownloadFiles, fileInfos, deadline)
+		err := fs.CreateDownloadNewFolder(subpathA, DownloadFiles, fileInfos)
 		if err != nil {
 			log.Println(err)
 			// if eval, ok := err.(*fs.FolderExistError); ok {

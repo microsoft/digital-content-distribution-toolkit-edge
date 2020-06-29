@@ -61,3 +61,14 @@ func getDirSizeinMB(path string) int64 {
 	filepath.Walk(filepath.Join(path, "metadatafiles"), calcsize)
 	return (size) / 1024.0 / 1024.0
 }
+func storeDeadline(path, deadline string) error {
+	f, err := os.OpenFile(filepath.Join(path, "deadline.txt"), os.O_RDWR|os.O_CREATE, 0700)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(deadline)
+	if err != nil {
+		return err
+	}
+}

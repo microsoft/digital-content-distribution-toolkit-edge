@@ -64,6 +64,8 @@ type VodInfo struct {
 	} `json:"metadata"`
 }
 
+//var deleteFlag bool = cfg.Section("DEVICE_INFO").Key("DELETE_FLAG").Bool()
+
 func pollMstore(interval int) {
 	for true {
 		fmt.Println("==================Polling MStore API ==============")
@@ -71,7 +73,7 @@ func pollMstore(interval int) {
 			log.Println(err)
 			logger.Log("Error", err.Error())
 		}
-		time.Sleep(time.Duration(interval) * time.Minute)
+		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }
 func checkForVODViaMstore() error {
@@ -132,6 +134,7 @@ func getMetadataAPI(contentId string) error {
 
 func getMstoreFiles(vod VodInfo) error {
 	pushId := strconv.Itoa(vod.Metadata.UserDefined.PushId)
+	//cid := vod.Metadata.CID
 	deadline := vod.Metadata.ValidityEndDate
 	var _heirarchy string
 	if vod.Metadata.UserDefined.AncestorIds != "" {
@@ -139,14 +142,7 @@ func getMstoreFiles(vod VodInfo) error {
 	} else {
 		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.MediaId
 	}
-	//_heirarchy := vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
-	// for i, x := range vod.Metadata.UserDefined.AncestorIds.File {
-	// 	if i == 0 {
-	// 		continue
-	// 	}
-	// 	_heirarchy = _heirarchy + x + "/"
-	// }
-	//_heirarchy = _heirarchy + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
+
 	path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
 	if path != "" {
 		log.Println(_heirarchy + " already exist.")
@@ -163,7 +159,6 @@ func getMstoreFiles(vod VodInfo) error {
 	folderMetadataFilesMap := make(map[string][]FileInfo)
 	for _, metadatafileEntry := range vod.Metadata.UserDefined.MetadataFiles.File {
 		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileInfo{metadatafileEntry.Filename, metadatafileEntry.Checksum})
-		//fmt.Println("MAP APPENDED:::::", folderMetadataFilesMap[metadatafileEntry.FolderId])
 	}
 	fmt.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
@@ -182,23 +177,28 @@ func getMstoreFiles(vod VodInfo) error {
 		fmt.Println("====================")
 		fmt.Println("subpath: ", subpath)
 		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
-		fileInfos := make([][]string, metafilesLen+bulkfilesLen)
+		fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
 		for i, x := range folderMetadataFilesMap[folder] {
-			fileInfos[i] = make([]string, 4)
+			fileInfos[i] = make([]string, 5)
 			fileInfos[i][0] = x.Name
 			fileInfos[i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
 			fileInfos[i][2] = x.Hashsum
 			fileInfos[i][3] = "metadata"
+			fileInfos[i][4] = strconv.FormatInt(deadline.Unix(), 10)
 		}
 		for i, x := range folderBulkFilesMap[folder] {
-			fileInfos[metafilesLen+i] = make([]string, 4)
+			fileInfos[metafilesLen+i] = make([]string, 5)
 			fileInfos[metafilesLen+i][0] = x.Name
 			fileInfos[metafilesLen+i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
 			fileInfos[metafilesLen+i][2] = x.Hashsum
 			fileInfos[metafilesLen+i][3] = "bulkfile"
+			fileInfos[metafilesLen+i][4] = strconv.FormatInt(deadline.Unix(), 10)
 		}
+		// info for the folder deadline
+		fileInfos[metafilesLen+bulkfilesLen] = make([]string, 5)
+		fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline.Unix(), 10)
 		subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
-		err := fs.CreateDownloadNewFolder(subpathA, copyFiles, fileInfos, deadline)
+		err := fs.CreateDownloadNewFolder(subpathA, copyFiles, fileInfos)
 		if err != nil {
 			log.Println(err)
 			// if eval, ok := err.(*fs.FolderExistError); ok {
@@ -211,6 +211,13 @@ func getMstoreFiles(vod VodInfo) error {
 			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
+		//trigger DELETE API--- if to be removed later
+		// if deleteFlag {
+		// 	if err := deleteAPI(cid); err != nil {
+		// 		logger.Log("Error", fmt.Sprintf("%s", err))
+		// 		fmt.Println("Error", fmt.Sprintf("%s", err))
+		// 	}
+		// }
 		log.Println("")
 		fs.PrintBuckets()
 		fs.PrintFileSystem()
@@ -227,13 +234,16 @@ func getMstoreFiles(vod VodInfo) error {
 }
 
 func copyFiles(filePath string, fileInfos [][]string) error {
-	for _, x := range fileInfos {
+	for i, x := range fileInfos {
+		if i == len(fileInfos)-1 {
+			break
+		}
 		var downloadpath string
 		switch x[3] {
 		case "metadata":
-			downloadpath = filepath.Join(filePath, "metadatafiles", x[0])
+			downloadpath = filepath.Join(filePath, cfg.Section("DEVICE_INFO").Key("METADATA_FOLDER"), x[0])
 		case "bulkfile":
-			downloadpath = filepath.Join(filePath, "bulkfiles", x[0])
+			downloadpath = filepath.Join(filePath, cfg.Section("DEVICE_INFO").Key("BULKFILE_FOLDER"), x[0])
 		default:
 			log.Println("Invalid File type: ", x[0])
 			continue
@@ -263,6 +273,13 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 			return err
 		}
 	}
+	// store the deadline for the created folder
+	//handled if no files to be downloaded-- only folder created and deadline.txt
+	if err := storeDeadline(filePath, fileInfos[0][4]); err != nil {
+		logger.Log("Error", fmt.Sprintf("Could not store validity end date: %s", err))
+		fmt.Println("Error", fmt.Sprintf("Could not store validity end date: %s", err))
+		return err
+	}
 	return nil
 }
 
@@ -285,6 +302,15 @@ func copySingleFile(dest, source string) error {
 	return nil
 }
 
+//TODO: Complete this
+// func deleteAPI(cid string) error {
+// 	query := "http://localhost:8134/deletecontent/" + cid
+// 	res, err := http.Get(query)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer res.Body.Close()
+// }
 func testMstore() error {
 	fmt.Println("TEST")
 	file, err := os.Open("test/resp3.json")

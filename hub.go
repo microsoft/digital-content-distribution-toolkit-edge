@@ -22,10 +22,13 @@ import (
 var logger cl.Logger
 var fs *filesys.FileSystem
 var km *keymanager.KeyManager
+var cfg *ini.File
 
 func main() {
-	cfg, err := ini.Load("hub_config.ini")
+	var err error
+	cfg, err = ini.Load("hub_config.ini")
 	if err != nil {
+		logger.Log("Critical", fmt.Sprintf("Failed to read config file: %s", err))
 		fmt.Printf("Failed to read config file: %v", err)
 		os.Exit(1)
 	}
@@ -42,7 +45,7 @@ func main() {
 	boltdb_location := cfg.Section("FILE_SYSTEM").Key("BOLTDB_LOCATION").String()
 	fs, err = filesys.MakeFileSystem(name_length, home_dir_location, boltdb_location)
 	if err != nil {
-		logger.Log("Error", fmt.Sprintf("Failed to setup filesys: %s", err))
+		logger.Log("Critical", fmt.Sprintf("Failed to setup filesys: %s", err))
 		os.Exit(1)
 	}
 	defer fs.Close()
@@ -51,7 +54,7 @@ func main() {
 	if initflag {
 		err = fs.InitFileSystem()
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("Failed to setup filesys: %s", err))
+			logger.Log("Critical", fmt.Sprintf("Failed to setup filesys: %s", err))
 			os.Exit(1)
 		}
 	}
@@ -80,6 +83,8 @@ func main() {
 	case "mstore":
 		go pollMstore(getdata_interval)
 	}
+	liveness_interval, err := cfg.Section("DEVICE_INFO").Key("LIVENESS_SCHEDULER").Int()
+	go liveness(liveness_interval)
 	//go pollMstore()
 	//testMstore()
 	//go check()
@@ -97,7 +102,7 @@ func main() {
 	})
 
 	if err != nil {
-		logger.Log("Error", fmt.Sprintf("Failed to setup keymanager: %s", err))
+		logger.Log("Critical", fmt.Sprintf("Failed to setup keymanager: %s", err))
 		os.Exit(1)
 	}
 
