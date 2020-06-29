@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"log"
 	"path/filepath"
 	"sync"
 
@@ -26,7 +27,7 @@ var km *keymanager.KeyManager
 func main() {
 	cfg, err := ini.Load("hub_config.ini")
 	if err != nil {
-		fmt.Printf("Failed to read config file: %v", err)
+		fmt.Println("Failed to read config file: %v", err)
 		os.Exit(1)
 	}
 
@@ -34,7 +35,8 @@ func main() {
 
 	logFile := cfg.Section("LOGGER").Key("LOG_FILE_PATH").String()
 	bufferSize, err := cfg.Section("LOGGER").Key("MEM_BUFFER_SIZE").Int()
-	logger = cl.MakeLogger(logFile, bufferSize)
+	deviceId := cfg.Section("DEVICE_INFO").Key("DEVICE_NAME").String()
+	logger = cl.MakeLogger(deviceId, logFile, bufferSize)
 
 	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
 
@@ -43,7 +45,8 @@ func main() {
 	boltdb_location := cfg.Section("FILE_SYSTEM").Key("BOLTDB_LOCATION").String()
 	fs, err = filesys.MakeFileSystem(name_length, home_dir_location, boltdb_location)
 	if err != nil {
-		logger.Log("Error", fmt.Sprintf("Failed to setup filesys: %s", err))
+		logger.Log("Error", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
+		log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
 		os.Exit(1)
 	}
 	defer fs.Close()
@@ -52,7 +55,8 @@ func main() {
 	if initflag {
 		err = fs.InitFileSystem()
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("Failed to setup filesys: %s", err))
+			logger.Log("Error", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
+			log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
 			os.Exit(1)
 		}
 	}
@@ -92,7 +96,8 @@ func main() {
 	})
 
 	if err != nil {
-		logger.Log("Error", fmt.Sprintf("Failed to setup keymanager: %s", err))
+		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
+		log.Println(fmt.Sprintf("Failed to setup keymanager: %v", err))
 		os.Exit(1)
 	}
 

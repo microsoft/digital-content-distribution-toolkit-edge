@@ -7,10 +7,19 @@ import (
     "log"
 	"os"
 	"bufio"
+	"encoding/json"
     "syscall"
     "time"
 )
 type LogType string;
+
+type Message struct {
+	DeviceId string
+	MessageType string
+	MessageSubType string
+	TimeStamp string
+	MessageBody map[string]string
+}
 
 const (
     Telemetry LogType = "Telemetry"
@@ -31,18 +40,20 @@ func (lt LogType) isValid() error {
 
 
 type Logger struct{
+	deviceId string
 	file *os.File
 	writer *bufio.Writer
 }
 
-func MakeLogger(logFilePath string, bufferSize int) *Logger {
+func MakeLogger(deviceId string, logFilePath string, bufferSize int) *Logger {
+	fmt.Println(">>>>>>", deviceId, logFilePath, bufferSize)
 	file, err := os.OpenFile(logFilePath, syscall.O_CREAT|syscall.O_WRONLY|syscall.O_APPEND, 0666)
     if err != nil {
         log.Fatalf("[Logger]error in opening file: %s", logFilePath)
 	}
 	
 	writer := bufio.NewWriterSize(file, bufferSize)
-	l := Logger{file, writer}
+	l := Logger{deviceId, file, writer}
 
 	return &l
 }
@@ -71,25 +82,33 @@ func (l *Logger) unlockFile() error {
 	return nil
 }
 
-func (l *Logger) Log(logType LogType, logString string) {
-    if err := logType.isValid(); err != nil{
-        fmt.Errorf("[Logger]invalid log type %s", logType)
+func (l *Logger) Log(messageType string, messageSubType string, messageBody map[string]string) {
+    if err := LogType(messageType).isValid(); err != nil{
+        fmt.Errorf("[Logger]invalid message type %s", messageType)
 	}
 	
-	err := l.lockFile()
+	msg := Message{l.deviceId, messageType, messageSubType, fmt.Sprintf("%d", time.Now().Unix()), messageBody}
+	b, err := json.Marshal(msg)
 	if err != nil {
-		log.Printf("[Logger] error in locking file")
+		log.Println(fmt.Sprintf("[Logger] error in creating message: %v", err))
+	}
+	msgString := string(b)
+	fmt.Println(msgString)
+
+	err = l.lockFile()
+	if err != nil {
+		log.Println("[Logger] error in locking file")
 	}
 
-	l.writer.WriteString(fmt.Sprintf("[%s]%s %s\n", logType, time.Now().String(), logString))
-	if(logType == "Telemetry" || logType == "Critical" || logType == "Error") {
+	l.writer.WriteString(msgString+"\n")
+	if(messageType == "Telemetry" || messageType == "Critical" || messageType == "Error") {
 		l.writer.Flush()
 		l.file.Sync()
 	}
 
 	err = l.unlockFile()
 	if err != nil {
-		log.Printf("[Logger] error in unlocking file")
+		log.Println("[Logger] error in unlocking file")
 	}
 }
 

@@ -73,14 +73,14 @@ def send_upstream_messages(iot_client):
                 fout.seek(0)
                 fout.write("")
                 fout.truncate()
-                
+            
             for x in temp:
                 if(len(x) != 0):
-                    message = Message("[{}]{}".format(config.get("DEVICE_INFO", "DEVICE_NAME"), x))
+                    message = Message(x)
                     print(message)
                     iot_client.send_message(message)
         except Exception as ex:
-            message = Message("[{}]{}".format(config.get("DEVICE_INFO", "DEVICE_NAME"), "[Critical] exception in send_upstream_messages in deivce SDK {}".format(ex)))
+            message = Message(str({"DeviceId": config.get("DEVICE_INFO", "DEVICE_NAME"), "MessageType": "Critical", "MessageSubType": "DeviceSDK", "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK {}".format(ex)}}))
             print(message)
             iot_client.send_message(message)
 
