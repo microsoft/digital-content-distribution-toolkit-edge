@@ -12,15 +12,8 @@ import (
 	"time"
 )
 
-//const _interval time.Duration = 120
-
 func checkIntegrity(interval int) {
 	for true {
-<<<<<<< HEAD:integrity_liveness.go
-		logger.Log("Telemetry", "[Liveness] "+"STATUS:ALIVE")
-=======
-		logger.Log("Telemetry", "Liveness", map[string]string{"STATUS": "ALIVE"})
->>>>>>> upstream/master:folder_checker_new.go
 		time.Sleep(time.Duration(interval) * time.Second)
 		fmt.Println("Info", "Checking files integrity from background thread")
 		fmt.Println("------------------------------------------------")
@@ -38,8 +31,7 @@ func checkIntegrity(interval int) {
 			//fmt.Println(c, t)
 			fmt.Println("Telemetry", "[IntegityStats] "+folder_name+" :Total no. of files checked: "+strconv.Itoa(t))
 			fmt.Println("Telemetry", "[IntegityStats] "+folder_name+" :No. of files corrupted: "+strconv.Itoa(c))
-			logger.Log("Telemetry", "IntegityStats", map[string]string{"FolderName": folder_name, "Total no. of files checked": strconv.Itoa(t)})
-			logger.Log("Telemetry", "IntegityStats", map[string]string{"FolderName": folder_name, "No. of files corrupted": strconv.Itoa(c)})
+			logger.Log("Telemetry", "IntegrityStats", map[string]string{"ParentName": folder_name, "Files Checked": strconv.Itoa(t), "Files Corrupted": strconv.Itoa(c)})
 		}
 	}
 }
@@ -66,41 +58,48 @@ func checkheirarchy(node []byte, c, t int) (int, int) {
 
 func checkfiles(folderpath string) int {
 	c := 0
-	if _, err := os.Stat(filepath.Join(folderpath, "metadatafiles")); !os.IsNotExist(err) {
-		hashsummap, f_err := gethashsum(filepath.Join(folderpath, "metadatafiles", "hashsum.txt"))
+	metadataFolderName := cfg.Section("DEVICE_INFO").Key("METADATA_FOLDER").String()
+	bulkFolderName := cfg.Section("DEVICE_INFO").Key("BULKFILE_FOLDER").String()
+	if _, err := os.Stat(filepath.Join(folderpath, metadataFolderName)); !os.IsNotExist(err) {
+		hashsummap, f_err := gethashsum(filepath.Join(folderpath, metadataFolderName, "hashsum.txt"))
 		if f_err != nil {
 			fmt.Println("Could not open hashsum.txt file", f_err)
 		}
 		//fmt.Println(hashsummap)
-		files, _ := ioutil.ReadDir(filepath.Join(folderpath, "metadatafiles"))
+		files, _ := ioutil.ReadDir(filepath.Join(folderpath, metadataFolderName))
 		for _, file := range files {
 			if file.Name() == "hashsum.txt" {
 				continue
 			}
-			//fmt.Println(filepath.Join(folderpath, "metadatafiles", file.Name()))
-			err = matchSHA256(filepath.Join(folderpath, "metadatafiles", file.Name()), hashsummap[file.Name()])
+			err = matchSHA256(filepath.Join(folderpath, metadataFolderName, file.Name()), hashsummap[file.Name()])
 			if err != nil {
-				fmt.Println("Telemetry", "[IntegrityStats] "+filepath.Join(folderpath, "metadatafiles", file.Name())+" marked for deletion")
+				fmt.Println("Telemetry", "[IntegrityStats] "+filepath.Join(folderpath, "metadatafiles", file.Name())+" is corrupted")
+				//TODO: get abstracted path for actual path
+				folderName, _ := fs.GetFolderNameForNode([]byte(filepath.Base(folderpath)))
+				logger.Log("Telemetry", "IntegrityStats", map[string]string{"FolderName": folderName, "IntegrityStatus": "Corrupted"})
 				c++
 				continue
 			}
 		}
 	}
-	if _, err := os.Stat(filepath.Join(folderpath, "bulkfiles")); !os.IsNotExist(err) {
-		hashsummap, f_err := gethashsum(filepath.Join(folderpath, "bulkfiles", "hashsum.txt"))
+	if _, err := os.Stat(filepath.Join(folderpath, bulkFolderName)); !os.IsNotExist(err) {
+		hashsummap, f_err := gethashsum(filepath.Join(folderpath, bulkFolderName, "hashsum.txt"))
 		if f_err != nil {
 			fmt.Println("Could not open hashsum.txt file", f_err)
 		}
 		//fmt.Println(hashsummap)
-		files, _ := ioutil.ReadDir(filepath.Join(folderpath, "bulkfiles"))
+		files, _ := ioutil.ReadDir(filepath.Join(folderpath, bulkFolderName))
 		for _, file := range files {
 			if file.Name() == "hashsum.txt" {
 				continue
 			}
 			//fmt.Println(filepath.Join(folderpath, "bulkfiles", file.Name()))
-			err = matchSHA256(filepath.Join(folderpath, "bulkfiles", file.Name()), hashsummap[file.Name()])
+			err = matchSHA256(filepath.Join(folderpath, bulkFolderName, file.Name()), hashsummap[file.Name()])
 			if err != nil {
 				fmt.Println("Telemetry", "[IntegrityStats] "+filepath.Join(folderpath, "bulkfiles", file.Name())+" marked for deletion")
+				//TODO: get abstracted path for actual path
+				folderName, _ := fs.GetFolderNameForNode([]byte(filepath.Base(folderpath)))
+				logger.Log("Telemetry", "IntegrityStats", map[string]string{"FolderName": folderName, "IntegrityStatus": "Corrupted"})
 				c++
 				continue
 			}
@@ -125,19 +124,21 @@ func gethashsum(folderpath string) (map[string]string, error) {
 }
 func getTotalFiles(folderpath string) int {
 	t := 0
-	if _, err := os.Stat(filepath.Join(folderpath, "metadatafiles")); !os.IsNotExist(err) {
-		files, _ := ioutil.ReadDir(filepath.Join(folderpath, "metadatafiles"))
+	metadataFolderName := cfg.Section("DEVICE_INFO").Key("METADATA_FOLDER").String()
+	bulkFolderName := cfg.Section("DEVICE_INFO").Key("BULKFILE_FOLDER").String()
+	if _, err := os.Stat(filepath.Join(folderpath, metadataFolderName)); !os.IsNotExist(err) {
+		files, _ := ioutil.ReadDir(filepath.Join(folderpath, metadataFolderName))
 		t += len(files) - 1
 	}
-	if _, err := os.Stat(filepath.Join(folderpath, "bulkfiles")); !os.IsNotExist(err) {
-		files, _ := ioutil.ReadDir(filepath.Join(folderpath, "bulkfiles"))
+	if _, err := os.Stat(filepath.Join(folderpath, bulkFolderName)); !os.IsNotExist(err) {
+		files, _ := ioutil.ReadDir(filepath.Join(folderpath, bulkFolderName))
 		t += len(files) - 1
 	}
 	return t
 }
 func liveness(interval int) {
 	for true {
-		logger.Log("Telemetry", "[Liveness] "+"STATUS:ALIVE")
+		logger.Log("Telemetry", "Liveness", map[string]string{"STATUS": "ALIVE"})
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }

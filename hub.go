@@ -29,7 +29,7 @@ func main() {
 	var err error
 	cfg, err = ini.Load("hub_config.ini")
 	if err != nil {
-		logger.Log("Critical", fmt.Sprintf("Failed to read config file: %s", err))
+		logger.Log("Critical", "Config.ini", map[string]string{"Message": fmt.Sprintf("Failed to read config file: %s", err)})
 		fmt.Printf("Failed to read config file: %v", err)
 		os.Exit(1)
 	}
@@ -53,12 +53,11 @@ func main() {
 		os.Exit(1)
 	}
 	defer fs.Close()
-
 	initflag, err := cfg.Section("DEVICE_INFO").Key("INIT_FILE_SYSTEM").Bool()
 	if initflag {
 		err = fs.InitFileSystem()
 		if err != nil {
-			logger.Log("Error", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
+			logger.Log("Critical", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
 			log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
 			os.Exit(1)
 		}
@@ -80,12 +79,12 @@ func main() {
 	case "noovo":
 		go pollNoovo(getdata_interval)
 	case "mstore":
-		go pollMstore(getdata_interval)
+		//go pollMstore(getdata_interval)
 	}
 	liveness_interval, err := cfg.Section("DEVICE_INFO").Key("LIVENESS_SCHEDULER").Int()
 	go liveness(liveness_interval)
 	//go pollMstore()
-	//testMstore()
+	testMstore()
 	//go check()
 
 	// setup key manager and load keys
@@ -101,7 +100,7 @@ func main() {
 	})
 
 	if err != nil {
-		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
+		logger.Log("Critical", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
 		log.Println(fmt.Sprintf("Failed to setup keymanager: %v", err))
 		os.Exit(1)
 	}

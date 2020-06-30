@@ -86,7 +86,7 @@ func pollNoovo(interval int) {
 		//logger.Log("Info", "Polling NOOVO API for the new content on the SAT")
 		if err := callNoovoAPI(); err != nil {
 			log.Println(err)
-			logger.Log("Error", err.Error())
+			logger.Log("Error", "SatdataNoovo", map[string]string{"Message": err.Error()})
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
@@ -111,7 +111,12 @@ func callNoovoAPI() error {
 	fmt.Println(":::::::::::::::::NO. OF CONTENTS:::::::::::", len(vods))
 	for _, vod := range vods {
 		if matched, _ := regexp.MatchString(`^BINE.`, vod.Content.VODInfo.MovieID); matched {
-			_heirarchy := vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.AncestorIds + "/" + vod.Content.UserDefined.MediaId
+			var _heirarchy string
+			if vod.Content.UserDefined.AncestorIds != "" {
+				_heirarchy = vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.AncestorIds + "/" + vod.Content.UserDefined.MediaId
+			} else {
+				_heirarchy = vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.MediaId
+			}
 			path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
 			if path != "" {
 				log.Println(_heirarchy + " already exist.")
@@ -119,13 +124,12 @@ func callNoovoAPI() error {
 			}
 			if err := downloadContent(vod, _heirarchy); err != nil {
 				log.Println(err)
-				logger.Log("Error", fmt.Sprintf("%s", err))
-				logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: FAILED")
+				logger.Log("Error", "SatdataNoovo", map[string]string{"Message": err.Error()})
+				logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": _heirarchy, "Channel": "SES"})
 				continue
 			}
 			path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-			logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
-			logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+			logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": strconv.FormatInt(getDirSizeinMB(path), 10) + " MB", "Channel": "SES"})
 			// logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 		}
 	}
@@ -135,15 +139,7 @@ func callNoovoAPI() error {
 func downloadContent(vod VodObj, _heirarchy string) error {
 	pushId := strconv.Itoa(vod.Content.UserDefined.PushId)
 	deadline := vod.Content.VODInfo.ValidityEndDate
-	// _heirarchy := vod.Content.UserDefined.MediaHouse + "/"
-	// for i, x := range vod.Content.UserDefined.AncestorIds.File {
-	// 	if i == 0 {
-	// 		continue
-	// 	}
-	// 	_heirarchy = _heirarchy + x + "/"
-	// }
-	// _heirarchy = _heirarchy + vod.Content.UserDefined.MediaId + "/"
-	//logger.Log("Info", "Downloading files for  "+_heirarchy+" via SES channel")
+
 	// filesUrlMap of the files with the url
 	filesURLMap := make(map[string]string)
 	filesURLMap[filepath.Base(vod.Content.Pictures.Thumbnail.File.Filename)] = vod.Content.Pictures.Thumbnail.File.Filename
@@ -207,7 +203,6 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 			if err.Error() == "[Filesystem][CreateFolder]A folder with the same name at the requested level already exists" {
 				continue
 			}
-			//logger.Log("Error", fmt.Sprintf("%s", err))
 			log.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
@@ -238,7 +233,13 @@ func dummyTest() error {
 	for _, vod := range vods {
 		if vod.Source == source {
 			if matched, _ := regexp.MatchString(`^BINE.`, vod.Content.VODInfo.MovieID); matched {
-				err := downloadContent(vod, "")
+				var _heirarchy string
+				if vod.Content.UserDefined.AncestorIds != "" {
+					_heirarchy = vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.AncestorIds + "/" + vod.Content.UserDefined.MediaId
+				} else {
+					_heirarchy = vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.MediaId
+				}
+				err := downloadContent(vod, _heirarchy)
 				if err != nil {
 					fmt.Println(err)
 				}

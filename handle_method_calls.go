@@ -56,8 +56,8 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	fmt.Println("Printing file sys")
 	fs.PrintFileSystem()
 	fmt.Println("====================")
-	//TODO: remove type casting
-	deadline := int64(download_params.GetDeadline())
+
+	deadline := download_params.GetDeadline()
 	metafilesLen := len(download_params.GetMetadatafiles())
 	bulkfilesLen := len(download_params.GetBulkfiles())
 	fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
@@ -83,7 +83,8 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline, 10)
 	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos)
 	if err != nil {
-		logger.Log("Error", fmt.Sprintf("%s", err))
+		logger.Log("Error", "HandleMethodCalls", map[string]string{"Message": err.Error()})
+		logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": download_params.GetFolderpath(), "Channel": "LAN"})
 		log.Println("Error", fmt.Sprintf("%s", err))
 		return &pb.Response{Responsemessage: "Folder not downloaded"}, err
 	}
@@ -91,13 +92,13 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	fs.PrintBuckets()
 	fs.PrintFileSystem()
 	log.Println("")
-
-	//???
-	if len(fileInfos) == 1 {
-		//logger.Log("Info", "Folder created. Download request does not have file infos ")
-		return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
-	}
-	//TODO: add telemetry
+	// //???
+	// if len(fileInfos) == 1 {
+	// 	//logger.Log("Info", "Folder created. Download request does not have file infos ")
+	// 	return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
+	// }
+	path, _ := fs.GetActualPathForAbstractedPath(download_params.GetFolderpath())
+	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "Size": strconv.FormatInt(getDirSizeinMB(path), 10) + " MB", "Channel": "LAN"})
 	return &pb.Response{Responsemessage: "Folder downloaded"}, nil
 }
 func DownloadFiles(filePath string, fileInfos [][]string) error {
@@ -116,25 +117,25 @@ func DownloadFiles(filePath string, fileInfos [][]string) error {
 			continue
 		}
 		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", "HandleMethodCalls", map[string]string{"Message": err.Error()})
 			log.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err := DownloadFile(downloadpath, x[1])
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", "HandleMethodCalls", map[string]string{"Message": err.Error()})
 			log.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err = matchSHA256(downloadpath, x[2])
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
+			logger.Log("Error", "HandleMethodCalls", map[string]string{"Message": fmt.Sprintf("Hashsum did not match: %s", err)})
 			log.Println("Error", fmt.Sprintf("Hashsum did not match: %s", err.Error()))
 			return err
 		}
 		//store it in a file
 		if err := storeHashsum(downloadpath, x[2]); err != nil {
-			logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+			logger.Log("Error", "HandleMethodCalls", map[string]string{"Message": fmt.Sprintf("Could not store Hashsum in the text file: %s", err)})
 			log.Println("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 			return err
 		}
@@ -142,7 +143,7 @@ func DownloadFiles(filePath string, fileInfos [][]string) error {
 	// store the deadline for the created folder
 	//handled if no files to be downloaded-- only folder created and deadline.txt
 	if err := storeDeadline(filePath, fileInfos[0][4]); err != nil {
-		logger.Log("Error", fmt.Sprintf("Could not store validity end date: %s", err))
+		logger.Log("Error", "HandleMethodCalls", map[string]string{"Message": fmt.Sprintf("Could not store validity end date: %s", err)})
 		fmt.Println("Error", fmt.Sprintf("Could not store validity end date: %s", err))
 		return err
 	}
@@ -166,22 +167,25 @@ func storeHashsum(path, hash string) error {
 func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.DeleteParams) (*pb.Response, error) {
 	folder_path := delete_params.GetFolderpath()
 	log.Println(folder_path)
+	path, _ := fs.GetActualPathForAbstractedPath(folder_path)
 	if delete_params.GetRecursive() {
 		err := fs.RecursiveDeleteFolder(strings.Split(folder_path, "/"))
 		if err != nil {
-			//logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", "HandleMethodCalls", map[string]string{"Message": err.Error()})
+			logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "FAIL", "FolderPath": delete_params.GetFolderpath()})
 			log.Println("Error", fmt.Sprintf("%s", err))
 			return &pb.Response{Responsemessage: "Folder not deleted"}, err
 		}
 	} else {
 		err := fs.DeleteFolder(strings.Split(folder_path, "/"))
 		if err != nil {
-			//logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", "HandleMethodCalls", map[string]string{"Message": err.Error()})
+			logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "FAIL", "FolderPath": delete_params.GetFolderpath()})
 			log.Println("Error", fmt.Sprintf("%s", err))
 			return &pb.Response{Responsemessage: "Folder not deleted"}, err
 		}
 	}
-
+	logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "SUCCESS", "FolderPath": delete_params.GetFolderpath(), "Size": strconv.FormatInt(getDirSizeinMB(path), 10) + " MB"})
 	return &pb.Response{Responsemessage: "Folder deleted"}, nil
 }
 
