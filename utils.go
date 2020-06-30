@@ -71,4 +71,5 @@ func storeDeadline(path, deadline string) error {
 	if err != nil {
 		return err
 	}
+	return nil
 }

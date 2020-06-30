@@ -56,7 +56,8 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	fmt.Println("Printing file sys")
 	fs.PrintFileSystem()
 	fmt.Println("====================")
-	deadline := download_params.GetDeadline()
+	//TODO: remove type casting
+	deadline := int64(download_params.GetDeadline())
 	metafilesLen := len(download_params.GetMetadatafiles())
 	bulkfilesLen := len(download_params.GetBulkfiles())
 	fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
@@ -67,7 +68,7 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		fileInfos[i][1] = (*x).Cdn
 		fileInfos[i][2] = (*x).Hashsum
 		fileInfos[i][3] = "metadata"
-		fileInfos[i][4] = strconv.FormatInt(deadline.Unix(), 10)
+		fileInfos[i][4] = strconv.FormatInt(deadline, 10)
 	}
 	for i, x := range download_params.GetBulkfiles() {
 		log.Println("\t", (*x).Name)
@@ -76,10 +77,10 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		fileInfos[metafilesLen+i][1] = (*x).Cdn
 		fileInfos[metafilesLen+i][2] = (*x).Hashsum
 		fileInfos[metafilesLen+i][3] = "bulkfile"
-		fileInfos[metafilesLen+i][4] = strconv.FormatInt(deadline.Unix(), 10)
+		fileInfos[metafilesLen+i][4] = strconv.FormatInt(deadline, 10)
 	}
 	fileInfos[metafilesLen+bulkfilesLen] = make([]string, 5)
-	fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline.Unix(), 10)
+	fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline, 10)
 	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos)
 	if err != nil {
 		logger.Log("Error", fmt.Sprintf("%s", err))
@@ -100,16 +101,16 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	return &pb.Response{Responsemessage: "Folder downloaded"}, nil
 }
 func DownloadFiles(filePath string, fileInfos [][]string) error {
-	for _, x := range fileInfos {
+	for i, x := range fileInfos {
 		if i == len(fileInfos)-1 {
 			break
 		}
 		var downloadpath string
 		switch x[3] {
 		case "metadata":
-			downloadpath = filepath.Join(filePath, cfg.Section("DEVICE_INFO").Key("METADATA_FOLDER"), x[0])
+			downloadpath = filepath.Join(filePath, cfg.Section("DEVICE_INFO").Key("METADATA_FOLDER").String(), x[0])
 		case "bulkfile":
-			downloadpath = filepath.Join(filePath, cfg.Section("DEVICE_INFO").Key("BULKFILE_FOLDER"), x[0])
+			downloadpath = filepath.Join(filePath, cfg.Section("DEVICE_INFO").Key("BULKFILE_FOLDER").String(), x[0])
 		default:
 			log.Println("Invalid File type: ", x[0])
 			continue

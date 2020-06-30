@@ -241,9 +241,9 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 		var downloadpath string
 		switch x[3] {
 		case "metadata":
-			downloadpath = filepath.Join(filePath, cfg.Section("DEVICE_INFO").Key("METADATA_FOLDER"), x[0])
+			downloadpath = filepath.Join(filePath, cfg.Section("DEVICE_INFO").Key("METADATA_FOLDER").String(), x[0])
 		case "bulkfile":
-			downloadpath = filepath.Join(filePath, cfg.Section("DEVICE_INFO").Key("BULKFILE_FOLDER"), x[0])
+			downloadpath = filepath.Join(filePath, cfg.Section("DEVICE_INFO").Key("BULKFILE_FOLDER").String(), x[0])
 		default:
 			log.Println("Invalid File type: ", x[0])
 			continue
@@ -286,6 +286,7 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 func copySingleFile(dest, source string) error {
 	//TODO: handle if the source does not exist
 	fmt.Println("SOURCE:", source)
+	t1 := time.Now()
 	sfile, err := os.Open(source)
 	if err != nil {
 		return err
@@ -298,7 +299,12 @@ func copySingleFile(dest, source string) error {
 	}
 	defer dfile.Close()
 	written, err := io.Copy(dfile, sfile)
-	fmt.Println("======== Written bytes======== ", written)
+	t2 := time.Now()
+	diff := t2.Sub(t1)
+	log.Println("Transfer with io.Copy() took %f seconds\n", diff.Seconds())
+	fmt.Println("========Copy speed======== ", float64(written/1024/1024)/diff.Seconds())
+	fmt.Println("======== Written MB======== ", float64(written/1024/1024))
+
 	return nil
 }
 
