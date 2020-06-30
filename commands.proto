@@ -27,7 +27,8 @@ message DownloadParams {
   repeated File bulkfiles = 3;
 
   repeated Channel channels = 4;
-  int32 deadline = 5;
+  int64 deadline = 5;
+  bool addtoexisting = 6;
 }
 
 message DeleteParams {
