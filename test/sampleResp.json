@@ -1,0 +1,178 @@
+[{
+    "source": "mstore",
+    "content": {
+      "pushInfo": {
+        "mode": "",
+        "broadcastStartDate": "0001-01-01T00:00:00Z",
+        "broadcastEndDate": "0001-01-01T00:00:00Z",
+        "CID": 46,
+        "broadcastProfile": {
+          "type": "",
+          "duration": "",
+          "nbrMinBroadcasts": 0,
+          "nbrMaxBroadcasts": 0,
+          "priority": 0,
+          "applicativeFEC": {
+            "percent": 0
+          }
+        }
+      },
+      "userDefined": {
+        "mediaHouse": "MSR",
+        "isDRM": false,
+        "mediaId": "machine_learning_lecture1",
+        "resolution": "SD",
+        "parentId": "machine_learning",
+        "metadataFiles": {
+          "file": [
+            {
+              "filename": "cover.png",
+              "checksum": "e02d7821816870ee0e58918e35d7f8916144d5359c4b9c02ca5e1b756f87899f",
+              "filesize": 2104,
+              "folderId": "machine_learning_lecture1",
+              "type": "metadata"
+            },
+            {
+              "filename": "thumbnail.jpg",
+              "checksum": "b1f2a066e355ba7be9c01a3afe1843148f50c1868e650ac5290664a580c344cd",
+              "filesize": 9723,
+              "folderId": "machine_learning_lecture1",
+              "type": "metadata"
+            },
+            {
+              "filename": "metadata.xml",
+              "checksum": "7b4bb8b01c333e7fa8145bcec20244197c7763786ef47c9de962effb017d01de",
+              "filesize": 53790,
+              "folderId": "machine_learning_lecture1",
+              "type": "metadata"
+            },
+            {
+                "filename": "metadata.xml",
+                "checksum": "7b4bb8b01c333e7fa8145bcec20244197c7763786ef47c9de962effb017d01de",
+                "filesize": 53790,
+                "folderId": "machine_learning",
+                "type": "metadata"
+            },
+            {
+                "filename": "genre_cover.png",
+                "checksum": "e02d7821816870ee0e58918e35d7f8916144d5359c4b9c02ca5e1b756f87899f",
+                "filesize": 2104,
+                "folderId": "machine_learning",
+                "type": "metadata"
+              }
+          ]
+        },
+        "pushId": 10,
+        "ancestorIds": {
+          "file": [
+            "root",
+            "machine_learning"
+          ]
+        },
+        "hierarchyLevels": 2,
+        "bulkFiles": {
+          "file": 
+            {
+            "filename": "vod.mp4",
+            "checksum": "e754ddcf735de06ac797915b814c933771276831b1d802022036036e0edd4294",
+            "filesize": 168089812,
+            "folderId": "machine_learning_lecture1",
+            "type": "bulkfile" 
+            }
+        
+        },
+        "totalNumberOfLectures": 12
+      },
+      "editorID": "SES",
+      "catalog": "ses_REPLACE",
+      "description": {
+        "videoVersion": "SD",
+        "series": false,
+        "category": "a",
+        "shortSummary": "S V N Vishwanathan (Vishy) and Prateek Jain will offer a 10 week Machine Learning course. It will be an exciting mix between theory and application talks by various guest lecturers. This will be run like a proper course in a university with TAs, assignments and completion certificates etc",
+        "productionNationality": "",
+        "shortTitle": "Machine Learning Course - Lecture 11",
+        "longTitle": "",
+        "audioVersion": "",
+        "keywords": {
+          "keyword": []
+        },
+        "comment": "",
+        "parentalGuidance": 0,
+        "theoricDuration": "",
+        "productionDate": 0,
+        "actors": {
+          "actor": []
+        },
+        "directors": {
+          "director": []
+        },
+        "longSummary": ""
+      },
+      "videos": {
+        "movie": {
+          "duration": "PT00H58M39S",
+          "file": {
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_lecture1_vod.mp4",
+            "filesize": 168089812,
+            "checksum": ""
+          }
+        },
+        "trailer": {
+          "duration": "",
+          "file": {
+            "filename": "",
+            "filesize": 0,
+            "checksum": ""
+          }
+        }
+      },
+      "pictures": {
+        "cover": {
+          "file": {
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_lecture1_cover.png",
+            "filesize": 53790,
+            "checksum": ""
+          },
+          "resolution": "640x360"
+        },
+        "thumbnail": {
+          "file": {
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_lecture1_thumbnail.jpg",
+            "filesize": 9723,
+            "checksum": ""
+          },
+          "resolution": "8704x769"
+        }
+      },
+      "data": {
+        "file": [
+          {
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_genre_cover.png",
+            "filesize": 2104,
+            "checksum": ""
+          },
+          {
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_metadata.xml",
+            "filesize": 2104,
+            "checksum": ""
+          },
+          {
+            "filename": "http://localhost:5000/static/dummyContent/10_machine_learning_lecture1_metadata.xml",
+            "filesize": 2104,
+            "checksum": ""
+          }
+        ]
+      },
+      "VODInfo": {
+        "movieID": "BINE_9021b19f-3a01-4a81-9c1d-3baab8daddca",
+        "revision": 1,
+        "validityStartDate": "2020-05-07T18:39:39Z",
+        "validityEndDate": "2020-05-15T18:39:39Z",
+        "price": ""
+      },
+      "version": 4.5
+    },
+    "subtitles": []
+  }
+]

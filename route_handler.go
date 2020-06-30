@@ -1,10 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,43 +22,56 @@ const lengthOfInt64Bytes int = 8
 // Setup Routes and their handles which the hub exposes
 // Route 1: "/list/files/:parent" returns the children and their metadata of :parent
 func setupRoutes(ginEngine *gin.Engine) {
-	ginEngine.Static("/static", "./static")
-	ginEngine.GET("/metadata/:mediaHouse/:id", serveSingleMetadata)
-	ginEngine.GET("/list/files/:mediaHouse/:parent", serveMetadata)
-	ginEngine.GET("/download/files/:mediaHouse/:folderID/:fileName", serveFile)
+	ginEngine.Static("/static", "./")
+	ginEngine.GET("/metadata/", AuthRequiredMiddleware, serveSingleMetadata)
+	ginEngine.GET("/list/files/", AuthRequiredMiddleware, serveMetadata)
+	ginEngine.GET("/list/leaves/", AuthRequiredMiddleware, serveLeaves)
+	ginEngine.GET("/download/files", AuthRequiredMiddleware, serveFile)
+	fs.PrintFileSystem()
+}
+
+func errorResponse(context *gin.Context, response ...interface{}) {
+	context.String(400, "", response)
 }
 
 func serveSingleMetadata(context *gin.Context) {
-	mediaHouse := context.Param("mediaHouse")
-	folderID := context.Param("id")
+	queryParams := context.Request.URL.Query()
+	mediaHouse := queryParams.Get("mediaHouse")
+	path := queryParams.Get("path")
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
+	parts := strings.Split(path, "/")
+	fmt.Println("Single metadata path", path)
 	// write folder size
-	if writeInt64(context, getFolderSize(mediaHouse, folderID)) < 0 {
-		fmt.Println("Could not write folder size for ID: ", folderID)
+	if writeInt64(context, getFolderSize(mediaHouse, path)) < 0 {
+		fmt.Println("Could not write folder size for ID: ", path)
 		return
 	}
-	writeMetadataFiles(context, getMetadataFiles(mediaHouse, folderID), mediaHouse, folderID)
-}
-
-func serveFile(context *gin.Context) {
-	mediaHouse := context.Param("mediaHouse")
-	folderID := context.Param("folderID")
-	fileName := context.Param("fileName")
-	// redirect to this path
-	context.Redirect(http.StatusTemporaryRedirect, "/static/"+mediaHouse+"/"+folderID+"/"+fileName)
+	folderInfo := getFolderInfo(mediaHouse, path)
+	if folderInfo == nil {
+		errorResponse(context, "Folder info for ", path, " was nil")
+		return
+	}
+	writeMetadataFiles(context, folderInfo.MetadataFiles, mediaHouse, parts[len(parts)-1])
 }
 
 //Route handler for /list/files/:parent
 //Returns metadata of the requested parent's children and the actual metadata files associated with each of the child
 //Batching files and children this way in a single response reduces the latency as opposed to using different HTTP request for each file
 func serveMetadata(context *gin.Context) {
-	parent := context.Param("parent")
-	mediaHouse := context.Param("mediaHouse")
+	queryParams := context.Request.URL.Query()
+	parent := queryParams.Get("path")
+	mediaHouse := queryParams.Get("mediaHouse")
 	fmt.Println("Parent is: ", parent)
-
+	if strings.HasPrefix(parent, "/") {
+		parent = parent[1:]
+	}
 	// get List of children
 	// need to get this and metadata file list from Database
 	children := getChildren(mediaHouse, parent)
-
+	log.Println("Info", "Length of children for "+parent+" is ")
+	log.Println("Length is", len(children))
 	// return number of children
 	if writeInt32(context, len(children)) < 0 {
 		fmt.Println("Could not write to response stream")
@@ -73,6 +92,7 @@ func serveMetadata(context *gin.Context) {
 		// return if this child has children
 		// 1 - yes, 0 - no
 		// TODO: Change this to a single byte
+		// How do I know which file is the metadata file in the actual folder path
 		hasChildren := 0
 		if children[i].HasChildren {
 			hasChildren = 1
@@ -83,16 +103,75 @@ func serveMetadata(context *gin.Context) {
 		}
 
 		// write folder size
-		if writeInt64(context, getFolderSize(mediaHouse, children[i].ID)) < 0 {
-			fmt.Println("Could not write folder size for ID: ", children[i].ID)
+		if writeInt64(context, children[i].Size) < 0 {
+			fmt.Println("Could not write folder size for ID: ", parent+"/"+children[i].ID)
 			return
 		}
 
-		metadataFiles := getMetadataFiles(mediaHouse, children[i].ID)
-		if writeMetadataFiles(context, metadataFiles, mediaHouse, children[i].ID) < 0 {
+		if writeMetadataFiles(context, children[i].MetadataFiles, mediaHouse, children[i].ID) < 0 {
 			fmt.Println("Could not write metadata files for ID: " + children[i].ID)
 		}
 	}
+}
+
+func vanillaJSON(input interface{}) (string, error) {
+	buffer := &bytes.Buffer{}
+	encoder := json.NewEncoder(buffer)
+	encoder.SetEscapeHTML(false)
+	err := encoder.Encode(input)
+	if err == nil {
+		return string(buffer.Bytes()), nil
+	} else {
+		logger.Log("Error", "RouteHandler", map[string]string{"Function": "vanillaJSON", "Message": fmt.Sprintf("error while encoding %s", err.Error())})
+	}
+	return "", err
+}
+
+func serveLeaves(context *gin.Context) {
+	if val, err := vanillaJSON(getAvailableFolders()); err == nil {
+		context.String(200, string(val))
+		return
+	}
+	errorResponse(context, "Leaves not found")
+}
+
+func serveFile(context *gin.Context) {
+	queryParams := context.Request.URL.Query()
+	mediaHouse := queryParams.Get("mediaHouse")
+	path := queryParams.Get("path")
+	path, err := url.QueryUnescape(path)
+	if err != nil {
+		fmt.Println("Failed path resolution")
+	}
+	fmt.Println(path)
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
+	fileName := queryParams.Get("file")
+	fileName, err = url.QueryUnescape(fileName)
+	if err != nil {
+		fmt.Println("Failed filname resolution")
+	}
+	if strings.HasPrefix(fileName, "/") {
+		fileName = fileName[1:]
+	}
+	abstractFilePath := mediaHouse + "/" + path
+	fmt.Println("abastract file path: ", abstractFilePath)
+	actualPath, err := fs.GetActualPathForAbstractedPath(abstractFilePath)
+	fmt.Println("Actual path: ", actualPath)
+	if err != nil {
+		fmt.Println(err)
+		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Could not get actual path for abstract path "+path})
+		errorResponse(context, "Invalid path")
+		return
+	}
+	logger.Log("Info", "RouteHandler", map[string]string{"Message": "Redirecting: "+path+" to actual: "+actualPath+"/"+fileName})
+	fmt.Println("Redirecting: " + path + " to actual: " + actualPath + "/" + fileName)
+	// redirect to this path
+	if strings.HasPrefix(actualPath, "/") {
+		actualPath = actualPath[1:]
+	}
+	context.Redirect(http.StatusTemporaryRedirect, "/static/"+actualPath+"/"+fileName)
 }
 
 func writeMetadataFiles(context *gin.Context, metadataFiles []string, mediaHouse string, id string) int {
@@ -104,13 +183,14 @@ func writeMetadataFiles(context *gin.Context, metadataFiles []string, mediaHouse
 	// loop through metadata files
 	for j := 0; j < len(metadataFiles); j++ {
 		// write length of name
-		if writeString(context, metadataFiles[j]) < 0 {
+		if writeString(context, filepath.Base(metadataFiles[j])) < 0 {
 			fmt.Println("Could not write file name: for ID ", id, " name: ", metadataFiles[j])
 			return -1
 		}
 
 		// write length of file
-		filePath := getFilePath(mediaHouse, id, metadataFiles[j])
+		filePath := metadataFiles[j]
+		fmt.Println("Metadata file path is ", filePath)
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
 			fmt.Println("Could not get file info ", id, " name: ", metadataFiles[j])
@@ -205,4 +285,24 @@ func writeFile(context *gin.Context, fileHandle *os.File, fileSize int64) int64 
 		written += int64(fileBytesRead)
 	}
 	return written
+}
+
+//FolderMetadata ... represents metadata of an available folder on the hub
+type FolderMetadata struct {
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	VideoFiles  []string `json:"videoFiles"`
+	AudioFiles  []string `json:"audioFiles"`
+	Thumbnail   string   `json:"thumbnail"`
+	Thumbnail2X string   `json:"thumbnail_2x"`
+	Language    string   `json:"language"`
+	Size        string   `json:"size"`
+	Duration    string   `json:"duration"`
+	Path        string   `json:"path"`
+}
+
+//AvailableFolder ... represents folders on the hub
+type AvailableFolder struct {
+	ID       string          `json:"id"`
+	Metadata *FolderMetadata `json:"metadata"`
 }

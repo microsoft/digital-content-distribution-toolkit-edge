@@ -14,7 +14,7 @@ const checkingInterval time.Duration = 100
 func computeSHA256(filePath string) string {
 	f, err := os.Open(filePath)
 	if err != nil {
-		fmt.Println("Could not open the file")
+		fmt.Errorf("Could not open the file:::", err)
 	}
 	defer f.Close()
 
@@ -30,7 +30,7 @@ func computeSHA256(filePath string) string {
 func check() {
 	for true {
 		time.Sleep(checkingInterval * time.Second)
-		logger.Log("Info", "Checking files integrity from background thread")
+		fmt.Println("Info", "Checking files integrity from background thread")
 		navigate("root")
 	}
 }
@@ -52,7 +52,8 @@ func navigate(node string) {
 			fmt.Println("Get rid of this folder from the database and delete file contents")
 		}
 	}
-	logger.Log("Telemetry", "==========DONE Checking " + node + " ==========")
+	fmt.Println("Telemetry", "==========DONE Checking "+node+" ==========")
+	//logger.Log("Telemetry", "==========DONE Checking "+node+" ==========")
 	children := getChildren("MSR", node)
 	for i := 0; i < len(children); i++ {
 		fmt.Println("CALLING CHECK ON CHILD: ", children[i].ID)

@@ -23,21 +23,49 @@ import commands_pb2_grpc
 device_client=None
 config = configparser.ConfigParser()
 
-class LogServicer(logger_pb2_grpc.LogServicer):
-    """Provides methods that implement functionality of logging server."""
+def lock_file(f):
+    fcntl.lockf(f, fcntl.LOCK_EX)
 
-    def __init__(self, device_client):
-      print(f'Assigning iot_client')
-      self.iot_client = device_client
+def unlock_file(f):
+    fcntl.lockf(f, fcntl.LOCK_UN)
 
-    def SendSingleLog(self, request, context):
-        print(f'Preparing to send telemetry from the provisioned device')
-        message = Message("[{}]{}".format(request.logtype, request.logstring))
-        print(message)
-        print(f'Sending telemetry from the provisioned device')
-        self.iot_client.send_message(message)
+class AtomicOpen:
+    """
+    Generic class to implement context to open file with lock and flush, release lock before closing
+    """
+    def __init__(self, path, *args, **kwargs):
+        self.file = open(path,*args, **kwargs)
+        lock_file(self.file)
 
-        return logger_pb2.Empty()
+    def __enter__(self, *args, **kwargs):
+        return self.file
+
+    def __exit__(self, exc_type=None, exc_value=None, traceback=None):        
+        self.file.flush()  # Flush to make sure all buffered contents are written to file
+        os.fsync(self.file.fileno())  # Release the lock on the file
+        unlock_file(self.file)
+        self.file.close()
+        # Handle exceptions that may have come up during execution, by default any exceptions are raised to the user.
+        if(exc_type != None):
+            return False
+        else:
+            return True
+          
+# class LogServicer(logger_pb2_grpc.LogServicer):
+#     """Provides methods that implement functionality of logging server."""
+
+#     def __init__(self, device_client):
+#       print(f'Assigning iot_client')
+#       self.iot_client = device_client
+
+#     def SendSingleLog(self, request, context):
+#         print(f'Preparing to send telemetry from the provisioned device')
+#         message = Message("[{}]{}".format(request.logtype, request.logstring))
+#         print(message)
+#         print(f'Sending telemetry from the provisioned device')
+#         self.iot_client.send_message(message)
+
+#         return logger_pb2.Empty()
 
 async def provision():
   # device and host configuration are stored in the config file
@@ -168,10 +196,8 @@ async def provision():
         _folder_path = payload["folder_path"]
         _recursive = bool(payload["recursive"])
         _delete_after = int(payload["delete_after"])
-
         delete_params = commands_pb2.DeleteParams(folderpath=_folder_path, recursive=_recursive,
         delteafter=_delete_after)
-
         response = stub.Delete(delete_params)
         print(response)
     except:
@@ -182,25 +208,33 @@ async def provision():
         response_status = 200
     method_response = MethodResponse(request.request_id, response_status, payload=response_payload)
     await device_client.send_method_response(method_response)
+  
+  def getFileParams(param):
+    fileparams = []
+    if param is not None:
+        result = param.split(";")
+        for x in result:
+            y = x.split(",")
+            fileparams.append(commands_pb2.File(name=y[0], cdn=y[1], hashsum=y[2]))
+    return fileparams
     
   async def download(request, stub):
     print("Sending request to download")
     payload = eval(request.payload)
     try:
         _folder_path = payload["folder_path"]
-        _metadata_files = [commands_pb2.File(name="cover.jpg", cdn="cdn1", hashsum="asdfasdf"), commands_pb2.File(name="rating.txt", cdn="cdn1", hashsum="asdfasdf")];
-        _bulk_files = [commands_pb2.File(name="A song of ice and fire", cdn="cdn1", hashsum="asdfasdf")];
-        
+        # print(_folder_path)
+        _metadata_files = getFileParams(payload["metadata_files"])
+        _bulk_files = getFileParams(payload["bulk_files"])
+        # print(_metadata_files)
         _channels = [commands_pb2.Channel(channelname=x) for x in payload["channels"].split(";")]
         _deadline = int(payload["deadline"])
-
         print(dict(folderpath=_folder_path, metadatafiles=_metadata_files,
         bulkfiles=_bulk_files, channels=_channels, deadline=_deadline
         ))
         
         download_params = commands_pb2.DownloadParams(folderpath=_folder_path, metadatafiles=_metadata_files,
         bulkfiles=_bulk_files, channels=_channels, deadline=_deadline)
-
         response = stub.Download(download_params)
         print(response)
     except:
@@ -256,15 +290,24 @@ async def provision():
           *[settings[setting](patch[setting], patch['$version']) for setting in to_update]
         )
   
-  def send_upstream_messages():
-    print("Starting telemetry...")
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
-    logger_pb2_grpc.add_LogServicer_to_server(LogServicer(device_client), server)
-    server.add_insecure_port('localhost:{}'.format(config.getint("GRPC", "UPSTREAM_PORT")))
-    server.start()
-    print("server started")
-    time.sleep(1000)
-    server.wait_for_termination()
+  def send_upstream_messages(device_client):
+    while True:
+        try:  # keep on spinning this even in case of error in production
+            with AtomicOpen(config.get("LOGGER", "LOG_FILE_PATH"), "r+") as fout:
+                temp = [line.strip() for line in fout.readlines()]
+                fout.seek(0)
+                fout.write("")
+                fout.truncate()
+            
+            for x in temp:
+                if(len(x) != 0):
+                    message = Message(x)
+                    print(message)
+                    device_client.send_message(message)
+        except Exception as ex:
+            message = Message(str({"DeviceId": config.get("DEVICE_INFO", "DEVICE_NAME"), "MessageType": "Critical", "MessageSubType": "DeviceSDK", "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK {}".format(ex)}}))
+            print(message)
+            device_client.send_message(message)
   
     # Define behavior for halting the application
   def stdin_listener():
@@ -279,6 +322,7 @@ async def provision():
   # start sending telemetry 
   telemetry_pool = futures.ThreadPoolExecutor(1)
   telemetry_pool.submit(send_upstream_messages)
+  send_upstream_messages(device_client)
   # initialize the device by setting all the properties
   await init_device()
   

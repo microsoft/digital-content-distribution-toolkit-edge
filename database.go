@@ -138,14 +138,14 @@ func getChildrenEntries(mediaHouse string, parent string) []FolderStructureEntry
 			return nil
 		}
 		cursor := parentBucket.Cursor()
-		// fmt.Println("==============Children==============")
+		fmt.Println("===========" + parent + ":===Children==============")
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
-			// fmt.Printf("key=%s, value=%s\n", k, v)
+			fmt.Printf("key=%s, value=%s\n", k, v)
 			target := new(FolderStructureEntry)
 			json.Unmarshal(v, target)
 			result = append(result, *target)
 		}
-		// fmt.Println("====================================")
+		fmt.Println("====================================")
 		return nil
 	})
 	return result
@@ -261,11 +261,11 @@ func setupDbForTesting() {
 
 	// create entries for testing
 	// Create directory strucutre
-	addFolder("MSR", "root", FolderStructureEntry{"FRIENDS", true, "metadata.xml"})
-	addFolder("MSR", "FRIENDS", FolderStructureEntry{"FS01", true, "metadata.xml"})
-	addFolder("MSR", "FRIENDS", FolderStructureEntry{"FS02", true, "metadata.xml"})
-	addFolder("MSR", "FS01", FolderStructureEntry{"FS01E01", false, "metadata.xml"})
-	addFolder("MSR", "FS02", FolderStructureEntry{"FS02E01", false, "metadata.xml"})
+	// addFolder("MSR", "root", FolderStructureEntry{"FRIENDS", true, "metadata.xml"})
+	// addFolder("MSR", "FRIENDS", FolderStructureEntry{"FS01", true, "metadata.xml"})
+	// addFolder("MSR", "FRIENDS", FolderStructureEntry{"FS02", true, "metadata.xml"})
+	// addFolder("MSR", "FS01", FolderStructureEntry{"FS01E01", false, "metadata.xml"})
+	// addFolder("MSR", "FS02", FolderStructureEntry{"FS02E01", false, "metadata.xml"})
 
 	// Create MetadataFile entries
 	addMetadataFiles("MSR", "FRIENDS", []FileEntry{FileEntry{Name: "cover.jpg", HashSum: "7440c1695f713cfc40e02c1f7f246cad718a0377d759fd298f7aed351edd4b3a"}, FileEntry{Name: "metadata.xml", HashSum: "7b4bb8b01c333e7fa8145bcec20244197c7763786ef47c9de962effb017d01de"}})
@@ -283,6 +283,26 @@ func setupDbForTesting() {
 	addBulkFiles("MSR", "FS02E01", []FileEntry{FileEntry{Name: "vod.mp4", HashSum: "e754ddcf735de06ac797915b814c933771276831b1d802022036036e0edd4294"}})
 }
 
+func KeyExistsInDb(mediaHouse string, parent string, id string) (bool, error) {
+	var haskey = false
+	err := db.View(func(tx *bolt.Tx) error {
+		mediaHouseBucket := getMediaHouseBucket(folderStructureBucketName, mediaHouse, tx)
+		if mediaHouseBucket == nil {
+			return nil
+		}
+		parentBucket := mediaHouseBucket.Bucket(getByteString(parent))
+		if parentBucket == nil {
+			return nil
+		}
+		if v := parentBucket.Get(getByteString(id)); v != nil {
+			haskey = true
+		}
+		return nil
+	})
+
+	return haskey, err
+}
+
 // Directory structure
 // static/MediaHouse/ID/file
 
@@ -291,6 +311,8 @@ type FolderStructureEntry struct {
 	ID                   string
 	HasChildren          bool
 	InfoMetadataFileName string
+	Size                 int64
+	MetadataFiles        []string
 }
 
 //FileEntry File Information
