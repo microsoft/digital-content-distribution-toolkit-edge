@@ -71,7 +71,7 @@ func pollMstore(interval int) {
 		fmt.Println("==================Polling MStore API ==============")
 		if err := checkForVODViaMstore(); err != nil {
 			log.Println(err)
-			logger.Log("Error", err.Error())
+			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
@@ -98,7 +98,7 @@ func checkForVODViaMstore() error {
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
 			log.Println(err)
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 			//return err
 			continue
 		}
@@ -207,7 +207,7 @@ func getMstoreFiles(vod VodInfo) error {
 			if err.Error() == "[Filesystem][CreateFolder] A folder with the same name at the requested level already exists" {
 				continue
 			}
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
@@ -224,8 +224,8 @@ func getMstoreFiles(vod VodInfo) error {
 		log.Println("")
 	}
 	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-	logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+" MB downloaded on the Hub")
-	logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+	logger.Log("Telemetry", "FolderDownload", map[string]string{"Path": _heirarchy, "Size": strconv.FormatInt(getDirSizeinMB(path), 10), "Channel": "SES"})
+	logger.Log("Telemetry", "ContentSyncChannel", map[string]string{"Path": _heirarchy, "Message": "synced via SES channel: SUCCESS"})
 	//logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+" MB downloaded on the Hub")
 	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
@@ -250,25 +250,25 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 		}
 		fmt.Println(downloadpath)
 		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err := copySingleFile(downloadpath, x[1])
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err = matchSHA256(downloadpath, x[2])
 		if err != nil {
-			logger.Log("Error", fmt.Sprintf("Hashsum did not match: %s", err))
+			logger.Log("Error", "SatdataMstore", map[string]string{"Message": fmt.Sprintf("Hashsum did not match: %s", err.Error())})
 			fmt.Println("Error", fmt.Sprintf(err.Error()))
 			return err
 		}
 		//store it in a file
 		if err := storeHashsum(downloadpath, x[2]); err != nil {
-			logger.Log("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+			logger.Log("Error", "SatdataMstore",  map[string]string{"Message": fmt.Sprintf("Could not store Hashsum in the text file: %s", err.Error())})
 			fmt.Println("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 			return err
 		}

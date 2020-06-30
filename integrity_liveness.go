@@ -16,7 +16,11 @@ import (
 
 func checkIntegrity(interval int) {
 	for true {
+<<<<<<< HEAD:integrity_liveness.go
 		logger.Log("Telemetry", "[Liveness] "+"STATUS:ALIVE")
+=======
+		logger.Log("Telemetry", "Liveness", map[string]string{"STATUS": "ALIVE"})
+>>>>>>> upstream/master:folder_checker_new.go
 		time.Sleep(time.Duration(interval) * time.Second)
 		fmt.Println("Info", "Checking files integrity from background thread")
 		fmt.Println("------------------------------------------------")
@@ -34,8 +38,8 @@ func checkIntegrity(interval int) {
 			//fmt.Println(c, t)
 			fmt.Println("Telemetry", "[IntegityStats] "+folder_name+" :Total no. of files checked: "+strconv.Itoa(t))
 			fmt.Println("Telemetry", "[IntegityStats] "+folder_name+" :No. of files corrupted: "+strconv.Itoa(c))
-			logger.Log("Telemetry", "[IntegityStats] "+folder_name+" Total no. of files checked: "+strconv.Itoa(t))
-			logger.Log("Telemetry", "[IntegityStats] "+folder_name+" No. of files corrupted: "+strconv.Itoa(c))
+			logger.Log("Telemetry", "IntegityStats", map[string]string{"FolderName": folder_name, "Total no. of files checked": strconv.Itoa(t)})
+			logger.Log("Telemetry", "IntegityStats", map[string]string{"FolderName": folder_name, "No. of files corrupted": strconv.Itoa(c)})
 		}
 	}
 }
