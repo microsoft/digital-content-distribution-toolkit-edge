@@ -13,7 +13,7 @@ from azure.iot.device import MethodResponse
 from azure.iot.device import Message
 
 import grpc
-
+import fcntl
 import logger_pb2
 import logger_pb2_grpc
 import commands_pb2
