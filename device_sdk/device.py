@@ -9,6 +9,7 @@ import sys
 import fcntl
 import os
 import grpc
+import datetime
 
 import logger_pb2
 import logger_pb2_grpc
@@ -245,13 +246,13 @@ def download(request, stub, iot_client):
     iot_client.send_method_response(method_response)
 
 commands = {
-    'blink': blink_command,
-    'rundiagnostics': diagnostics_command,
-    'turnon': turnon_command,
-    'turnoff': turnoff_command,
-    'setTelemetryInterval': setTelemetryInterval,
-    'download' : download,
-    'delete' : delete
+    'Blink': blink_command,
+    'RunDiagnostics': diagnostics_command,
+    'TurnOn': turnon_command,
+    'TurnOff': turnoff_command,
+    'SetTelemetryInterval': setTelemetryInterval,
+    'Download' : download,
+    'Delete' : delete
   }
 
 # Define behavior for handling commands
@@ -267,7 +268,14 @@ def command_listener(iot_client):
                 payload=method_request.payload
             )
         )
-      commands[method_request.name](method_request, stub, iot_client)    
+      try:
+        commands[method_request.name](method_request, stub, iot_client)
+      except KeyError:
+        print(f"{method_request.name} is an unknown command.")
+        response_payload = {"Response": "Method call {} not defined".format(method_request.name)}
+        response_status = 404
+        method_response = MethodResponse(method_request.request_id, response_status, payload=response_payload)
+        iot_client.send_method_response(method_response)
 
 
 if __name__ == '__main__':
@@ -286,10 +294,15 @@ if __name__ == '__main__':
     iot_client = iothub_client_init()
     init_device(iot_client)
     
-    print("Listen for method calls...")
-    t = threading.Thread(target=command_listener, args=[iot_client])
-    t.daemon = True
-    t.start()
-    
-    print("Send Upstream messages...")
-    send_upstream_messages(iot_client)
+    if iot_client is not None and iot_client.connected:
+      print('Send reported properties on startup')
+      iot_client.patch_twin_reported_properties({'state': 'true'})
+      print("Listen for method calls...")
+      t = threading.Thread(target=command_listener, args=[iot_client])
+      t.daemon = True
+      t.start()
+      
+      print("Send Upstream messages...")
+      send_upstream_messages(iot_client)
+    else:
+      print('Device could not connect')
