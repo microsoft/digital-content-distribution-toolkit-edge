@@ -1,27 +1,31 @@
-import asyncio
-import os
-import json
-import datetime
-import random
+from __future__ import print_function
+
 import configparser
 from concurrent import futures
+# from multiprocessing import Process
+import threading
 import time
-
-from azure.iot.device.aio import ProvisioningDeviceClient
-from azure.iot.device.aio import IoTHubDeviceClient
-from azure.iot.device import MethodResponse
-from azure.iot.device import Message
-
-import grpc
+import sys
 import fcntl
+import os
+import grpc
+
 import logger_pb2
 import logger_pb2_grpc
 import commands_pb2
 import commands_pb2_grpc
+import asyncio
 
+from azure.iot.device import IoTHubDeviceClient, Message, ProvisioningDeviceClient
+from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
 
-device_client=None
 config = configparser.ConfigParser()
+symmetric_key = None
+registration_id = None
+id_scope = None
+capabilityModelId = None
+capabilityModel = None 
+provisioning_host = None
 
 def lock_file(f):
     fcntl.lockf(f, fcntl.LOCK_EX)
@@ -50,82 +54,31 @@ class AtomicOpen:
             return False
         else:
             return True
-          
-# class LogServicer(logger_pb2_grpc.LogServicer):
-#     """Provides methods that implement functionality of logging server."""
 
-#     def __init__(self, device_client):
-#       print(f'Assigning iot_client')
-#       self.iot_client = device_client
-
-#     def SendSingleLog(self, request, context):
-#         print(f'Preparing to send telemetry from the provisioned device')
-#         message = Message("[{}]{}".format(request.logtype, request.logstring))
-#         print(message)
-#         print(f'Sending telemetry from the provisioned device')
-#         self.iot_client.send_message(message)
-
-#         return logger_pb2.Empty()
-
-async def provision():
-  # device and host configuration are stored in the config file
-  config.read('hub_config.ini')
-  config.read('device.ini')
-  provisioning_host = config.get('host', 'provisioningHost')
-  symmetric_key = config.get('section_device', 'sas_key')
-  registration_id = config.get('section_device','deviceId')
-  id_scope = config.get('section_device','scope')
-  
-  # device properties
-  processorArchitecture= config.get('section_device','processorArchitecture')
-  softwareVersion= config.get('section_device','softwareVersion')
-  totalMemory= config.getint('section_device','totalMemory')
-  totalStorage= config.getint('section_device','totalStorage')
-  processorManufacturer= config.get('section_device','processorManufacturer')
-  osName = config.get('section_device','osName')
-  manufacturer= config.get('section_device','manufacturer')
-  model= config.get('section_device','model')
-  config.read('customerdetails.ini')
-  customerName=config.get('customer_details', 'customer_name')
-  location=config.get('customer_details', 'location')
-  # capability Model
-  capabilityModelId=config.get('section_device','capabilityModelId')
-  capabilityModel = "{iotcModelId : '" + capabilityModelId + "'}" 
-  
-
-  # All the remaining code is nested within this main function
-
-  async def register_device():
+def register_device():
+    provisioning_host = config.get('host', 'provisioningHost')
+    symmetric_key = config.get('section_device', 'sas_key')
+    registration_id = config.get('section_device','deviceId')
+    id_scope = config.get('section_device','scope')
+    capabilityModelId=config.get('section_device','capabilityModelId')
+    capabilityModel = "{iotcModelId : '" + capabilityModelId + "'}" 
+    
     provisioning_device_client = ProvisioningDeviceClient.create_from_symmetric_key(
-      provisioning_host=provisioning_host,
-      registration_id=registration_id,
-      id_scope=id_scope,
-      symmetric_key=symmetric_key,
+        provisioning_host=provisioning_host,
+        registration_id=registration_id,
+        id_scope=id_scope,
+        symmetric_key=symmetric_key,
     )
     provisioning_device_client.provisioning_payload = capabilityModel
-    registration_result = await provisioning_device_client.register()
-
+    registration_result = provisioning_device_client.register()
     print(f'Registration result: {registration_result.status}')
-
     return registration_result
 
-  async def init_device():
-    await device_client.patch_twin_reported_properties({'location':location})
-    await device_client.patch_twin_reported_properties({'name':customerName})
-    await device_client.patch_twin_reported_properties({'model':model})
-    await device_client.patch_twin_reported_properties({'swVersion':softwareVersion})
-    await device_client.patch_twin_reported_properties({'osName':osName})
-    await device_client.patch_twin_reported_properties({'processorManufacturer':processorManufacturer})
-    await device_client.patch_twin_reported_properties({'totalMemory':totalMemory})
-    await device_client.patch_twin_reported_properties({'totalStorage':totalStorage})
-    await device_client.patch_twin_reported_properties({'manufacturer':manufacturer})
-    await device_client.patch_twin_reported_properties({'processorArchitecture': processorArchitecture})
-
-
-  async def connect_device():
+def connect_device():
     device_client = None
+    symmetric_key = config.get('section_device', 'sas_key')
     try:
-      registration_result = await register_device()
+      registration_result = register_device()
       if registration_result.status == 'assigned':
         device_client = IoTHubDeviceClient.create_from_symmetric_key(
           symmetric_key=symmetric_key,
@@ -133,49 +86,103 @@ async def provision():
           device_id=registration_result.registration_state.device_id,
         )
         # Connect the client.
-        await device_client.connect()
+        device_client.connect()
         print('Device connected successfully')
     finally:
       return device_client
 
-  async def blink_command(request, stub):
+def init_device(device_client):
+    # device properties
+    processorArchitecture= config.get('section_device','processorArchitecture')
+    softwareVersion= config.get('section_device','softwareVersion')
+    totalMemory= config.getint('section_device','totalMemory')
+    totalStorage= config.getint('section_device','totalStorage')
+    processorManufacturer= config.get('section_device','processorManufacturer')
+    osName = config.get('section_device','osName')
+    manufacturer= config.get('section_device','manufacturer')
+    model= config.get('section_device','model')
+    config.read('customerdetails.ini')
+    customerName=config.get('customer_details', 'customer_name')
+    location=config.get('customer_details', 'location')
+    
+    device_client.patch_twin_reported_properties({'location':location})
+    device_client.patch_twin_reported_properties({'name':customerName})
+    device_client.patch_twin_reported_properties({'model':model})
+    device_client.patch_twin_reported_properties({'swVersion':softwareVersion})
+    device_client.patch_twin_reported_properties({'osName':osName})
+    device_client.patch_twin_reported_properties({'processorManufacturer':processorManufacturer})
+    device_client.patch_twin_reported_properties({'totalMemory':totalMemory})
+    device_client.patch_twin_reported_properties({'totalStorage':totalStorage})
+    device_client.patch_twin_reported_properties({'manufacturer':manufacturer})
+    device_client.patch_twin_reported_properties({'processorArchitecture': processorArchitecture})
+    
+def iothub_client_init():
+    client = connect_device()
+    return client
+
+def send_upstream_messages(iot_client):
+    while True:
+        try:  # keep on spinning this even in case of error in production
+            with AtomicOpen(config.get("LOGGER", "LOG_FILE_PATH"), "r+") as fout:
+                temp = [line.strip() for line in fout.readlines()]
+                fout.seek(0)
+                fout.write("")
+                fout.truncate()
+            
+            # print(temp)
+            for x in temp:
+                if(len(x) != 0):
+                    message = Message(x)
+                    print(message)
+                    iot_client.send_message(message)
+        except Exception as ex:
+            message = Message(str({"DeviceId": config.get("DEVICE_INFO", "DEVICE_NAME"), "MessageType": "Critical", "MessageSubType": "DeviceSDK", "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK {}".format(ex)}}))
+            print(message)
+            iot_client.send_message(message)
+
+
+def getFileParams(param):
+    fileparams = []
+    if param is not None:
+        result = param.split(";")
+        for x in result:
+            y = x.split(",")
+            fileparams.append(commands_pb2.File(name=y[0], cdn=y[1], hashsum=y[2]))
+    return fileparams
+
+def blink_command(request, stub, iot_client):
     print('Received synchronous call to blink')
     response = MethodResponse.create_from_method_request(
       request, status = 200, payload = {'description': f'Blinking LED every {request.payload} seconds'}
     )
-    await device_client.send_method_response(response)  # send response
+    iot_client.send_method_response(response)  # send response
     print(f'Blinking LED every {request.payload} seconds')
 
-  async def diagnostics_command(request, stub):
+def diagnostics_command(request, stub, iot_client):
     print('Starting asynchronous diagnostics run...')
     response = MethodResponse.create_from_method_request(
       request, status = 202
     )
-    await device_client.send_method_response(response)  # send response
+    iot_client.send_method_response(response)  # send response
     print('Generating diagnostics...')
-    await asyncio.sleep(2)
-    print('Generating diagnostics...')
-    await asyncio.sleep(2)
-    print('Generating diagnostics...')
-    await asyncio.sleep(2)
     print('Sending property update to confirm command completion')
-    await device_client.patch_twin_reported_properties({'rundiagnostics': {'value': f'Diagnostics run complete at {datetime.datetime.today()}.'}})
+    iot_client.patch_twin_reported_properties({'rundiagnostics': {'value': f'Diagnostics run complete at {datetime.datetime.today()}.'}})
 
-  async def turnon_command(request, stub):
+def turnon_command(request, stub, iot_client):
     print('Turning on the LED')
     response = MethodResponse.create_from_method_request(
       request, status = 200
     )
-    await device_client.send_method_response(response)  # send response
+    iot_client.send_method_response(response)  # send response
 
-  async def turnoff_command(request, stub):
+def turnoff_command(request, stub, iot_client):
     print('Turning off the LED')
     response = MethodResponse.create_from_method_request(
       request, status = 200
     )
-    await device_client.send_method_response(response)  # send response
+    iot_client.send_method_response(response)  # send response
   
-  async def setTelemetryInterval(request, stub):
+def setTelemetryInterval(request, stub, iot_client):
     print('starting setTelemetryInterval')
     try:
         INTERVAL = int(request.payload)
@@ -186,12 +193,11 @@ async def provision():
         response_payload = {"Response": "Executed direct method {}".format(request.name)}
         response_status = 200
     method_response = MethodResponse(request.request_id, response_status, payload=response_payload)
-    await device_client.send_method_response(method_response)
+    iot_client.send_method_response(method_response)
     
-  async def delete(request, stub):
+def delete(request, stub, iot_client):
     print("Sending request to delete", request.payload)
     payload = eval(request.payload)
-
     try:
         _folder_path = payload["folder_path"]
         _recursive = bool(payload["recursive"])
@@ -200,26 +206,17 @@ async def provision():
         delteafter=_delete_after)
         response = stub.Delete(delete_params)
         print(response)
-    except:
-        response_payload = {"Response": "Invalid parameter"}
+    except Exception as ex:
+        response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
         response_status = 400
     else:
         response_payload = {"Response": "Executed method  call {}".format(request.name)}
-        response_status = 200
+        response_status = 200 
     method_response = MethodResponse(request.request_id, response_status, payload=response_payload)
-    await device_client.send_method_response(method_response)
-  
-  def getFileParams(param):
-    fileparams = []
-    if param is not None:
-        result = param.split(";")
-        for x in result:
-            y = x.split(",")
-            fileparams.append(commands_pb2.File(name=y[0], cdn=y[1], hashsum=y[2]))
-    return fileparams
-    
-  async def download(request, stub):
-    print("Sending request to download")
+    iot_client.send_method_response(method_response)
+
+def download(request, stub, iot_client):
+    print("Sending request to downlaoad")
     payload = eval(request.payload)
     try:
         _folder_path = payload["folder_path"]
@@ -229,25 +226,25 @@ async def provision():
         # print(_metadata_files)
         _channels = [commands_pb2.Channel(channelname=x) for x in payload["channels"].split(";")]
         _deadline = int(payload["deadline"])
+        _add_to_existing = bool(payload["add_to_existing"])
         print(dict(folderpath=_folder_path, metadatafiles=_metadata_files,
-        bulkfiles=_bulk_files, channels=_channels, deadline=_deadline
-        ))
+        bulkfiles=_bulk_files, channels=_channels, deadline=_deadline, 
+        addtoexisting=_add_to_existing))
         
         download_params = commands_pb2.DownloadParams(folderpath=_folder_path, metadatafiles=_metadata_files,
-        bulkfiles=_bulk_files, channels=_channels, deadline=_deadline)
+        bulkfiles=_bulk_files, channels=_channels, deadline=_deadline, addtoexisting=_add_to_existing)
         response = stub.Download(download_params)
         print(response)
-    except:
-        response_payload = {"Response": "Invalid parameter"}
+    except Exception as ex:
+        response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
         response_status = 400
     else:
         response_payload = {"Response": "Executed method  call {}".format(request.name)}
         response_status = 200
-    
     method_response = MethodResponse(request.request_id, response_status, payload=response_payload)
-    await device_client.send_method_response(method_response)
+    iot_client.send_method_response(method_response)
 
-  commands = {
+commands = {
     'blink': blink_command,
     'rundiagnostics': diagnostics_command,
     'turnon': turnon_command,
@@ -256,101 +253,43 @@ async def provision():
     'download' : download,
     'delete' : delete
   }
-  # Define behavior for handling commands
-  async def command_listener():
+
+# Define behavior for handling commands
+def command_listener(iot_client):
     with grpc.insecure_channel('localhost:{}'.format(config.getint("GRPC", "DOWNSTREAM_PORT"))) as channel:
         stub = commands_pb2_grpc.RelayCommandStub(channel)
     while True:
       print("command_listener started...")
-      method_request = await device_client.receive_method_request()  # Wait for commands
-      await commands[method_request.name](method_request, stub)    
-
-
-  async def name_setting(value, version):
-      await asyncio.sleep(1)
-      print(f'Setting name value {value} - {version}')
-      await device_client.patch_twin_reported_properties({'name' : {'value': value['value'], 'status': 'completed', 'desiredVersion': version}})
-
-  async def location_setting(value, version):
-      await asyncio.sleep(5)
-      print(f'Setting location value {value} - {version}')
-      await device_client.patch_twin_reported_properties({'location' : {'value': value['value'], 'status': 'completed', 'desiredVersion': version}})
-      
-  settings = {
-      'name': name_setting,
-      'location': location_setting
-  }
-
-    # define behavior for receiving a twin patch
-  async def twin_patch_listener():
-      while True:
-        patch = await device_client.receive_twin_desired_properties_patch() # blocking
-        to_update = patch.keys() & settings.keys()
-        await asyncio.gather(
-          *[settings[setting](patch[setting], patch['$version']) for setting in to_update]
+      method_request = iot_client.receive_method_request()  # Wait for commands
+      print (
+            "\nMethod callback called with:\nmethodName = {method_name}\npayload = {payload}".format(
+                method_name=method_request.name,
+                payload=method_request.payload
+            )
         )
-  
-  def send_upstream_messages(device_client):
-    while True:
-        try:  # keep on spinning this even in case of error in production
-            with AtomicOpen(config.get("LOGGER", "LOG_FILE_PATH"), "r+") as fout:
-                temp = [line.strip() for line in fout.readlines()]
-                fout.seek(0)
-                fout.write("")
-                fout.truncate()
-            
-            for x in temp:
-                if(len(x) != 0):
-                    message = Message(x)
-                    print(message)
-                    device_client.send_message(message)
-        except Exception as ex:
-            message = Message(str({"DeviceId": config.get("DEVICE_INFO", "DEVICE_NAME"), "MessageType": "Critical", "MessageSubType": "DeviceSDK", "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK {}".format(ex)}}))
-            print(message)
-            device_client.send_message(message)
-  
-    # Define behavior for halting the application
-  def stdin_listener():
-    while True:
-      selection = input('Press Q to quit\n')
-      if selection == 'Q' or selection == 'q':
-        print('Quitting...')
-        break
-            
-  # connect to the IOT device 
-  device_client = await connect_device()
-  # start sending telemetry 
-  telemetry_pool = futures.ThreadPoolExecutor(1)
-  telemetry_pool.submit(send_upstream_messages)
-  send_upstream_messages(device_client)
-  # initialize the device by setting all the properties
-  await init_device()
-  
-  if device_client is not None and device_client.connected:
-        print('Send reported properties on startup')
-        await device_client.patch_twin_reported_properties({'state': 'true'})
-        tasks = asyncio.gather(
-        command_listener(), # listens to incoming commands from IOT hub
-        twin_patch_listener() # updates editable properties for a device in the IOT hub
-        )
+      commands[method_request.name](method_request, stub, iot_client)    
 
-        # Run the stdin listener in the event loop
-        loop = asyncio.get_running_loop()
-        user_finished = loop.run_in_executor(None, stdin_listener)
-
-        # Wait for user to indicate they are done listening for method calls
-        await user_finished
-        
-        # Cancel tasks
-        tasks.add_done_callback(lambda r: r.exception())
-        tasks.cancel()
-        
-        await device_client.disconnect()
-
-  else:
-        print('Device could not connect')
-        
-  return device_client
 
 if __name__ == '__main__':
-  asyncio.run(provision())
+    config.read('hub_config.ini')
+    print(config.sections())
+    # device and host configuration are stored in the config file
+    config.read('device.ini')
+    provisioning_host = config.get('host', 'provisioningHost')
+    symmetric_key = config.get('section_device', 'sas_key')
+    registration_id = config.get('section_device','deviceId')
+    id_scope = config.get('section_device','scope')
+    
+    # capability Model
+    capabilityModelId=config.get('section_device','capabilityModelId')
+    capabilityModel = "{iotcModelId : '" + capabilityModelId + "'}" 
+    iot_client = iothub_client_init()
+    init_device(iot_client)
+    
+    print("Listen for method calls...")
+    t = threading.Thread(target=command_listener, args=[iot_client])
+    t.daemon = True
+    t.start()
+    
+    print("Send Upstream messages...")
+    send_upstream_messages(iot_client)
