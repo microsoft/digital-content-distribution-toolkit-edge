@@ -301,7 +301,7 @@ func copySingleFile(dest, source string) error {
 	t2 := time.Now()
 	diff := t2.Sub(t1)
 	log.Println("Transfer with io.Copy() took %f seconds\n", diff.Seconds())
-	fmt.Println("========Copy speed======== ", float64(written/1024/1024)/diff.Seconds())
+	fmt.Println("========Copy speed==(MBps)====== ", float64(written/1024/1024)/diff.Seconds())
 	fmt.Println("======== Written MB======== ", float64(written/1024/1024))
 
 	return nil

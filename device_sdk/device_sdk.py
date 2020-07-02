@@ -79,6 +79,7 @@ def send_upstream_messages(iot_client):
             for x in temp:
                 if(len(x) != 0):
                     message = Message(x)
+                    print("here........")
                     print(message)
                     iot_client.send_message(message)
         except Exception as ex:
