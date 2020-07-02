@@ -79,12 +79,12 @@ func main() {
 	case "noovo":
 		go pollNoovo(getdata_interval)
 	case "mstore":
-		//go pollMstore(getdata_interval)
+		go pollMstore(getdata_interval)
 	}
 	liveness_interval, err := cfg.Section("DEVICE_INFO").Key("LIVENESS_SCHEDULER").Int()
 	go liveness(liveness_interval)
 	//go pollMstore()
-	testMstore()
+	//testMstore()
 	//go check()
 
 	// setup key manager and load keys

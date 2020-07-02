@@ -69,7 +69,8 @@ func checkfiles(folderpath string, subfolderName string) (int, int) {
 	if _, err := os.Stat(filepath.Join(folderpath, subfolderName)); !os.IsNotExist(err) {
 		hashsummap, fErr := gethashsum(filepath.Join(folderpath, subfolderName, "hashsum.txt"))
 		if fErr != nil {
-			fmt.Println("Could not open hashsum.txt file", fErr)
+			log.Println("Could not open hashsum.txt file", fErr)
+			return 0, 0
 		}
 		files, _ := ioutil.ReadDir(filepath.Join(folderpath, subfolderName))
 		for _, file := range files {
