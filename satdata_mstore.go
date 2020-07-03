@@ -219,9 +219,9 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		log.Println("")
 	}
 	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": strconv.FormatInt(getDirSizeinMB(path), 10) + " MB", "Channel": "SES"})
+	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "SES"})
 	//logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
-	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+" MB downloaded on the Hub")
+	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+fmt.Sprintf("%f", getDirSizeinMB(path))+" MB downloaded on the Hub")
 	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
 	//fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 

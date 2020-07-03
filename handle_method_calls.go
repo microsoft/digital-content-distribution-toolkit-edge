@@ -94,12 +94,12 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 				deleteFilesFromExistingFolder(actualPath, fileInfos)
 				return &pb.Response{Responsemessage: fmt.Sprintf("Additional files could not be downloaded: %v", err)}, nil
 			}
-			logger.Log("Telemetry", "AdditinalFileSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "Size": strconv.FormatInt(getDirSizeinMB(actualPath), 10) + " MB", "Channel": "LAN"})
+			logger.Log("Telemetry", "AdditinalFileSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "Size": fmt.Sprintf("%f", getDirSizeinMB(actualPath)) + " MB", "Channel": "LAN"})
 			return &pb.Response{Responsemessage: "Additional Files downloaded"}, nil
 		}
 		logger.Log("Error", "HandleMethodCalls", map[string]string{"Message": fmt.Sprintf("Folder path does not already exist")})
 		logger.Log("Telemetry", "AdditinalFileSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": download_params.GetFolderpath(), "Channel": "LAN"})
-		return &pb.Response{Responsemessage: fmt.Sprintf("Additional files could not be downloaded: %v", errors.New("Folder does not exist")} , nil
+		return &pb.Response{Responsemessage: fmt.Sprintf("Additional files could not be downloaded: %v", errors.New("Folder does not exist"))}, nil
 	}
 	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos)
 	if err != nil {
@@ -112,13 +112,14 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	fs.PrintBuckets()
 	fs.PrintFileSystem()
 	log.Println("")
-	// //???
-	// if len(fileInfos) == 1 {
-	// 	//logger.Log("Info", "Folder created. Download request does not have file infos ")
-	// 	return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
-	// }
+	// to be removed later
+	if len(fileInfos) == 1 {
+		logger.Log("Info", "ContentSyncInfo", map[string]string{"Message": "Folder created. Download request does not have file infos "})
+		return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
+	}
 	path, _ := fs.GetActualPathForAbstractedPath(download_params.GetFolderpath())
-	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "Size": strconv.FormatInt(getDirSizeinMB(path), 10) + " MB", "Channel": "LAN"})
+	fmt.Println("-----Actual Path-----", path)
+	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "LAN"})
 	return &pb.Response{Responsemessage: "Folder downloaded"}, nil
 }
 func deleteFilesFromExistingFolder(path string, fileInfos [][]string) error {
@@ -225,7 +226,7 @@ func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.Delet
 			return &pb.Response{Responsemessage: fmt.Sprintf("Folder not deleted: %v", err)}, nil
 		}
 	}
-	logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "SUCCESS", "FolderPath": delete_params.GetFolderpath(), "Size": strconv.FormatInt(getDirSizeinMB(path), 10) + " MB"})
+	logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "SUCCESS", "FolderPath": delete_params.GetFolderpath(), "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB"})
 	return &pb.Response{Responsemessage: "Folder deleted"}, nil
 }
 

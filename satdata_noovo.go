@@ -129,7 +129,7 @@ func callNoovoAPI() error {
 				continue
 			}
 			path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-			logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": strconv.FormatInt(getDirSizeinMB(path), 10) + " MB", "Channel": "SES"})
+			logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "SES"})
 			// logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 		}
 	}

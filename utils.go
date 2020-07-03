@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,17 +51,23 @@ func matchSHA256(filePath string, trueSHA string) error {
 	}
 	return errors.New("hashsum did not match")
 }
-func getDirSizeinMB(path string) int64 {
-	var size int64 = 0
-	calcsize := func(_ string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			size += info.Size()
-		}
-		return err
+func getDirSizeinMB(path string) float64 {
+	fmt.Println("PATH------------", path)
+	var size float64 = 0
+	err := filepath.Walk(path,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			//fmt.Println(path, info.Size())
+			size += float64(info.Size())
+			return nil
+		})
+	if err != nil {
+		log.Println(err)
 	}
-	filepath.Walk(filepath.Join(path, "bulkfiles"), calcsize)
-	filepath.Walk(filepath.Join(path, "metadatafiles"), calcsize)
-	return (size) / 1024.0 / 1024.0
+	sizeMB := (size) / 1024.0 / 1024.0
+	return math.Round(sizeMB*100) / 100
 }
 func storeDeadline(path, deadline string) error {
 	if _, f_err := os.Stat(filepath.Join(path, "deadline.txt")); os.IsNotExist(f_err) {
