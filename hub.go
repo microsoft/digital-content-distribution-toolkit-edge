@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	"gopkg.in/ini.v1"
+	ini "gopkg.in/ini.v1"
 
 	filesys "./filesys"
 	keymanager "./keymanager"
