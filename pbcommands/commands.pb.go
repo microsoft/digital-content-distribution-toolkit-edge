@@ -289,6 +289,53 @@ func (x *DeleteParams) GetDeleteafter() int32 {
 	return 0
 }
 
+type AddNewPublicKeyParams struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Publickey string `protobuf:"bytes,1,opt,name=publickey,proto3" json:"publickey,omitempty"`
+}
+
+func (x *AddNewPublicKeyParams) Reset() {
+	*x = AddNewPublicKeyParams{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_commands_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AddNewPublicKeyParams) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddNewPublicKeyParams) ProtoMessage() {}
+
+func (x *AddNewPublicKeyParams) ProtoReflect() protoreflect.Message {
+	mi := &file_commands_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddNewPublicKeyParams.ProtoReflect.Descriptor instead.
+func (*AddNewPublicKeyParams) Descriptor() ([]byte, []int) {
+	return file_commands_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AddNewPublicKeyParams) GetPublickey() string {
+	if x != nil {
+		return x.Publickey
+	}
+	return ""
+}
+
 type Response struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -300,7 +347,7 @@ type Response struct {
 func (x *Response) Reset() {
 	*x = Response{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_commands_proto_msgTypes[4]
+		mi := &file_commands_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -313,7 +360,7 @@ func (x *Response) String() string {
 func (*Response) ProtoMessage() {}
 
 func (x *Response) ProtoReflect() protoreflect.Message {
-	mi := &file_commands_proto_msgTypes[4]
+	mi := &file_commands_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -326,7 +373,7 @@ func (x *Response) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Response.ProtoReflect.Descriptor instead.
 func (*Response) Descriptor() ([]byte, []int) {
-	return file_commands_proto_rawDescGZIP(), []int{4}
+	return file_commands_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Response) GetResponsemessage() string {
@@ -372,19 +419,27 @@ var file_commands_proto_rawDesc = []byte{
 	0x28, 0x08, 0x52, 0x09, 0x72, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65, 0x12, 0x20, 0x0a,
 	0x0b, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x61, 0x66, 0x74, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01,
 	0x28, 0x05, 0x52, 0x0b, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x61, 0x66, 0x74, 0x65, 0x72, 0x22,
-	0x34, 0x0a, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x28, 0x0a, 0x0f, 0x72,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x6d, 0x65,
-	0x73, 0x73, 0x61, 0x67, 0x65, 0x32, 0x8a, 0x01, 0x0a, 0x0c, 0x52, 0x65, 0x6c, 0x61, 0x79, 0x43,
-	0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x12, 0x3e, 0x0a, 0x08, 0x44, 0x6f, 0x77, 0x6e, 0x6c, 0x6f,
-	0x61, 0x64, 0x12, 0x1a, 0x2e, 0x70, 0x62, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x73, 0x2e,
-	0x44, 0x6f, 0x77, 0x6e, 0x6c, 0x6f, 0x61, 0x64, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x1a, 0x14,
-	0x2e, 0x70, 0x62, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x73, 0x2e, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x3a, 0x0a, 0x06, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65,
-	0x12, 0x18, 0x2e, 0x70, 0x62, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x73, 0x2e, 0x44, 0x65,
-	0x6c, 0x65, 0x74, 0x65, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x1a, 0x14, 0x2e, 0x70, 0x62, 0x63,
-	0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x73, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x22, 0x00, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x35, 0x0a, 0x15, 0x41, 0x64, 0x64, 0x4e, 0x65, 0x77, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b,
+	0x65, 0x79, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x70, 0x75, 0x62, 0x6c,
+	0x69, 0x63, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x75, 0x62,
+	0x6c, 0x69, 0x63, 0x6b, 0x65, 0x79, 0x22, 0x34, 0x0a, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x28, 0x0a, 0x0f, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x6d, 0x65,
+	0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x72, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x32, 0xd8, 0x01, 0x0a,
+	0x0c, 0x52, 0x65, 0x6c, 0x61, 0x79, 0x43, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x12, 0x3e, 0x0a,
+	0x08, 0x44, 0x6f, 0x77, 0x6e, 0x6c, 0x6f, 0x61, 0x64, 0x12, 0x1a, 0x2e, 0x70, 0x62, 0x63, 0x6f,
+	0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x73, 0x2e, 0x44, 0x6f, 0x77, 0x6e, 0x6c, 0x6f, 0x61, 0x64, 0x50,
+	0x61, 0x72, 0x61, 0x6d, 0x73, 0x1a, 0x14, 0x2e, 0x70, 0x62, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e,
+	0x64, 0x73, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x3a, 0x0a,
+	0x06, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x12, 0x18, 0x2e, 0x70, 0x62, 0x63, 0x6f, 0x6d, 0x6d,
+	0x61, 0x6e, 0x64, 0x73, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x61, 0x72, 0x61, 0x6d,
+	0x73, 0x1a, 0x14, 0x2e, 0x70, 0x62, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x73, 0x2e, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x4c, 0x0a, 0x0f, 0x41, 0x64, 0x64,
+	0x4e, 0x65, 0x77, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x12, 0x21, 0x2e, 0x70,
+	0x62, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x73, 0x2e, 0x41, 0x64, 0x64, 0x4e, 0x65, 0x77,
+	0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x1a,
+	0x14, 0x2e, 0x70, 0x62, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x73, 0x2e, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -399,13 +454,14 @@ func file_commands_proto_rawDescGZIP() []byte {
 	return file_commands_proto_rawDescData
 }
 
-var file_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_commands_proto_goTypes = []interface{}{
-	(*File)(nil),           // 0: pbcommands.File
-	(*Channel)(nil),        // 1: pbcommands.Channel
-	(*DownloadParams)(nil), // 2: pbcommands.DownloadParams
-	(*DeleteParams)(nil),   // 3: pbcommands.DeleteParams
-	(*Response)(nil),       // 4: pbcommands.Response
+	(*File)(nil),                  // 0: pbcommands.File
+	(*Channel)(nil),               // 1: pbcommands.Channel
+	(*DownloadParams)(nil),        // 2: pbcommands.DownloadParams
+	(*DeleteParams)(nil),          // 3: pbcommands.DeleteParams
+	(*AddNewPublicKeyParams)(nil), // 4: pbcommands.AddNewPublicKeyParams
+	(*Response)(nil),              // 5: pbcommands.Response
 }
 var file_commands_proto_depIdxs = []int32{
 	0, // 0: pbcommands.DownloadParams.metadatafiles:type_name -> pbcommands.File
@@ -413,10 +469,12 @@ var file_commands_proto_depIdxs = []int32{
 	1, // 2: pbcommands.DownloadParams.channels:type_name -> pbcommands.Channel
 	2, // 3: pbcommands.RelayCommand.Download:input_type -> pbcommands.DownloadParams
 	3, // 4: pbcommands.RelayCommand.Delete:input_type -> pbcommands.DeleteParams
-	4, // 5: pbcommands.RelayCommand.Download:output_type -> pbcommands.Response
-	4, // 6: pbcommands.RelayCommand.Delete:output_type -> pbcommands.Response
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
+	4, // 5: pbcommands.RelayCommand.AddNewPublicKey:input_type -> pbcommands.AddNewPublicKeyParams
+	5, // 6: pbcommands.RelayCommand.Download:output_type -> pbcommands.Response
+	5, // 7: pbcommands.RelayCommand.Delete:output_type -> pbcommands.Response
+	5, // 8: pbcommands.RelayCommand.AddNewPublicKey:output_type -> pbcommands.Response
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
 	3, // [3:3] is the sub-list for extension extendee
 	0, // [0:3] is the sub-list for field type_name
@@ -477,6 +535,18 @@ func file_commands_proto_init() {
 			}
 		}
 		file_commands_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AddNewPublicKeyParams); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_commands_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Response); i {
 			case 0:
 				return &v.state
@@ -495,7 +565,7 @@ func file_commands_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_commands_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
@@ -523,6 +593,7 @@ const _ = grpc.SupportPackageIsVersion6
 type RelayCommandClient interface {
 	Download(ctx context.Context, in *DownloadParams, opts ...grpc.CallOption) (*Response, error)
 	Delete(ctx context.Context, in *DeleteParams, opts ...grpc.CallOption) (*Response, error)
+	AddNewPublicKey(ctx context.Context, in *AddNewPublicKeyParams, opts ...grpc.CallOption) (*Response, error)
 }
 
 type relayCommandClient struct {
@@ -551,10 +622,20 @@ func (c *relayCommandClient) Delete(ctx context.Context, in *DeleteParams, opts 
 	return out, nil
 }
 
+func (c *relayCommandClient) AddNewPublicKey(ctx context.Context, in *AddNewPublicKeyParams, opts ...grpc.CallOption) (*Response, error) {
+	out := new(Response)
+	err := c.cc.Invoke(ctx, "/pbcommands.RelayCommand/AddNewPublicKey", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RelayCommandServer is the server API for RelayCommand service.
 type RelayCommandServer interface {
 	Download(context.Context, *DownloadParams) (*Response, error)
 	Delete(context.Context, *DeleteParams) (*Response, error)
+	AddNewPublicKey(context.Context, *AddNewPublicKeyParams) (*Response, error)
 }
 
 // UnimplementedRelayCommandServer can be embedded to have forward compatible implementations.
@@ -566,6 +647,9 @@ func (*UnimplementedRelayCommandServer) Download(context.Context, *DownloadParam
 }
 func (*UnimplementedRelayCommandServer) Delete(context.Context, *DeleteParams) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (*UnimplementedRelayCommandServer) AddNewPublicKey(context.Context, *AddNewPublicKeyParams) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddNewPublicKey not implemented")
 }
 
 func RegisterRelayCommandServer(s *grpc.Server, srv RelayCommandServer) {
@@ -608,6 +692,24 @@ func _RelayCommand_Delete_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RelayCommand_AddNewPublicKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddNewPublicKeyParams)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RelayCommandServer).AddNewPublicKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pbcommands.RelayCommand/AddNewPublicKey",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RelayCommandServer).AddNewPublicKey(ctx, req.(*AddNewPublicKeyParams))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _RelayCommand_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "pbcommands.RelayCommand",
 	HandlerType: (*RelayCommandServer)(nil),
@@ -619,6 +721,10 @@ var _RelayCommand_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Delete",
 			Handler:    _RelayCommand_Delete_Handler,
+		},
+		{
+			MethodName: "AddNewPublicKey",
+			Handler:    _RelayCommand_AddNewPublicKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

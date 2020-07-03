@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"strconv"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	ini "gopkg.in/ini.v1"
@@ -26,7 +28,8 @@ var km *keymanager.KeyManager
 var cfg *ini.File
 
 func main() {
-	cfg, err := ini.Load("hub_config.ini")
+	var err error
+	cfg, err = ini.Load("hub_config.ini")
 	if err != nil {
 		fmt.Println("Failed to read config file: %v", err)
 		os.Exit(1)
@@ -88,15 +91,34 @@ func main() {
 	pubkeys_dir := cfg.Section("APP_AUTHENTICATION").Key("PUBLIC_KEY_STORE_PATH").String()
 	keys_cache_size, err := cfg.Section("APP_AUTHENTICATION").Key("KEY_MANAGER_CACHE_SIZE").Int()
 
-	km, _ = keymanager.MakeKeyManager(keys_cache_size)
+	km, _ = keymanager.MakeKeyManager(keys_cache_size, pubkeys_dir)
+
+	file_times := make([]int64, 0)
 	err = filepath.Walk(pubkeys_dir, func(path string, info os.FileInfo, err error) error {
-		if filepath.Ext(path) == ".pem" {
-			km.AddKey(path)
+		ext := filepath.Ext(path)
+		if ext == ".pem" {
+			file_full_name := filepath.Base(path)
+			file_name := file_full_name[:len(file_full_name) - len(ext)]
+			file_time, err := strconv.ParseInt(file_name, 10, 64)
+			if err != nil {
+				log.Println(fmt.Sprintf("Key file with name %v is not in correct format", file_full_name))
+			} else {
+				file_times = append(file_times, file_time)
+			}
 		}
 		return nil
 	})
 
-	if err != nil {
+	sort.Slice(file_times, func(i, j int) bool {return file_times[i] < file_times[j]})
+	for _, file_time := range file_times {
+		err = km.AddKey(fmt.Sprintf("%v.pem", file_time))
+		if(err != nil) {
+			log.Println(fmt.Sprintf("Failed to add key: %v", err))
+		}
+	}
+	log.Println(fmt.Sprintf("Read a total of %v public keys", len(km.GetKeyList())))
+
+	if len(km.GetKeyList()) == 0 {
 		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
 		log.Println(fmt.Sprintf("Failed to setup keymanager: %v", err))
 		os.Exit(1)

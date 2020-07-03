@@ -150,6 +150,7 @@ func storeHashsum(path, hash string) error {
 	}
 	return nil
 }
+
 func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.DeleteParams) (*pb.Response, error) {
 	folder_path := delete_params.GetFolderpath()
 	log.Println(folder_path)
@@ -170,6 +171,33 @@ func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.Delet
 	}
 
 	return &pb.Response{Responsemessage: "Folder deleted"}, nil
+}
+
+func (s *relayCommandServer) AddNewPublicKey(ctx context.Context, add_params *pb.AddNewPublicKeyParams) (*pb.Response, error) {
+	public_key := add_params.GetPublickey()
+	log.Println(public_key)
+	
+	filePath := filepath.Join(km.PubkeysDir, fmt.Sprintf("%v.pem", time.Now().Unix()))
+	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Println("[AddNewPublicKey] Error", fmt.Sprintf("%s", err))
+		return &pb.Response{Responsemessage: fmt.Sprintf("New Public Key Not Added: %v", err)}, nil
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(public_key)
+	if err != nil {
+		log.Println("[AddNewPublicKey] Error", fmt.Sprintf("%s", err))
+		return &pb.Response{Responsemessage: fmt.Sprintf("New Public Key Not Added: %v", err)}, nil
+	}
+
+	err = km.AddKey(filepath.Base(filePath))
+	if err != nil {
+		log.Println("[AddNewPublicKey] Error", fmt.Sprintf("%s", err))
+		return &pb.Response{Responsemessage: fmt.Sprintf("New Public Key Not Added: %v", err)}, nil
+	}
+
+	return &pb.Response{Responsemessage: "New Public Key Added"}, nil
 }
 
 func newServer() *relayCommandServer {
