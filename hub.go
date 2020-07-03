@@ -28,7 +28,8 @@ var km *keymanager.KeyManager
 var cfg *ini.File
 
 func main() {
-	cfg, err := ini.Load("hub_config.ini")
+	var err error
+	cfg, err = ini.Load("hub_config.ini")
 	if err != nil {
 		fmt.Println("Failed to read config file: %v", err)
 		os.Exit(1)
