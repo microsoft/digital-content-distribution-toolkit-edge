@@ -55,7 +55,61 @@ steps:
     echo $GOARCH
     echo $GOOS
   displayName: "Setting Go build environment variables"
+
+- task: CmdLine@2
+  displayName: "Building ARM executable"
+  inputs:
+    script: "env GOARCH=arm64 GOOS=linux go build -o bine_arm"
+
+- task: Docker@2
+  displayName: Login to ACR
+  inputs:
+    command: login
+    containerRegistry: $(bineDockerRegistry)
+
+- task: CmdLine@2
+  displayName: "Setting up ARM docker builder"
+  inputs:
+    script: "docker buildx create --name mybuilder; docker buildx use mybuilder; docker buildx inspect --bootstrap"
+
+- task: CmdLine@2
+  displayName: "Building ARM docker image"
+  inputs:
+    script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar ."
+
+- task: CmdLine@2
+  displayName: "Loading hub_dev.tar"
+  inputs:
+    script: "docker load -i hub_dev.tar"
+
+- task: CmdLine@2
+  displayName: "Tagging docker image"
+  inputs:
+    script: "docker tag hub_dev $(arm_image)"
+
+- task: CmdLine@2
+  displayName: "Pushing image to docker hub"
+  inputs:
+    script: "docker push $(arm_image)"
+
 - task: Go@0 
+  displayName: "Building x86 executable"  
   inputs:
     command: 'build'
-    arguments: '-o bine_arm'
+    arguments: '-o bine'
+
+- task: CmdLine@2
+  displayName: "Building x86 image"
+  inputs:
+    script: "docker build -t $(x86_image) -f ./Dockerfile_x86 ."
+
+- task: CmdLine@2
+  displayName: "Pushing image to docker hub"
+  inputs:
+    script: "docker push $(x86_image)"
+
+- task: Docker@2
+  displayName: Logout of ACR
+  inputs:
+    command: logout
+    containerRegistry: $(bineDockerRegistry)

@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"log"
+	"os"
 	"path/filepath"
 	"sync"
 	"strconv"
 	"sort"
 
 	"github.com/gin-gonic/gin"
-	"gopkg.in/ini.v1"
+	ini "gopkg.in/ini.v1"
 
 	filesys "./filesys"
 	keymanager "./keymanager"
@@ -25,6 +25,7 @@ import (
 var logger *cl.Logger
 var fs *filesys.FileSystem
 var km *keymanager.KeyManager
+var cfg *ini.File
 
 func main() {
 	cfg, err := ini.Load("hub_config.ini")
@@ -64,15 +65,15 @@ func main() {
 	}
 
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
-	
+
 	// launch a goroutine to handle method calls
 	wg.Add(1)
 	go handle_method_calls(downstream_grpc_port, wg)
-	
+
 	// start a concurrent background service which checks if the files on the device are tampered with
 	integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Int()
 	go checkIntegrity(integrityCheckInterval)
-	
+
 	satApiCmd := cfg.Section("DEVICE_INFO").Key("SAT_API_SWITCH").String()
 	getdata_interval, err := cfg.Section("DEVICE_INFO").Key("MSTORE_SCHEDULER").Int()
 	switch satApiCmd {
