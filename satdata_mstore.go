@@ -230,8 +230,9 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	if deleteFlag {
 		if err := deleteAPI(cid); err != nil {
 			logger.Log("Error", "SatdataMstore", map[string]string{"CID": cid, "Message": fmt.Sprintf("Error in MstoreDeleteAPI: %s", err.Error())})
-			fmt.Println("Error", fmt.Sprintf("%s", err))
+			fmt.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 		}
+		logger.Log("Info", "SatdataMstore", map[string]string{"Message": "Deleted from Mstore"})
 	}
 	return _heirarchy, nil
 }

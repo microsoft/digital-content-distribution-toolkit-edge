@@ -85,6 +85,8 @@ func main() {
 	}
 	liveness_interval, err := cfg.Section("DEVICE_INFO").Key("LIVENESS_SCHEDULER").Int()
 	go liveness(liveness_interval)
+	deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
+	go deleteContent(deletion_interval)
 	//go pollMstore()
 	//testMstore()
 	//go check()
