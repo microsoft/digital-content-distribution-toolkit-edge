@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -47,14 +46,6 @@ func verifyToken(token string) (*Claims, error) {
 }
 
 func AuthRequiredMiddleware(c *gin.Context) {
-	if middlewareCfg == nil {
-		cfg, err := ini.Load("hub_config.ini")
-		if err != nil {
-			fmt.Println("Failed to read config file: %v in Auth middleware", err)
-			os.Exit(1)
-		}
-		middlewareCfg = cfg
-	}
 	authToken := c.GetHeader("Authorization")
 	fmt.Println("Received token is: ", authToken)
 	authToken = strings.Replace(authToken, "Bearer ", "", 1)
@@ -72,7 +63,7 @@ func AuthRequiredMiddleware(c *gin.Context) {
 	}
 
 	c.Set("userId", claims.Userid)
-	c.Header("hubId", middlewareCfg.Section("DEVICE_INFO").Key("DEVICE_NAME").String())
+	c.Header("hubId", cfg.Section("DEVICE_INFO").Key("DEVICE_NAME").String())
 	// Pass on to the next-in-chain
 	c.Next()
 }
