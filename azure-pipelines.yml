@@ -85,12 +85,12 @@ steps:
 - task: CmdLine@2
   displayName: "Tagging docker image"
   inputs:
-    script: "docker tag hub_dev $(arm_image)"
+    script: "docker tag hub_dev $(arm_image_dev)"
 
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"
   inputs:
-    script: "docker push $(arm_image)"
+    script: "docker push $(arm_image_dev)"
 
 - task: Go@0 
   displayName: "Building x86 executable"  
@@ -101,12 +101,12 @@ steps:
 - task: CmdLine@2
   displayName: "Building x86 image"
   inputs:
-    script: "docker build -t $(x86_image) -f ./Dockerfile_x86 ."
+    script: "docker build -t $(x86_image_dev) -f ./Dockerfile_x86 ."
 
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"
   inputs:
-    script: "docker push $(x86_image)"
+    script: "docker push $(x86_image_dev)"
 
 - task: Docker@2
   displayName: Logout of ACR
