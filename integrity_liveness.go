@@ -34,7 +34,7 @@ func checkIntegrity(interval int) {
 			t += m_t + b_t
 			fmt.Println("Telemetry", "[IntegityStats] "+folder_name+" :Total no. of files checked: "+strconv.Itoa(t))
 			fmt.Println("Telemetry", "[IntegityStats] "+folder_name+" :No. of files corrupted: "+strconv.Itoa(c))
-			logger.Log("Telemetry", "IntegrityStats", map[string]string{"ParentName": folder_name, "Files Checked": strconv.Itoa(t), "Files Corrupted": strconv.Itoa(c)})
+			//logger.Log("Telemetry", "IntegrityStats", map[string]string{"ParentName": folder_name, "Files Checked": strconv.Itoa(t), "Files Corrupted": strconv.Itoa(c)})
 		}
 	}
 }
@@ -82,8 +82,8 @@ func checkfiles(folderpath string, subfolderName string) (int, int) {
 			if err != nil {
 				fmt.Println("Telemetry", "[IntegrityStats] "+filepath.Join(folderpath, subfolderName, file.Name())+" is corrupted")
 				//TODO: get abstracted path for actual path
-				folderName, _ := fs.GetFolderNameForNode([]byte(filepath.Base(folderpath)))
-				logger.Log("Telemetry", "IntegrityStats", map[string]string{"FolderName": folderName, "IntegrityStatus": "Corrupted. Should be deleted"})
+				//folderName, _ := fs.GetFolderNameForNode([]byte(filepath.Base(folderpath)))
+				logger.Log("Telemetry", "IntegrityStats", map[string]string{"FileName": filepath.Join(folderpath, subfolderName, file.Name()), "IntegrityStatus": "Corrupted. Should be deleted"})
 				c++
 				continue
 			}
