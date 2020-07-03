@@ -18,7 +18,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='pbcommands',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\x0e\x63ommands.proto\x12\npbcommands\"2\n\x04\x46ile\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03\x63\x64n\x18\x02 \x01(\t\x12\x0f\n\x07hashsum\x18\x03 \x01(\t\"\x1e\n\x07\x43hannel\x12\x13\n\x0b\x63hannelname\x18\x01 \x01(\t\"\xc2\x01\n\x0e\x44ownloadParams\x12\x12\n\nfolderpath\x18\x01 \x01(\t\x12\'\n\rmetadatafiles\x18\x02 \x03(\x0b\x32\x10.pbcommands.File\x12#\n\tbulkfiles\x18\x03 \x03(\x0b\x32\x10.pbcommands.File\x12%\n\x08\x63hannels\x18\x04 \x03(\x0b\x32\x13.pbcommands.Channel\x12\x10\n\x08\x64\x65\x61\x64line\x18\x05 \x01(\x03\x12\x15\n\raddtoexisting\x18\x06 \x01(\x08\"J\n\x0c\x44\x65leteParams\x12\x12\n\nfolderpath\x18\x01 \x01(\t\x12\x11\n\trecursive\x18\x02 \x01(\x08\x12\x13\n\x0b\x64\x65leteafter\x18\x03 \x01(\x05\"#\n\x08Response\x12\x17\n\x0fresponsemessage\x18\x01 \x01(\t2\x8a\x01\n\x0cRelayCommand\x12>\n\x08\x44ownload\x12\x1a.pbcommands.DownloadParams\x1a\x14.pbcommands.Response\"\x00\x12:\n\x06\x44\x65lete\x12\x18.pbcommands.DeleteParams\x1a\x14.pbcommands.Response\"\x00\x62\x06proto3'
+  serialized_pb=b'\n\x0e\x63ommands.proto\x12\npbcommands\"2\n\x04\x46ile\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03\x63\x64n\x18\x02 \x01(\t\x12\x0f\n\x07hashsum\x18\x03 \x01(\t\"\x1e\n\x07\x43hannel\x12\x13\n\x0b\x63hannelname\x18\x01 \x01(\t\"\xc2\x01\n\x0e\x44ownloadParams\x12\x12\n\nfolderpath\x18\x01 \x01(\t\x12\'\n\rmetadatafiles\x18\x02 \x03(\x0b\x32\x10.pbcommands.File\x12#\n\tbulkfiles\x18\x03 \x03(\x0b\x32\x10.pbcommands.File\x12%\n\x08\x63hannels\x18\x04 \x03(\x0b\x32\x13.pbcommands.Channel\x12\x10\n\x08\x64\x65\x61\x64line\x18\x05 \x01(\x03\x12\x15\n\raddtoexisting\x18\x06 \x01(\x08\"J\n\x0c\x44\x65leteParams\x12\x12\n\nfolderpath\x18\x01 \x01(\t\x12\x11\n\trecursive\x18\x02 \x01(\x08\x12\x13\n\x0b\x64\x65leteafter\x18\x03 \x01(\x05\"*\n\x15\x41\x64\x64NewPublicKeyParams\x12\x11\n\tpublickey\x18\x01 \x01(\t\"#\n\x08Response\x12\x17\n\x0fresponsemessage\x18\x01 \x01(\t2\xd8\x01\n\x0cRelayCommand\x12>\n\x08\x44ownload\x12\x1a.pbcommands.DownloadParams\x1a\x14.pbcommands.Response\"\x00\x12:\n\x06\x44\x65lete\x12\x18.pbcommands.DeleteParams\x1a\x14.pbcommands.Response\"\x00\x12L\n\x0f\x41\x64\x64NewPublicKey\x12!.pbcommands.AddNewPublicKeyParams\x1a\x14.pbcommands.Response\"\x00\x62\x06proto3'
 )
 
 
@@ -211,6 +211,37 @@ _DELETEPARAMS = _descriptor.Descriptor(
 )
 
 
+_ADDNEWPUBLICKEYPARAMS = _descriptor.Descriptor(
+  name='AddNewPublicKeyParams',
+  full_name='pbcommands.AddNewPublicKeyParams',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='publickey', full_name='pbcommands.AddNewPublicKeyParams.publickey', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=387,
+  serialized_end=429,
+)
+
+
 _RESPONSE = _descriptor.Descriptor(
   name='Response',
   full_name='pbcommands.Response',
@@ -237,8 +268,8 @@ _RESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=387,
-  serialized_end=422,
+  serialized_start=431,
+  serialized_end=466,
 )
 
 _DOWNLOADPARAMS.fields_by_name['metadatafiles'].message_type = _FILE
@@ -248,6 +279,7 @@ DESCRIPTOR.message_types_by_name['File'] = _FILE
 DESCRIPTOR.message_types_by_name['Channel'] = _CHANNEL
 DESCRIPTOR.message_types_by_name['DownloadParams'] = _DOWNLOADPARAMS
 DESCRIPTOR.message_types_by_name['DeleteParams'] = _DELETEPARAMS
+DESCRIPTOR.message_types_by_name['AddNewPublicKeyParams'] = _ADDNEWPUBLICKEYPARAMS
 DESCRIPTOR.message_types_by_name['Response'] = _RESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -279,6 +311,13 @@ DeleteParams = _reflection.GeneratedProtocolMessageType('DeleteParams', (_messag
   })
 _sym_db.RegisterMessage(DeleteParams)
 
+AddNewPublicKeyParams = _reflection.GeneratedProtocolMessageType('AddNewPublicKeyParams', (_message.Message,), {
+  'DESCRIPTOR' : _ADDNEWPUBLICKEYPARAMS,
+  '__module__' : 'commands_pb2'
+  # @@protoc_insertion_point(class_scope:pbcommands.AddNewPublicKeyParams)
+  })
+_sym_db.RegisterMessage(AddNewPublicKeyParams)
+
 Response = _reflection.GeneratedProtocolMessageType('Response', (_message.Message,), {
   'DESCRIPTOR' : _RESPONSE,
   '__module__' : 'commands_pb2'
@@ -294,8 +333,8 @@ _RELAYCOMMAND = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=425,
-  serialized_end=563,
+  serialized_start=469,
+  serialized_end=685,
   methods=[
   _descriptor.MethodDescriptor(
     name='Download',
@@ -312,6 +351,15 @@ _RELAYCOMMAND = _descriptor.ServiceDescriptor(
     index=1,
     containing_service=None,
     input_type=_DELETEPARAMS,
+    output_type=_RESPONSE,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='AddNewPublicKey',
+    full_name='pbcommands.RelayCommand.AddNewPublicKey',
+    index=2,
+    containing_service=None,
+    input_type=_ADDNEWPUBLICKEYPARAMS,
     output_type=_RESPONSE,
     serialized_options=None,
   ),

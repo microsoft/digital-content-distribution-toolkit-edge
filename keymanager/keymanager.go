@@ -5,25 +5,33 @@ import (
 	"sync"
 	"crypto/rsa"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
+type KeyEntry struct {
+	key *rsa.PublicKey
+	fileName string
+}
 type KeyManager struct {
-	keys []*rsa.PublicKey
+	keys []KeyEntry
 	maxLength int
 	currentLength int
+	PubkeysDir string
 	mutex sync.Mutex
 }
 
-func MakeKeyManager(maxLength int) (*KeyManager, error) {
+func MakeKeyManager(maxLength int, PubkeysDir string) (*KeyManager, error) {
 	var mutex sync.Mutex
-	km := KeyManager{make([]*rsa.PublicKey, maxLength), maxLength, 0, mutex}
+	km := KeyManager{make([]KeyEntry, maxLength), maxLength, 0, PubkeysDir, mutex}
 
 	return &km, nil
 }
 
-func (km *KeyManager) AddKey(publicKeyPath string) error {
+func (km *KeyManager) AddKey(publicKeyName string) error {
+	publicKeyPath := filepath.Join(km.PubkeysDir, publicKeyName)
 	keyData, err := ioutil.ReadFile(publicKeyPath)
     if err != nil {
         return err
@@ -38,10 +46,12 @@ func (km *KeyManager) AddKey(publicKeyPath string) error {
 	defer km.mutex.Unlock()
 
 	if(km.currentLength == km.maxLength) {
+		os.Remove(filepath.Join(km.PubkeysDir, km.keys[0].fileName))
 		km.keys = km.keys[1:]
-		km.keys = append(km.keys, key)
+
+		km.keys = append(km.keys, KeyEntry{key, publicKeyName})
 	} else {
-		km.keys[km.currentLength] = key;
+		km.keys[km.currentLength] = KeyEntry{key, publicKeyName};
 		km.currentLength += 1;
 	}
 
@@ -49,5 +59,10 @@ func (km *KeyManager) AddKey(publicKeyPath string) error {
 }
 
 func (km *KeyManager) GetKeyList() []*rsa.PublicKey {
-	return km.keys[:km.currentLength]
+	temp := make([]*rsa.PublicKey, 0)
+	for i := 0; i < km.currentLength; i++ {
+		temp = append(temp, km.keys[i].key)
+	}
+
+	return temp
 }
