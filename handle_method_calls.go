@@ -118,7 +118,6 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
 	}
 	path, _ := fs.GetActualPathForAbstractedPath(download_params.GetFolderpath())
-	fmt.Println("-----Actual Path-----", path)
 	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "LAN"})
 	return &pb.Response{Responsemessage: "Folder downloaded"}, nil
 }
