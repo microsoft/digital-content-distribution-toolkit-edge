@@ -30,8 +30,9 @@ func (pw *ProgressWriter) Write(b []byte) (int, error) {
 }
 
 func (pw *ProgressWriter) print() {
-	fmt.Printf("\r%s", strings.Repeat(" ", 40))
+	fmt.Printf("\r%s", strings.Repeat(" ", 60))
 	fmt.Printf("\rDownloaded: %d MB of %d MB", (pw.Counter / 1024 / 1024), pw.Total)
+	fmt.Println()
 }
 
 func matchSHA256(filePath string, trueSHA string) error {
@@ -52,7 +53,6 @@ func matchSHA256(filePath string, trueSHA string) error {
 	return errors.New("hashsum did not match")
 }
 func getDirSizeinMB(path string) float64 {
-	fmt.Println("PATH------------", path)
 	var size float64 = 0
 	err := filepath.Walk(path,
 		func(path string, info os.FileInfo, err error) error {

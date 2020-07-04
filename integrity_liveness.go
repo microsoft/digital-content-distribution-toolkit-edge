@@ -53,7 +53,7 @@ func checkheirarchy(node []byte, c, t int) (int, int) {
 		//check files
 		//fmt.Println("Children NODE-----", string(children[i:i+fs.GetNodeLength()]))
 		abstractedPath := filepath.Join(fs.GetHomeFolder(), string(children[i:i+fs.GetNodeLength()]))
-		fmt.Println("Path========", abstractedPath)
+		//fmt.Println("Path========", abstractedPath)
 		m_c, m_t := checkfiles(abstractedPath, cfg.Section("DEVICE_INFO").Key("METADATA_FOLDER").String())
 		b_c, b_t := checkfiles(abstractedPath, cfg.Section("DEVICE_INFO").Key("BULKFILE_FOLDER").String())
 		c += m_c + b_c

@@ -27,6 +27,7 @@ type relayCommandServer struct {
 }
 
 func DownloadFile(filepath, url string) error {
+	//TODO: check if the filepath already exist
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -139,6 +140,7 @@ func deleteFilesFromExistingFolder(path string, fileInfos [][]string) error {
 			continue
 		}
 		err := os.Remove(deletepath)
+		log.Println("Deleting.... ", deletepath)
 		if err != nil {
 			logger.Log("Error", "HandleMethodCalls[Delete]", map[string]string{"Message": err.Error()})
 			log.Println(err)
@@ -207,21 +209,22 @@ func storeHashsum(path, hash string) error {
 
 func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.DeleteParams) (*pb.Response, error) {
 	folder_path := delete_params.GetFolderpath()
-	log.Println(folder_path)
+	log.Println("[DELETE]--", folder_path)
 	hierarchy := strings.Split(strings.Trim(folder_path, "/"), "/")
-	log.Println(hierarchy)
+	//log.Println("[DELETE]---", hierarchy)
 	//
 	fmt.Println("Printing buckets")
 	fs.PrintBuckets()
 	fmt.Println("Printing file sys")
 	fs.PrintFileSystem()
 	fmt.Println("====================")
-	path, _ := fs.GetActualPathForAbstractedPath(folder_path)
+	//path, _ := fs.GetActualPathForAbstractedPath(folder_path)
+	//folderSize := getDirSizeinMB(path)
 	if delete_params.GetRecursive() {
 		err := fs.RecursiveDeleteFolder(hierarchy)
 		if err != nil {
 			logger.Log("Error", "HandleMethodCalls[Delete]", map[string]string{"Message": err.Error()})
-			logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "FAIL", "FolderPath": delete_params.GetFolderpath()})
+			logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "FAIL", "FolderPath": delete_params.GetFolderpath(), "Message": err.Error()})
 			log.Println("[Delete] Error", fmt.Sprintf("%s", err))
 			return &pb.Response{Responsemessage: fmt.Sprintf("Folder not deleted: %v", err)}, nil
 		}
@@ -229,16 +232,17 @@ func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.Delet
 		err := fs.DeleteFolder(strings.Split(folder_path, "/"))
 		if err != nil {
 			logger.Log("Error", "HandleMethodCalls[Delete]", map[string]string{"Message": err.Error()})
-			logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "FAIL", "FolderPath": delete_params.GetFolderpath()})
+			logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "FAIL", "FolderPath": delete_params.GetFolderpath(), "Message": err.Error()})
 			log.Println("[Delete] Error", fmt.Sprintf("%s", err))
 			return &pb.Response{Responsemessage: fmt.Sprintf("Folder not deleted: %v", err)}, nil
 		}
 	}
-	fmt.Println("Printing buckets after deletion")
+	fmt.Println("=========== After deletion =================")
+	fmt.Println("Printing buckets")
 	fs.PrintBuckets()
-	fmt.Println("Printing file sys")
+	fmt.Println("Printing file sys ")
 	fs.PrintFileSystem()
-	logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "SUCCESS", "FolderPath": delete_params.GetFolderpath(), "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB"})
+	logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "SUCCESS", "FolderPath": delete_params.GetFolderpath()})
 	return &pb.Response{Responsemessage: "Folder deleted"}, nil
 }
 
