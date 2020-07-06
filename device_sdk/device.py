@@ -6,10 +6,11 @@ from concurrent import futures
 import threading
 import time
 import sys
-import fcntl
+#import fcntl
 import os
 import grpc
 import datetime
+import json
 
 import logger_pb2
 import logger_pb2_grpc
@@ -28,11 +29,11 @@ capabilityModelId = None
 capabilityModel = None 
 provisioning_host = None
 
-def lock_file(f):
-    fcntl.lockf(f, fcntl.LOCK_EX)
+#def lock_file(f):
+    #fcntl.lockf(f, fcntl.LOCK_EX)
 
-def unlock_file(f):
-    fcntl.lockf(f, fcntl.LOCK_UN)
+#def unlock_file(f):
+    #fcntl.lockf(f, fcntl.LOCK_UN)
 
 class AtomicOpen:
     """
@@ -40,7 +41,7 @@ class AtomicOpen:
     """
     def __init__(self, path, *args, **kwargs):
         self.file = open(path,*args, **kwargs)
-        lock_file(self.file)
+        #lock_file(self.file)
 
     def __enter__(self, *args, **kwargs):
         return self.file
@@ -48,7 +49,7 @@ class AtomicOpen:
     def __exit__(self, exc_type=None, exc_value=None, traceback=None):        
         self.file.flush()  # Flush to make sure all buffered contents are written to file
         os.fsync(self.file.fileno())  # Release the lock on the file
-        unlock_file(self.file)
+        #unlock_file(self.file)
         self.file.close()
         # Handle exceptions that may have come up during execution, by default any exceptions are raised to the user.
         if(exc_type != None):
@@ -121,6 +122,12 @@ def iothub_client_init():
     client = connect_device()
     return client
 
+def create_telemetry_message(x):
+  if "Liveness" in x:
+    return Message(json.dumps({'liveness': x}))
+  else:
+    return Message(json.dumps({'other': x})) 
+  
 def send_upstream_messages(iot_client):
     while True:
         try:  # keep on spinning this even in case of error in production
@@ -133,7 +140,7 @@ def send_upstream_messages(iot_client):
             # print(temp)
             for x in temp:
                 if(len(x) != 0):
-                    message = Message(x)
+                    message = create_telemetry_message(x)
                     print(message)
                     iot_client.send_message(message)
         except Exception as ex:
@@ -145,9 +152,9 @@ def send_upstream_messages(iot_client):
 def getFileParams(param):
     fileparams = []
     if param is not None:
-        result = param.split(";")
+        result = param.split(';')
         for x in result:
-            y = x.split(",")
+            y = x.split(',')
             fileparams.append(commands_pb2.File(name=y[0], cdn=y[1], hashsum=y[2]))
     return fileparams
 
@@ -200,9 +207,9 @@ def delete(request, stub, iot_client):
     print("Sending request to delete", request.payload)
     payload = eval(request.payload)
     try:
-        _folder_path = payload["folder_path"]
-        _recursive = bool(payload["recursive"])
-        _delete_after = int(payload["delete_after"])
+        _folder_path = payload['folder_path']
+        _recursive = bool(payload['recursive'])
+        _delete_after = int(payload['delete_after'])
         delete_params = commands_pb2.DeleteParams(folderpath=_folder_path, recursive=_recursive,
         delteafter=_delete_after)
         response = stub.Delete(delete_params)
@@ -219,15 +226,17 @@ def delete(request, stub, iot_client):
 def download(request, stub, iot_client):
     print("Sending request to downlaoad")
     payload = eval(request.payload)
+    print(type(payload))
     try:
-        _folder_path = payload["folder_path"]
+        
+        _folder_path = payload['folder_path']
         # print(_folder_path)
-        _metadata_files = getFileParams(payload["metadata_files"])
-        _bulk_files = getFileParams(payload["bulk_files"])
+        _metadata_files = getFileParams(payload['metadata_files'])
+        _bulk_files = getFileParams(payload['bulk_files'])
         # print(_metadata_files)
-        _channels = [commands_pb2.Channel(channelname=x) for x in payload["channels"].split(";")]
-        _deadline = int(payload["deadline"])
-        _add_to_existing = bool(payload["add_to_existing"])
+        _channels = [commands_pb2.Channel(channelname=x) for x in payload['channels'].split(';')]
+        _deadline = int(payload['deadline'])
+        _add_to_existing = bool(payload['add_to_existing'])
         print(dict(folderpath=_folder_path, metadatafiles=_metadata_files,
         bulkfiles=_bulk_files, channels=_channels, deadline=_deadline, 
         addtoexisting=_add_to_existing))
@@ -261,6 +270,7 @@ def command_listener(iot_client):
         stub = commands_pb2_grpc.RelayCommandStub(channel)
     while True:
       print("command_listener started...")
+      
       method_request = iot_client.receive_method_request()  # Wait for commands
       print (
             "\nMethod callback called with:\nmethodName = {method_name}\npayload = {payload}".format(
