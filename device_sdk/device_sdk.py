@@ -153,7 +153,7 @@ def listen_for_method_calls(iot_client):
                     _recursive = bool(payload["recursive"])
                     _delete_after = int(payload["delete_after"])
                     delete_params = commands_pb2.DeleteParams(folderpath=_folder_path, recursive=_recursive,
-                    delteafter=_delete_after)
+                    deleteafter=_delete_after)
                     response = stub.Delete(delete_params)
                     print(response)
                 except Exception as ex:

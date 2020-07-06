@@ -1,6 +1,6 @@
 # remove the database file and file system, may not be required in real life but for testing
 # TODO: dynamically see the folder instead of hardcode zzzz/
-rm -rf test.db zzzz/
+#rm -rf test.db zzzz/
 
 
 # close ports required for gRPC

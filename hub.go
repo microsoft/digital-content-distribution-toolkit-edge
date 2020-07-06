@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
-	"strconv"
 	"sort"
+	"strconv"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	ini "gopkg.in/ini.v1"
@@ -31,7 +31,8 @@ func main() {
 	var err error
 	cfg, err = ini.Load("hub_config.ini")
 	if err != nil {
-		fmt.Println("Failed to read config file: %v", err)
+		logger.Log("Critical", "Config.ini", map[string]string{"Message": fmt.Sprintf("Failed to read config file: %s", err)})
+		fmt.Printf("Failed to read config file: %v", err)
 		os.Exit(1)
 	}
 
@@ -54,12 +55,11 @@ func main() {
 		os.Exit(1)
 	}
 	defer fs.Close()
-
 	initflag, err := cfg.Section("DEVICE_INFO").Key("INIT_FILE_SYSTEM").Bool()
 	if initflag {
 		err = fs.InitFileSystem()
 		if err != nil {
-			logger.Log("Error", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
+			logger.Log("Critical", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
 			log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
 			os.Exit(1)
 		}
@@ -83,6 +83,10 @@ func main() {
 	case "mstore":
 		go pollMstore(getdata_interval)
 	}
+	liveness_interval, err := cfg.Section("DEVICE_INFO").Key("LIVENESS_SCHEDULER").Int()
+	go liveness(liveness_interval)
+	deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
+	go deleteContent(deletion_interval)
 	//go pollMstore()
 	//testMstore()
 	//go check()
@@ -98,7 +102,7 @@ func main() {
 		ext := filepath.Ext(path)
 		if ext == ".pem" {
 			file_full_name := filepath.Base(path)
-			file_name := file_full_name[:len(file_full_name) - len(ext)]
+			file_name := file_full_name[:len(file_full_name)-len(ext)]
 			file_time, err := strconv.ParseInt(file_name, 10, 64)
 			if err != nil {
 				log.Println(fmt.Sprintf("Key file with name %v is not in correct format", file_full_name))
@@ -109,17 +113,17 @@ func main() {
 		return nil
 	})
 
-	sort.Slice(file_times, func(i, j int) bool {return file_times[i] < file_times[j]})
+	sort.Slice(file_times, func(i, j int) bool { return file_times[i] < file_times[j] })
 	for _, file_time := range file_times {
 		err = km.AddKey(fmt.Sprintf("%v.pem", file_time))
-		if(err != nil) {
+		if err != nil {
 			log.Println(fmt.Sprintf("Failed to add key: %v", err))
 		}
 	}
 	log.Println(fmt.Sprintf("Read a total of %v public keys", len(km.GetKeyList())))
 
 	if len(km.GetKeyList()) == 0 {
-		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
+		logger.Log("Critical", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
 		log.Println(fmt.Sprintf("Failed to setup keymanager: %v", err))
 		os.Exit(1)
 	}
