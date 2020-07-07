@@ -1,5 +1,5 @@
 {
-  "@id": "urn:BINEHUB:sample_device:1",
+  "@id": "urn:BINEHUB:iot_device:1",
   "@type": "CapabilityModel",
   "displayName": "BineHub Capability Model",
   "implements": [
@@ -77,7 +77,7 @@
       "@type": "InterfaceInstance",
       "name": "sensor",
       "schema": {
-        "@id": "urn:BINEHUB:BineHub:1",
+        "@id": "urn:BINEHUB:binehub_iot_device:1",
         "@type": "Interface",
         "displayName": "BineHub",
         "@context": "http://azureiot.com/v1/contexts/IoTModel.json",
@@ -108,31 +108,35 @@
           {
             "@type": [
               "Telemetry",
-              "SemanticType/Temperature"
+              "SemanticType/Event"
             ],
-            "description": "Current temperature on the device",
-            "displayName": "Temperature",
-            "name": "temp",
-            "schema": "double",
-            "unit": "Units/Temperature/fahrenheit"
+            "description": "Liveness Probe",
+            "displayName": "Liveness",
+            "name": "liveness",
+            "schema": "string"
           },
           {
             "@type": [
               "Telemetry",
-              "SemanticType/Humidity"
+              "SemanticType/Event"
             ],
-            "description": "Current humidity on the device",
-            "displayName": "Humidity",
-            "name": "humid",
-            "schema": "double",
-            "unit": "Units/Humidity/percent"
+            "description": "Other telemetry",
+            "displayName": "Other",
+            "name": "other",
+            "schema": "string"
           },
           {
-            "@type": "Command",
+            "@type": [
+                "Command"
+              ],
             "description": "This command will begin blinking the LED for given time interval.",
-            "name": "blink",
+            "name": "Blink",
             "commandType": "synchronous",
             "request": {
+              "@type": [
+                  "SchemaField"
+                ],
+              "displayName": "Seconds delay between blinking",
               "name": "interval",
               "schema": "long"
             },
@@ -150,22 +154,110 @@
             }
           },
           {
-            "@type": "Command",
-            "name": "turnon",
+            "@type": [
+                "Command"
+              ],
+            "name": "TurnOn",
             "comment": "This Commands will turn-on the LED light on the device.",
             "commandType": "synchronous"
           },
           {
-            "@type": "Command",
-            "name": "turnoff",
+            "@type": [
+                "Command"
+              ],
+            "name": "TurnOff",
             "comment": "This Commands will turn-off the LED light on the device.",
             "commandType": "synchronous"
           },
           {
-            "@type": "Command",
-            "name": "rundiagnostics",
+            "@type": [
+                "Command"
+              ],
+            "name": "RunDiagnostics",
             "comment": "This command initiates a diagnostics run.  This will take time and is implemented as an asynchronous command",
             "commandType": "asynchronous"
+          },
+		  {
+            "@type": [
+                "Command"
+              ],
+            "name": "Download",
+            "comment": "This command initiates a download.  This will take time and is implemented as an asynchronous command",
+            "commandType": "asynchronous",
+			"request": {
+              "@type": [
+                  "SchemaField"
+                ],
+			  "displayName": "JSON payload to include : device_id, method, folder_path, metadata_files, bulk_files, channels, deadline, add_to_existing",
+              "name": "payload",
+              "schema": "string"
+            },
+            "response": {
+              "name": "downloadResponse",
+              "schema": {
+                "@type": "Object",
+                "fields": [
+                  {
+                    "name": "description",
+                    "schema": "string"
+                  }
+                ]
+              }
+            }
+          },
+		  {
+            "@type": [
+                "Command"
+              ],
+            "name": "SetTelemetryInterval",
+            "comment": "This command sets the Telemetry interval.  This will take time and is implemented as an asynchronous command",
+            "commandType": "asynchronous",
+			"request": {
+              "@type": [
+                  "SchemaField"
+                ],
+			  "displayName": "Telemetry Interval",
+              "name": "interval",
+              "schema": "long"
+            },
+            "response": {
+              "name": "telemetryResponse",
+              "schema": {
+                "@type": "Object",
+                "fields": [
+                  {
+                    "name": "description",
+                    "schema": "string"
+                  }
+                ]
+              }
+            }
+          },
+		  {
+            "@type": "Command",
+            "name": "Delete",
+            "comment": "This command initiates a delete.  This will take time and is implemented as an asynchronous command",
+            "commandType": "asynchronous",
+			"request": {
+              "@type": [
+                  "SchemaField"
+                ],
+			  "displayName": "JSON payload to include: folder_path, recursive, delete_after",
+              "name": "payload",
+              "schema": "string"
+            },
+            "response": {
+              "name": "deleteResponse",
+              "schema": {
+                "@type": "Object",
+                "fields": [
+                  {
+                    "name": "description",
+                    "schema": "string"
+                  }
+                ]
+              }
+            }
           }
         ]
       }
