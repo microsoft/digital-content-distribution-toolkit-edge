@@ -23,7 +23,7 @@ def start():
             name = request.form['name']
             location = request.form['location']
             phonenumber = request.form['phonenumber']
-            hubDetails = open('../device_sdk/hubdetails.ini', 'w+') 
+            hubDetails = open('../customerdetails.ini', 'w+') 
             name_config = f'customer_name={name}\n'
             location_config = f'location={location}\n'
             phonenumber_config = f'phonenumber={phonenumber}\n'
