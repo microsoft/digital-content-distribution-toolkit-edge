@@ -65,13 +65,11 @@ type VodInfo struct {
 	} `json:"metadata"`
 }
 
-//var deleteFlag bool = cfg.Section("DEVICE_INFO").Key("DELETE_FLAG").Bool()
-
 func pollMstore(interval int) {
 	for true {
 		fmt.Println("==================Polling MStore API ==============")
 		if err := checkForVODViaMstore(); err != nil {
-			log.Println(err)
+			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
@@ -94,11 +92,11 @@ func checkForVODViaMstore() error {
 		return jsonErr
 	}
 	fmt.Println(":::::::::::::::::NO. OF CONTENTS:::::::::::", len(vodlist.ListContents))
-	for _, id := range vodlist.ListContents {
-		fmt.Println("======= Processing for CID=======", id.ContentID)
+	for i, id := range vodlist.ListContents {
+		fmt.Println("=======(", i, ") Processing for CID:=====", id.ContentID)
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
-			log.Println(err)
+			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 			continue
 		}
@@ -139,7 +137,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	deadline := vod.Metadata.ValidityEndDate
 	var _heirarchy string
 	if vod.Metadata.UserDefined.AncestorIds != "" {
-		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
+		_heirarchy = vod.Metadata.UserDefined.MediaHouse + vod.Metadata.UserDefined.AncestorIds + "/" + vod.Metadata.UserDefined.MediaId
 	} else {
 		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.MediaId
 	}
@@ -209,7 +207,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 			if err.Error() == "[Filesystem][CreateFolder] A folder with the same name at the requested level already exists" {
 				continue
 			}
-			fmt.Println("Error", fmt.Sprintf("%s", err))
+			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 			return _heirarchy, err
 		}
 
@@ -220,19 +218,19 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	}
 	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
 	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "SES"})
-	//logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+	logger.Log("Telemetry", "Storage ", map[string]string{"AvailableDiskSpace": getDiskInfo()})
 	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+fmt.Sprintf("%f", getDirSizeinMB(path))+" MB downloaded on the Hub")
 	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
-	//fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 
 	//trigger DELETE API--- if to be removed later
 	deleteFlag, _ := cfg.Section("DEVICE_INFO").Key("DELETE_FLAG").Bool()
 	if deleteFlag {
 		if err := deleteAPI(cid); err != nil {
 			logger.Log("Error", "SatdataMstore", map[string]string{"CID": cid, "Message": fmt.Sprintf("Error in MstoreDeleteAPI: %s", err.Error())})
-			fmt.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
+			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 		}
-		logger.Log("Info", "SatdataMstore", map[string]string{"Message": "Deleted from Mstore"})
+		logger.Log("Info", "SatdataMstore", map[string]string{"CID": cid, "Message": "Deleted from Mstore"})
 	}
 	return _heirarchy, nil
 }
@@ -269,7 +267,6 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 		}
 		//store it in a file
 		if err := storeHashsum(downloadpath, x[2]); err != nil {
-			//logger.Log("Error", "SatdataMstore", map[string]string{"Message": fmt.Sprintf("Could not store Hashsum in the text file: %s", err.Error())})
 			fmt.Println("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 			return errors.New(fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 		}
@@ -302,12 +299,11 @@ func copySingleFile(dest, source string) error {
 	t2 := time.Now()
 	diff := t2.Sub(t1)
 	//log.Println("Transfer with io.Copy() took %f seconds\n", diff.Seconds())
-	fmt.Println("========Copy speed==(MBps)====== ", float64(written/1024/1024)/diff.Seconds())
+	log.Println("========Copy speed==(MBps)====== ", float64(written/1024/1024)/diff.Seconds())
 	//fmt.Println("======== Written MB======== ", float64(written/1024/1024))
 
 	return nil
 }
-
 func deleteAPI(cid string) error {
 	query := "http://localhost:8134/deletecontent/" + cid
 	res, err := http.Get(query)
@@ -326,7 +322,7 @@ func deleteAPI(cid string) error {
 	result := r.FindStringSubmatch(str)
 	status := strings.Fields(strings.Trim(result[1], "\n"))
 	if status[2] == "OK" {
-		logger.Log("Info", "MstoreDeleteAPI", map[string]string{"Message": cid + " Deleted from Mstore"})
+		log.Println(" [SATDATA_MSTORE] deleted from mstore: ", cid)
 	} else {
 		return errors.New("Could not Delete from Mstore db")
 	}

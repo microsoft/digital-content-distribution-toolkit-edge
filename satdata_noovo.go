@@ -113,7 +113,7 @@ func callNoovoAPI() error {
 		if matched, _ := regexp.MatchString(`^BINE.`, vod.Content.VODInfo.MovieID); matched {
 			var _heirarchy string
 			if vod.Content.UserDefined.AncestorIds != "" {
-				_heirarchy = vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.AncestorIds + "/" + vod.Content.UserDefined.MediaId
+				_heirarchy = vod.Content.UserDefined.MediaHouse + vod.Content.UserDefined.AncestorIds + "/" + vod.Content.UserDefined.MediaId
 			} else {
 				_heirarchy = vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.MediaId
 			}
@@ -130,7 +130,7 @@ func callNoovoAPI() error {
 			}
 			path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
 			logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "SES"})
-			// logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+			logger.Log("Telemetry", "Storage ", map[string]string{"AvailableDiskSpace": getDiskInfo()})
 		}
 	}
 	return nil
@@ -151,7 +151,6 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 	folderMetadataFilesMap := make(map[string][]FileInfo)
 	for _, metadatafileEntry := range vod.Content.UserDefined.MetadataFiles.File {
 		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileInfo{metadatafileEntry.Filename, metadatafileEntry.Checksum})
-		//fmt.Println("MAP APPENDED:::::", folderMetadataFilesMap[metadatafileEntry.FolderId])
 	}
 	fmt.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
