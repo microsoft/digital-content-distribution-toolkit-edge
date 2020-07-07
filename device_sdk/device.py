@@ -6,7 +6,7 @@ from concurrent import futures
 import threading
 import time
 import sys
-#import fcntl
+import fcntl
 import os
 import grpc
 import datetime
@@ -16,7 +16,6 @@ import logger_pb2
 import logger_pb2_grpc
 import commands_pb2
 import commands_pb2_grpc
-import asyncio
 
 from azure.iot.device import IoTHubDeviceClient, Message, ProvisioningDeviceClient
 from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
@@ -29,11 +28,11 @@ capabilityModelId = None
 capabilityModel = None 
 provisioning_host = None
 
-#def lock_file(f):
-    #fcntl.lockf(f, fcntl.LOCK_EX)
+def lock_file(f):
+    fcntl.lockf(f, fcntl.LOCK_EX)
 
-#def unlock_file(f):
-    #fcntl.lockf(f, fcntl.LOCK_UN)
+def unlock_file(f):
+    fcntl.lockf(f, fcntl.LOCK_UN)
 
 class AtomicOpen:
     """
@@ -41,7 +40,7 @@ class AtomicOpen:
     """
     def __init__(self, path, *args, **kwargs):
         self.file = open(path,*args, **kwargs)
-        #lock_file(self.file)
+        lock_file(self.file)
 
     def __enter__(self, *args, **kwargs):
         return self.file
@@ -49,7 +48,7 @@ class AtomicOpen:
     def __exit__(self, exc_type=None, exc_value=None, traceback=None):        
         self.file.flush()  # Flush to make sure all buffered contents are written to file
         os.fsync(self.file.fileno())  # Release the lock on the file
-        #unlock_file(self.file)
+        unlock_file(self.file)
         self.file.close()
         # Handle exceptions that may have come up during execution, by default any exceptions are raised to the user.
         if(exc_type != None):
@@ -73,7 +72,7 @@ def register_device():
     )
     provisioning_device_client.provisioning_payload = capabilityModel
     registration_result = provisioning_device_client.register()
-    print(f'Registration result: {registration_result.status}')
+    print('Registration result: {}'.format(registration_result.status))
     return registration_result
 
 def connect_device():
@@ -148,145 +147,108 @@ def send_upstream_messages(iot_client):
             print(message)
             iot_client.send_message(message)
 
-
 def getFileParams(param):
     fileparams = []
     if param is not None:
-        result = param.split(';')
+        result = param.split(";")
         for x in result:
-            y = x.split(',')
+            y = x.split(",")
             fileparams.append(commands_pb2.File(name=y[0], cdn=y[1], hashsum=y[2]))
     return fileparams
 
-def blink_command(request, stub, iot_client):
-    print('Received synchronous call to blink')
-    response = MethodResponse.create_from_method_request(
-      request, status = 200, payload = {'description': f'Blinking LED every {request.payload} seconds'}
-    )
-    iot_client.send_method_response(response)  # send response
-    print(f'Blinking LED every {request.payload} seconds')
-
-def diagnostics_command(request, stub, iot_client):
-    print('Starting asynchronous diagnostics run...')
-    response = MethodResponse.create_from_method_request(
-      request, status = 202
-    )
-    iot_client.send_method_response(response)  # send response
-    print('Generating diagnostics...')
-    print('Sending property update to confirm command completion')
-    iot_client.patch_twin_reported_properties({'rundiagnostics': {'value': f'Diagnostics run complete at {datetime.datetime.today()}.'}})
-
-def turnon_command(request, stub, iot_client):
-    print('Turning on the LED')
-    response = MethodResponse.create_from_method_request(
-      request, status = 200
-    )
-    iot_client.send_method_response(response)  # send response
-
-def turnoff_command(request, stub, iot_client):
-    print('Turning off the LED')
-    response = MethodResponse.create_from_method_request(
-      request, status = 200
-    )
-    iot_client.send_method_response(response)  # send response
-  
-def setTelemetryInterval(request, stub, iot_client):
-    print('starting setTelemetryInterval')
-    try:
-        INTERVAL = int(request.payload)
-    except ValueError:
-        response_payload = {"Response": "Invalid parameter"}
-        response_status = 400
-    else:
-        response_payload = {"Response": "Executed direct method {}".format(request.name)}
-        response_status = 200
-    method_response = MethodResponse(request.request_id, response_status, payload=response_payload)
-    iot_client.send_method_response(method_response)
-    
-def delete(request, stub, iot_client):
-    print("Sending request to delete", request.payload)
-    payload = eval(request.payload)
-    try:
-        _folder_path = payload['folder_path']
-        _recursive = bool(payload['recursive'])
-        _delete_after = int(payload['delete_after'])
-        delete_params = commands_pb2.DeleteParams(folderpath=_folder_path, recursive=_recursive,
-        delteafter=_delete_after)
-        response = stub.Delete(delete_params)
-        print(response)
-    except Exception as ex:
-        response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
-        response_status = 400
-    else:
-        response_payload = {"Response": "Executed method  call {}".format(request.name)}
-        response_status = 200 
-    method_response = MethodResponse(request.request_id, response_status, payload=response_payload)
-    iot_client.send_method_response(method_response)
-
-def download(request, stub, iot_client):
-    print("Sending request to downlaoad")
-    payload = eval(request.payload)
-    print(type(payload))
-    try:
-        
-        _folder_path = payload['folder_path']
-        # print(_folder_path)
-        _metadata_files = getFileParams(payload['metadata_files'])
-        _bulk_files = getFileParams(payload['bulk_files'])
-        # print(_metadata_files)
-        _channels = [commands_pb2.Channel(channelname=x) for x in payload['channels'].split(';')]
-        _deadline = int(payload['deadline'])
-        _add_to_existing = bool(payload['add_to_existing'])
-        print(dict(folderpath=_folder_path, metadatafiles=_metadata_files,
-        bulkfiles=_bulk_files, channels=_channels, deadline=_deadline, 
-        addtoexisting=_add_to_existing))
-        
-        download_params = commands_pb2.DownloadParams(folderpath=_folder_path, metadatafiles=_metadata_files,
-        bulkfiles=_bulk_files, channels=_channels, deadline=_deadline, addtoexisting=_add_to_existing)
-        response = stub.Download(download_params)
-        print(response)
-    except Exception as ex:
-        response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
-        response_status = 400
-    else:
-        response_payload = {"Response": "Executed method  call {}".format(request.name)}
-        response_status = 200
-    method_response = MethodResponse(request.request_id, response_status, payload=response_payload)
-    iot_client.send_method_response(method_response)
-
-commands = {
-    'Blink': blink_command,
-    'RunDiagnostics': diagnostics_command,
-    'TurnOn': turnon_command,
-    'TurnOff': turnoff_command,
-    'SetTelemetryInterval': setTelemetryInterval,
-    'Download' : download,
-    'Delete' : delete
-  }
-
-# Define behavior for handling commands
 def command_listener(iot_client):
+    print("Listening for device commands...")
     with grpc.insecure_channel('localhost:{}'.format(config.getint("GRPC", "DOWNSTREAM_PORT"))) as channel:
         stub = commands_pb2_grpc.RelayCommandStub(channel)
-    while True:
-      print("command_listener started...")
-      
-      method_request = iot_client.receive_method_request()  # Wait for commands
-      print (
-            "\nMethod callback called with:\nmethodName = {method_name}\npayload = {payload}".format(
-                method_name=method_request.name,
-                payload=method_request.payload
+        while True:
+            method_request = iot_client.receive_method_request()
+            print (
+                "\nMethod callback called with:\nmethodName = {method_name}\npayload = {payload}".format(
+                    method_name=method_request.name,
+                    payload=method_request.payload
+                )
             )
-        )
-      try:
-        commands[method_request.name](method_request, stub, iot_client)
-      except KeyError:
-        print(f"{method_request.name} is an unknown command.")
-        response_payload = {"Response": "Method call {} not defined".format(method_request.name)}
-        response_status = 404
-        method_response = MethodResponse(method_request.request_id, response_status, payload=response_payload)
-        iot_client.send_method_response(method_response)
-
+            if method_request.name == "SetTelemetryInterval":
+                try:
+                    INTERVAL = int(method_request.payload)
+                    print("\nSet Telemetry Interval : {}".format(INTERVAL))
+                except ValueError:
+                    response_payload = {"Response": "Invalid parameter"}
+                    response_status = 400
+                else:
+                    response_payload = {"Response": "Executed direct method {}".format(method_request.name)}
+                    response_status = 200
+            elif(method_request.name == "Download"):
+                print("Sending request to downlaoad")
+                payload = eval(method_request.payload)
+                try:
+                    _folder_path = payload['folder_path']
+                    _metadata_files = getFileParams(payload['metadata_files'])
+                    _bulk_files = getFileParams(payload['bulk_files'])
+                    _channels = [commands_pb2.Channel(channelname=x) for x in payload['channels'].split(";")]
+                    _deadline = int(payload['deadline'])
+                    print(dict(folderpath=_folder_path, metadatafiles=_metadata_files,
+                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline
+                    ))
+                    
+                    download_params = commands_pb2.DownloadParams(folderpath=_folder_path, metadatafiles=_metadata_files,
+                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline)
+                    response = stub.Download(download_params)
+                    print(response)
+                except Exception as ex:
+                    print("Exception {}".format(ex))
+                    response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
+                    response_status = 400
+                else:
+                    response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
+                    response_status = 200
+            elif(method_request.name == "Blink"):
+                print('Received synchronous call to blink')
+                method_response = MethodResponse.create_from_method_request(
+                method_request, status = 200, payload = {'description': 'Blinking LED every {} seconds'.format(method_request.payload)}
+                )
+                print('Blinking LED every {} seconds'.format(method_request.payload))
+            elif(method_request.name == "TurnOn"):
+                print('Turning on the LED')
+                method_response = MethodResponse.create_from_method_request(
+                method_request, status = 200
+                )
+            elif(method_request.name == "TurnOff"):
+                print('Turning off the LED')
+                method_response = MethodResponse.create_from_method_request(
+                method_request, status = 200
+                )
+            elif(method_request.name == "RunDiagnostics"):
+                print('Starting asynchronous diagnostics run...')
+                method_response = MethodResponse.create_from_method_request(
+                method_request, status = 202
+                )
+                print('Generating diagnostics...')
+                print('Sending property update to confirm command completion')
+                iot_client.patch_twin_reported_properties({'rundiagnostics': {'value': 'Diagnostics run complete at {}.'.format(datetime.datetime.today())}})
+            elif(method_request.name == "Delete"):
+                print("Sending request to delete", method_request.payload)
+                payload = eval(method_request.payload)
+                try:
+                    _folder_path = payload['folder_path']
+                    _recursive = bool(payload['recursive'])
+                    _delete_after = int(payload['delete_after'])
+                    delete_params = commands_pb2.DeleteParams(folderpath=_folder_path, recursive=_recursive,
+                    delteafter=_delete_after)
+                    response = stub.Delete(delete_params)
+                    print(response)
+                except Exception as ex:
+                    print("Exception {}".format(ex))
+                    response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
+                    response_status = 400
+                else:
+                    response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
+                    response_status = 200            
+            else:
+                response_payload = {"Response": "Method call {} not defined".format(method_request.name)}
+                response_status = 404
+            method_response = MethodResponse(method_request.request_id, response_status, payload=response_payload)
+            iot_client.send_method_response(method_response)
 
 if __name__ == '__main__':
     config.read('hub_config.ini')
