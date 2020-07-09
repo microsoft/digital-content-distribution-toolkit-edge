@@ -120,12 +120,6 @@ def init_device(device_client):
 def iothub_client_init():
     client = connect_device()
     return client
-
-def create_telemetry_message(x):
-  if "Liveness" in x:
-    return Message(json.dumps({'liveness': x}))
-  else:
-    return Message(json.dumps({'other': x})) 
   
 def send_upstream_messages(iot_client):
     while True:
@@ -139,7 +133,7 @@ def send_upstream_messages(iot_client):
             # print(temp)
             for x in temp:
                 if(len(x) != 0):
-                    message = create_telemetry_message(x)
+                    message = Message(x)
                     print(message)
                     iot_client.send_message(message)
         except Exception as ex:
