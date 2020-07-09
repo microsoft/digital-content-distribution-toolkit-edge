@@ -8,3 +8,5 @@ bine*
 resp*
 zzzz
 __pycache__/
+upstream.log
+start_hub.sh

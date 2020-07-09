@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-//const interval time.Duration = 20
 const source string = "mstore"
 
 type VodObj struct {
@@ -87,9 +86,9 @@ func pollNoovo(interval int) {
 		//logger.Log("Info", "Polling NOOVO API for the new content on the SAT")
 		if err := callNoovoAPI(); err != nil {
 			log.Println(err)
-			//logger.Log("Error", err.Error())
+			logger.Log("Error", "SatdataNoovo", map[string]string{"Message": err.Error()})
 		}
-		time.Sleep(time.Duration(interval) * time.Minute)
+		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }
 
@@ -112,7 +111,12 @@ func callNoovoAPI() error {
 	fmt.Println(":::::::::::::::::NO. OF CONTENTS:::::::::::", len(vods))
 	for _, vod := range vods {
 		if matched, _ := regexp.MatchString(`^BINE.`, vod.Content.VODInfo.MovieID); matched {
-			_heirarchy := vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.AncestorIds + "/" + vod.Content.UserDefined.MediaId
+			var _heirarchy string
+			if vod.Content.UserDefined.AncestorIds != "" {
+				_heirarchy = vod.Content.UserDefined.MediaHouse + vod.Content.UserDefined.AncestorIds + "/" + vod.Content.UserDefined.MediaId
+			} else {
+				_heirarchy = vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.MediaId
+			}
 			path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
 			if path != "" {
 				log.Println(_heirarchy + " already exist.")
@@ -120,14 +124,13 @@ func callNoovoAPI() error {
 			}
 			if err := downloadContent(vod, _heirarchy); err != nil {
 				log.Println(err)
-				//logger.Log("Error", fmt.Sprintf("%s", err))
-				//logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: FAILED")
+				logger.Log("Error", "SatdataNoovo", map[string]string{"Message": err.Error()})
+				logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": _heirarchy, "Channel": "SES"})
 				continue
 			}
 			path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-			// logger.Log("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+strconv.FormatInt(getDirSizeinMB(path), 10)+"downloaded on the Hub")
-			// logger.Log("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
-			// logger.Log("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+			logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "SES"})
+			logger.Log("Telemetry", "Storage ", map[string]string{"AvailableDiskSpace": getDiskInfo()})
 		}
 	}
 	return nil
@@ -136,15 +139,7 @@ func callNoovoAPI() error {
 func downloadContent(vod VodObj, _heirarchy string) error {
 	pushId := strconv.Itoa(vod.Content.UserDefined.PushId)
 	deadline := vod.Content.VODInfo.ValidityEndDate
-	// _heirarchy := vod.Content.UserDefined.MediaHouse + "/"
-	// for i, x := range vod.Content.UserDefined.AncestorIds.File {
-	// 	if i == 0 {
-	// 		continue
-	// 	}
-	// 	_heirarchy = _heirarchy + x + "/"
-	// }
-	// _heirarchy = _heirarchy + vod.Content.UserDefined.MediaId + "/"
-	//logger.Log("Info", "Downloading files for  "+_heirarchy+" via SES channel")
+
 	// filesUrlMap of the files with the url
 	filesURLMap := make(map[string]string)
 	filesURLMap[filepath.Base(vod.Content.Pictures.Thumbnail.File.Filename)] = vod.Content.Pictures.Thumbnail.File.Filename
@@ -156,7 +151,6 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 	folderMetadataFilesMap := make(map[string][]FileInfo)
 	for _, metadatafileEntry := range vod.Content.UserDefined.MetadataFiles.File {
 		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileInfo{metadatafileEntry.Filename, metadatafileEntry.Checksum})
-		//fmt.Println("MAP APPENDED:::::", folderMetadataFilesMap[metadatafileEntry.FolderId])
 	}
 	fmt.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
@@ -179,23 +173,27 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 		fmt.Println("====================")
 		fmt.Println(subpath)
 		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
-		fileInfos := make([][]string, metafilesLen+bulkfilesLen)
+		fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
 		for i, x := range folderMetadataFilesMap[folder] {
-			fileInfos[i] = make([]string, 4)
+			fileInfos[i] = make([]string, 5)
 			fileInfos[i][0] = x.Name
 			fileInfos[i][1] = filesURLMap[pushId+"_"+folder+"_"+x.Name]
 			fileInfos[i][2] = x.Hashsum
 			fileInfos[i][3] = "metadata"
+			fileInfos[i][4] = strconv.FormatInt(deadline.Unix(), 10)
 		}
 		for i, x := range folderBulkFilesMap[folder] {
-			fileInfos[i] = make([]string, 4)
+			fileInfos[i] = make([]string, 5)
 			fileInfos[metafilesLen+i][0] = x.Name
 			fileInfos[metafilesLen+i][1] = filesURLMap[pushId+"_"+folder+"_"+x.Name]
 			fileInfos[metafilesLen+i][2] = x.Hashsum
 			fileInfos[metafilesLen+i][3] = "bulkfile"
+			fileInfos[metafilesLen+i][4] = strconv.FormatInt(deadline.Unix(), 10)
 		}
+		fileInfos[metafilesLen+bulkfilesLen] = make([]string, 5)
+		fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline.Unix(), 10)
 		subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
-		err := fs.CreateDownloadNewFolder(subpathA, DownloadFiles, fileInfos, deadline)
+		err := fs.CreateDownloadNewFolder(subpathA, DownloadFiles, fileInfos)
 		if err != nil {
 			log.Println(err)
 			// if eval, ok := err.(*fs.FolderExistError); ok {
@@ -204,7 +202,6 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 			if err.Error() == "[Filesystem][CreateFolder]A folder with the same name at the requested level already exists" {
 				continue
 			}
-			//logger.Log("Error", fmt.Sprintf("%s", err))
 			log.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
@@ -235,7 +232,13 @@ func dummyTest() error {
 	for _, vod := range vods {
 		if vod.Source == source {
 			if matched, _ := regexp.MatchString(`^BINE.`, vod.Content.VODInfo.MovieID); matched {
-				err := downloadContent(vod, "")
+				var _heirarchy string
+				if vod.Content.UserDefined.AncestorIds != "" {
+					_heirarchy = vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.AncestorIds + "/" + vod.Content.UserDefined.MediaId
+				} else {
+					_heirarchy = vod.Content.UserDefined.MediaHouse + "/" + vod.Content.UserDefined.MediaId
+				}
+				err := downloadContent(vod, _heirarchy)
 				if err != nil {
 					fmt.Println(err)
 				}

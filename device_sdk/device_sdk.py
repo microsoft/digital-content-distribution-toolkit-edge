@@ -2,7 +2,8 @@ from __future__ import print_function
 
 import configparser
 from concurrent import futures
-from multiprocessing import Process
+# from multiprocessing import Process
+import threading
 import time
 import sys
 import fcntl
@@ -128,12 +129,13 @@ def listen_for_method_calls(iot_client):
                     # print(_metadata_files)
                     _channels = [commands_pb2.Channel(channelname=x) for x in payload["channels"].split(";")]
                     _deadline = int(payload["deadline"])
+                    _add_to_existing = bool(payload["add_to_existing"])
                     print(dict(folderpath=_folder_path, metadatafiles=_metadata_files,
-                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline
-                    ))
+                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline, 
+                    addtoexisting=_add_to_existing))
                     
                     download_params = commands_pb2.DownloadParams(folderpath=_folder_path, metadatafiles=_metadata_files,
-                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline)
+                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline, addtoexisting=_add_to_existing)
                     response = stub.Download(download_params)
                     print(response)
                 except Exception as ex:
@@ -151,7 +153,7 @@ def listen_for_method_calls(iot_client):
                     _recursive = bool(payload["recursive"])
                     _delete_after = int(payload["delete_after"])
                     delete_params = commands_pb2.DeleteParams(folderpath=_folder_path, recursive=_recursive,
-                    delteafter=_delete_after)
+                    deleteafter=_delete_after)
                     response = stub.Delete(delete_params)
                     print(response)
                 except Exception as ex:
@@ -159,7 +161,22 @@ def listen_for_method_calls(iot_client):
                     response_status = 400
                 else:
                     response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
-                    response_status = 200            
+                    response_status = 200  
+            elif(method_request.name == "AddNewPublicKey"):
+                print("Sending request to add new public key")
+                payload = eval(method_request.payload)
+                print(payload)
+                try:
+                    _public_key = payload["public_key"]
+                    add_params = commands_pb2.AddNewPublicKeyParams(publickey=_public_key)
+                    response = stub.AddNewPublicKey(add_params)
+                    print(response)
+                except Exception as ex:
+                    response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
+                    response_status = 400
+                else:
+                    response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
+                    response_status = 200
             else:
                 response_payload = {"Response": "Method call {} not defined".format(method_request.name)}
                 response_status = 404
@@ -171,9 +188,11 @@ if __name__ == '__main__':
     print(config.sections())
     iot_client = iothub_client_init()
     
-    telemetry_pool = futures.ThreadPoolExecutor(1)
-    telemetry_pool.submit(send_upstream_messages, iot_client)
+    # telemetry_pool = futures.ThreadPoolExecutor(1)
+    # telemetry_pool.submit(listen_for_method_calls, iot_client)
+    t = threading.Thread(target=listen_for_method_calls, args=[iot_client])
+    t.daemon = True
+    t.start()
     
-    send_upstream_messages(iot_client)
     print("came here...")
-    listen_for_method_calls(iot_client)
+    send_upstream_messages(iot_client)
