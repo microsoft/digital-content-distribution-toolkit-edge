@@ -23,7 +23,7 @@ def start():
             name = request.form['name']
             location = request.form['location']
             phonenumber = request.form['phonenumber']
-            hubDetails = open('../customerdetails.ini', 'w+') 
+            hubDetails = open('../customerdetails.ini', 'w') 
             name_config = f'customer_name={name}\n'
             location_config = f'location={location}\n'
             phonenumber_config = f'phonenumber={phonenumber}\n'
@@ -32,7 +32,11 @@ def start():
             hubDetails.write(location_config)
             hubDetails.write(phonenumber_config)
             hubDetails.close() 
+            #Create dummy file in tmp directory
+            f = open("../tmp/dummy","w")
+            f.close
             error = None
+            # run the start_hub.sh script
             return redirect(url_for('home'))
     return render_template('login.html', error=error)
 
