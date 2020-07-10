@@ -110,9 +110,9 @@
               "Telemetry",
               "SemanticType/Event"
             ],
-            "description": "Liveness Probe",
-            "displayName": "Liveness",
-            "name": "liveness",
+            "description": "Telemetry",
+            "displayName": "Telemetry",
+            "name": "Telemetry",
             "schema": "string"
           },
           {
@@ -120,9 +120,39 @@
               "Telemetry",
               "SemanticType/Event"
             ],
-            "description": "Other telemetry",
-            "displayName": "Other",
-            "name": "other",
+            "description": "Debug Logs",
+            "displayName": "Debug",
+            "name": "Debug",
+            "schema": "string"
+          },
+		  {
+            "@type": [
+              "Telemetry",
+              "SemanticType/Event"
+            ],
+            "description": "Info Logs",
+            "displayName": "Info",
+            "name": "Info",
+            "schema": "string"
+          },
+		  {
+            "@type": [
+              "Telemetry",
+              "SemanticType/Event"
+            ],
+            "description": "Warning Logs",
+            "displayName": "Warning",
+            "name": "Warning",
+            "schema": "string"
+          },
+		  {
+            "@type": [
+              "Telemetry",
+              "SemanticType/Event"
+            ],
+            "description": "Error Logs",
+            "displayName": "Error",
+            "name": "Error",
             "schema": "string"
           },
           {

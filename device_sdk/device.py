@@ -196,18 +196,7 @@ def command_listener(iot_client):
                 else:
                     response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
                     response_status = 200
-            elif(method_request.name == "Blink"):
-                print('Received synchronous call to blink')
-                method_response = MethodResponse.create_from_method_request(
-                method_request, status = 200, payload = {'description': 'Blinking LED every {} seconds'.format(method_request.payload)}
-                )
-                print('Blinking LED every {} seconds'.format(method_request.payload))
-            elif(method_request.name == "TurnOn"):
-                print('Turning on the LED')
-                method_response = MethodResponse.create_from_method_request(
-                method_request, status = 200
-                )
-            elif(method_request.name == "TurnOff"):
+            
                 print('Turning off the LED')
                 method_response = MethodResponse.create_from_method_request(
                 method_request, status = 200
