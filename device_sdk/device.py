@@ -201,14 +201,6 @@ def command_listener(iot_client):
                 method_response = MethodResponse.create_from_method_request(
                 method_request, status = 200
                 )
-            elif(method_request.name == "RunDiagnostics"):
-                print('Starting asynchronous diagnostics run...')
-                method_response = MethodResponse.create_from_method_request(
-                method_request, status = 202
-                )
-                print('Generating diagnostics...')
-                print('Sending property update to confirm command completion')
-                iot_client.patch_twin_reported_properties({'rundiagnostics': {'value': 'Diagnostics run complete at {}.'.format(datetime.datetime.today())}})
             elif(method_request.name == "Delete"):
                 print("Sending request to delete", method_request.payload)
                 payload = eval(method_request.payload)
