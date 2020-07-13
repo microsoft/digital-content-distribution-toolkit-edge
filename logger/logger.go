@@ -15,7 +15,7 @@ type LogType string;
 
 type Message struct {
 	DeviceId string
-	MessageType string
+	// MessageType string
 	MessageSubType string
 	TimeStamp string
 	MessageBody map[string]string
@@ -87,8 +87,10 @@ func (l *Logger) Log(messageType string, messageSubType string, messageBody map[
         fmt.Errorf("[Logger]invalid message type %s", messageType)
 	}
 	
-	msg := Message{l.deviceId, messageType, messageSubType, fmt.Sprintf("%d", time.Now().Unix()), messageBody}
-	b, err := json.Marshal(msg)
+	msg := Message{l.deviceId, messageSubType, fmt.Sprintf("%d", time.Now().Unix()), messageBody}
+	messsageDict := make(map[string]Message)
+	messsageDict[messageType] = msg
+	b, err := json.Marshal(messsageDict)
 	if err != nil {
 		log.Println(fmt.Sprintf("[Logger] error in creating message: %v", err))
 	}
