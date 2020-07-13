@@ -11,7 +11,6 @@ import os
 import grpc
 import datetime
 import json
-import ast
 
 import logger_pb2
 import logger_pb2_grpc
