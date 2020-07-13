@@ -24,6 +24,11 @@ class RelayCommandStub(object):
                 request_serializer=commands__pb2.DeleteParams.SerializeToString,
                 response_deserializer=commands__pb2.Response.FromString,
                 )
+        self.AddNewPublicKey = channel.unary_unary(
+                '/pbcommands.RelayCommand/AddNewPublicKey',
+                request_serializer=commands__pb2.AddNewPublicKeyParams.SerializeToString,
+                response_deserializer=commands__pb2.Response.FromString,
+                )
 
 
 class RelayCommandServicer(object):
@@ -42,6 +47,12 @@ class RelayCommandServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AddNewPublicKey(self, request, context):
+        """Missing associated documentation comment in .proto file"""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_RelayCommandServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -53,6 +64,11 @@ def add_RelayCommandServicer_to_server(servicer, server):
             'Delete': grpc.unary_unary_rpc_method_handler(
                     servicer.Delete,
                     request_deserializer=commands__pb2.DeleteParams.FromString,
+                    response_serializer=commands__pb2.Response.SerializeToString,
+            ),
+            'AddNewPublicKey': grpc.unary_unary_rpc_method_handler(
+                    servicer.AddNewPublicKey,
+                    request_deserializer=commands__pb2.AddNewPublicKeyParams.FromString,
                     response_serializer=commands__pb2.Response.SerializeToString,
             ),
     }
@@ -94,6 +110,22 @@ class RelayCommand(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/pbcommands.RelayCommand/Delete',
             commands__pb2.DeleteParams.SerializeToString,
+            commands__pb2.Response.FromString,
+            options, channel_credentials,
+            call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AddNewPublicKey(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/pbcommands.RelayCommand/AddNewPublicKey',
+            commands__pb2.AddNewPublicKeyParams.SerializeToString,
             commands__pb2.Response.FromString,
             options, channel_credentials,
             call_credentials, compression, wait_for_ready, timeout, metadata)

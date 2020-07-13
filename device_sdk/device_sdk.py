@@ -75,7 +75,6 @@ def send_upstream_messages(iot_client):
                 fout.write("")
                 fout.truncate()
             
-            # print(temp)
             for x in temp:
                 if(len(x) != 0):
                     message = Message(x)
@@ -154,7 +153,7 @@ def listen_for_method_calls(iot_client):
                     _recursive = bool(payload["recursive"])
                     _delete_after = int(payload["delete_after"])
                     delete_params = commands_pb2.DeleteParams(folderpath=_folder_path, recursive=_recursive,
-                    delteafter=_delete_after)
+                    deleteafter=_delete_after)
                     response = stub.Delete(delete_params)
                     print(response)
                 except Exception as ex:
@@ -162,7 +161,22 @@ def listen_for_method_calls(iot_client):
                     response_status = 400
                 else:
                     response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
-                    response_status = 200            
+                    response_status = 200  
+            elif(method_request.name == "AddNewPublicKey"):
+                print("Sending request to add new public key")
+                payload = eval(method_request.payload)
+                print(payload)
+                try:
+                    _public_key = payload["public_key"]
+                    add_params = commands_pb2.AddNewPublicKeyParams(publickey=_public_key)
+                    response = stub.AddNewPublicKey(add_params)
+                    print(response)
+                except Exception as ex:
+                    response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
+                    response_status = 400
+                else:
+                    response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
+                    response_status = 200
             else:
                 response_payload = {"Response": "Method call {} not defined".format(method_request.name)}
                 response_status = 404

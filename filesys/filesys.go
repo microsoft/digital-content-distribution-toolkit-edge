@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	bolt "github.com/boltdb/bolt"
 )
@@ -454,7 +453,7 @@ func (fs *FileSystem) GetActualPathForAbstractedPath(path string) (string, error
 	return actual_path, nil
 }
 
-func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc downloadFunc, downloadParams [][]string, deadline time.Time) error {
+func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc downloadFunc, downloadParams [][]string) error {
 	// check if folder creation is a valid operation
 	folder_name := []byte(hierarchy[len(hierarchy)-1])
 	node := RandStringBytes(fs.nodeLength, fs.homeNode)
@@ -477,16 +476,7 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 	if err != nil {
 		return err
 	}
-	// store the deadline for the created folder
-	f, err := os.OpenFile(filepath.Join(actual_path, "deadline.txt"), os.O_RDWR|os.O_CREATE, 0700)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = f.WriteString(deadline.String())
-	if err != nil {
-		return err
-	}
+
 	// downlaod the files, check hashsum is done in dfunc
 	err = dfunc(actual_path, downloadParams)
 	if err != nil {
@@ -569,8 +559,8 @@ func (fs *FileSystem) IsLeaf(actual_path_folder string) (bool, error) {
 	}
 
 	hierarchy := strings.Split(strings.Trim(actual_path_folder, "/"), "/")
-	children, err := fs.GetChildrenForNode([]byte(hierarchy[len(hierarchy) - 1]))
-	if(err != nil) {
+	children, err := fs.GetChildrenForNode([]byte(hierarchy[len(hierarchy)-1]))
+	if err != nil {
 		return false, err
 	}
 
@@ -588,24 +578,24 @@ func (fs *FileSystem) preOrderTraversal(root []byte, prefix string) []string {
 
 	ans := []string{}
 	for i := 0; i < len(children); i += fs.nodeLength {
-		if(i == 0) {
+		if i == 0 {
 			continue
 		}
-		ans = append(ans, fs.preOrderTraversal(children[i: i + fs.nodeLength], prefix + "/" + folder_name)...)
+		ans = append(ans, fs.preOrderTraversal(children[i:i+fs.nodeLength], prefix+"/"+folder_name)...)
 	}
 
-	return ans;
+	return ans
 }
 
 func (fs *FileSystem) GetLeavesList() []string {
 	homeNodeName, _ := fs.GetFolderNameForNode(fs.homeNode)
 	temp := fs.preOrderTraversal(fs.homeNode, "")
 	for i, _ := range temp {
-		temp[i] = temp[i][len(homeNodeName) + 1:]
+		temp[i] = temp[i][len(homeNodeName)+1:]
 	}
 
 	return temp
-} 
+}
 
 func (fs *FileSystem) PrintBuckets() {
 	fs.nodesDB.View(func(tx *bolt.Tx) error {
