@@ -96,7 +96,7 @@ func getMetdataFileParser(actualPath string) []string {
 	parentDirectory := actualPath + "/metadatafiles"
 	files, err := ioutil.ReadDir(parentDirectory)
 	if err != nil {
-		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in "+actualPath+" "+err.Error()})
+		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in " + actualPath + " " + err.Error()})
 		return result
 	}
 	for _, file := range files {
@@ -128,7 +128,7 @@ func getFolderSizeParser(actualPath string) int64 {
 	files, err := ioutil.ReadDir(actualPath + "/bulkfiles")
 	fmt.Println("Actual path for folder size parse: ", actualPath)
 	if err != nil {
-		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in "+actualPath+" "+err.Error()})
+		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in " + actualPath + " " + err.Error()})
 		return 0
 	}
 	var size int64 = 0
@@ -145,9 +145,9 @@ func getFolderSize(mediaHouse string, path string) int64 {
 	return 0
 }
 
-func getDownloadableURL(abstractFolderPath string, abstractFilePath string) string {
+func getDownloadableURL(osFolderPath string, abstractFilePath string) string {
 	abstractFilePath = strings.ReplaceAll(abstractFilePath, "-", "_") // TODO: Replace this hack with fix in DB after demo
-	return fmt.Sprintf("http://{HUB_IP}:5000/download/files?mediaHouse=MSR&path=%s&file=%s", (abstractFolderPath), (abstractFilePath))
+	return fmt.Sprintf("http://{HUB_IP}:5000/static/%s%s", (osFolderPath), (abstractFilePath))
 }
 
 func getMetadataStruct(filePath string) (*FolderMetadata, error) {
@@ -166,7 +166,9 @@ func getMetadataStruct(filePath string) (*FolderMetadata, error) {
 func getAvailableFolders() []AvailableFolder {
 	leaves := fs.GetLeavesList()
 	var result []AvailableFolder
+	fmt.Println("Leaves length: ", len(leaves))
 	for _, leaf := range leaves {
+		fmt.Println("Leaf is : ", leaf)
 		osFsPath, err := fs.GetActualPathForAbstractedPath(leaf)
 		fmt.Println("Os file path: ", osFsPath)
 		leaf = strings.Replace(leaf, "MSR", "", 1)
@@ -182,13 +184,13 @@ func getAvailableFolders() []AvailableFolder {
 					if err == nil {
 						folderSize := getFolderSizeParser(osFsPath)
 						folderMetadata.Size = strconv.FormatInt(folderSize, 10)
-						folderMetadata.Duration = "60"
 
-						folderMetadata.Thumbnail = getDownloadableURL(leaf, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail))
+						folderMetadata.Thumbnail = getDownloadableURL(osFsPath, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail))
 						fmt.Println("Thumbnail URL: ", folderMetadata.Thumbnail)
-						folderMetadata.Thumbnail2X = getDownloadableURL(leaf, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail2X))
+						folderMetadata.Thumbnail2X = getDownloadableURL(osFsPath, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail2X))
 						folderMetadata.Language = "English"
-						folderMetadata.Path = leaf
+						folderMetadata.Path = osFsPath
+						folderMetadata.FolderUrl = "http://{HUB_IP}:5000/static/" + osFsPath
 
 						fmt.Println("Folder size is: ", folderSize)
 						parts := strings.Split(leaf, "/")
@@ -196,12 +198,14 @@ func getAvailableFolders() []AvailableFolder {
 						availableFolder := AvailableFolder{ID: parts[len(parts)-1], Metadata: folderMetadata}
 						result = append(result, availableFolder)
 					} else {
-						logger.Log("Error", "RouteHander", map[string]string{"Function":"GetAvailableFolders", "Message": fmt.Sprintf("metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error())})
+						logger.Log("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error())})
 					}
 				}
 			} else {
-				logger.Log("Error", "RouteHander", map[string]string{"Function":"GetAvailableFolders", "Message": fmt.Sprintf("metadata directory %s for abstract path %s threw error %s", metadataFilesDirectory, leaf, err.Error())})
+				logger.Log("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata directory %s for abstract path %s threw error %s", metadataFilesDirectory, leaf, err.Error())})
 			}
+		} else {
+			fmt.Println("Error: ", err.Error())
 		}
 	}
 	return result

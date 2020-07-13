@@ -30,9 +30,8 @@ func (pw *ProgressWriter) Write(b []byte) (int, error) {
 }
 
 func (pw *ProgressWriter) print() {
-	fmt.Printf("\r%s", strings.Repeat(" ", 60))
-	fmt.Printf("\rDownloaded: %d MB of %d MB", (pw.Counter / 1024 / 1024), pw.Total)
-	fmt.Println()
+	fmt.Printf("\r%s", strings.Repeat(" ", 50))
+	fmt.Printf("\r Downloaded: %d MB of %d MB", (pw.Counter / 1024 / 1024), pw.Total)
 }
 
 func matchSHA256(filePath string, trueSHA string) error {

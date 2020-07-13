@@ -75,7 +75,7 @@ steps:
 - task: CmdLine@2
   displayName: "Building ARM docker image"
   inputs:
-    script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar ."
+    script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar -f ./Dockerfiles/Dockerfile ."
 
 - task: CmdLine@2
   displayName: "Loading hub_dev.tar"
@@ -101,7 +101,7 @@ steps:
 - task: CmdLine@2
   displayName: "Building x86 image"
   inputs:
-    script: "docker build -t $(x86_image_dev) -f ./Dockerfile_x86 ."
+    script: "docker build -t $(x86_image_dev) -f ./Dockerfiles/Dockerfile.x86 ."
 
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"

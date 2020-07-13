@@ -161,11 +161,11 @@ func serveFile(context *gin.Context) {
 	fmt.Println("Actual path: ", actualPath)
 	if err != nil {
 		fmt.Println(err)
-		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Could not get actual path for abstract path "+path})
+		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Could not get actual path for abstract path " + path})
 		errorResponse(context, "Invalid path")
 		return
 	}
-	logger.Log("Info", "RouteHandler", map[string]string{"Message": "Redirecting: "+path+" to actual: "+actualPath+"/"+fileName})
+	logger.Log("Info", "RouteHandler", map[string]string{"Message": "Redirecting: " + path + " to actual: " + actualPath + "/" + fileName})
 	fmt.Println("Redirecting: " + path + " to actual: " + actualPath + "/" + fileName)
 	// redirect to this path
 	if strings.HasPrefix(actualPath, "/") {
@@ -299,6 +299,8 @@ type FolderMetadata struct {
 	Size        string   `json:"size"`
 	Duration    string   `json:"duration"`
 	Path        string   `json:"path"`
+	MPDFile     string   `json:"mpdFile"`
+	FolderUrl   string   `json:"folderUrl"`
 }
 
 //AvailableFolder ... represents folders on the hub
