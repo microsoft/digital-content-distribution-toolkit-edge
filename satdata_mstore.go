@@ -216,13 +216,6 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		fs.PrintFileSystem()
 		log.Println("")
 	}
-	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "SES"})
-	logger.Log("Telemetry", "Storage ", map[string]string{"AvailableDiskSpace": getDiskInfo()})
-	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+fmt.Sprintf("%f", getDirSizeinMB(path))+" MB downloaded on the Hub")
-	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
-	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
-
 	//trigger DELETE API--- if to be removed later
 	deleteFlag, _ := cfg.Section("DEVICE_INFO").Key("DELETE_FLAG").Bool()
 	if deleteFlag {
@@ -232,6 +225,11 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		}
 		logger.Log("Info", "SatdataMstore", map[string]string{"CID": cid, "Message": "Deleted from Mstore"})
 	}
+	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
+	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": fmt.Sprintf("%.2fMB", getDirSizeinMB(path)), "Channel": "SES", "AvailableDiskSpace": getDiskInfo()})
+	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+fmt.Sprintf("%f", getDirSizeinMB(path))+" MB downloaded on the Hub")
+	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 	return _heirarchy, nil
 }
 

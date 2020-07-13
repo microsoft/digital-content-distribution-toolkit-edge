@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
+
+	syscall "golang.org/x/sys/unix"
 )
 
 //ProgressWriter this prints progress of a download
@@ -20,6 +21,35 @@ type ProgressWriter struct {
 }
 type FileInfo struct {
 	Name, Hashsum string
+}
+
+type DiskStatus struct {
+	Total uint64
+	Avail uint64
+}
+
+func DiskUsage(path string) (disk DiskStatus) {
+	fs := syscall.Statfs_t{}
+	err := syscall.Statfs(path, &fs)
+	if err != nil {
+		return
+	}
+	disk.Total = fs.Blocks * uint64(fs.Bsize)
+	disk.Avail = fs.Bavail * uint64(fs.Bsize)
+	return
+}
+
+const (
+	B  = 1
+	KB = 1024 * B
+	MB = 1024 * KB
+	GB = 1024 * MB
+)
+
+func getDiskInfo() string {
+	disk := DiskUsage("./")
+	result := fmt.Sprintf("%.2fGB", float64(disk.Avail)/float64(GB)) + "/" + fmt.Sprintf("%.2fGB", float64(disk.Total)/float64(GB))
+	return result
 }
 
 func (pw *ProgressWriter) Write(b []byte) (int, error) {
@@ -66,8 +96,8 @@ func getDirSizeinMB(path string) float64 {
 	if err != nil {
 		log.Println(err)
 	}
-	sizeMB := (size) / 1024.0 / 1024.0
-	return math.Round(sizeMB*100) / 100
+	sizeMB := (size) / float64(MB)
+	return sizeMB
 }
 func storeDeadline(path, deadline string) error {
 	if _, f_err := os.Stat(filepath.Join(path, "deadline.txt")); os.IsNotExist(f_err) {
