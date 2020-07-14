@@ -85,7 +85,7 @@ steps:
 - task: CmdLine@2
   displayName: "Tagging docker image"
   inputs:
-    script: "docker tag hub_dev $(arm_image_dev)"
+    script: "docker tag hub_dev $(arm_image_dev):$(Build.SourceVersion)"
 
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"
@@ -101,7 +101,7 @@ steps:
 - task: CmdLine@2
   displayName: "Building x86 image"
   inputs:
-    script: "docker build -t $(x86_image_dev) -f ./Dockerfiles/Dockerfile.x86 ."
+    script: "docker build -t $(x86_image_dev):$(Build.SourceVersion) -f ./Dockerfiles/Dockerfile.x86 ."
 
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"
