@@ -146,7 +146,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	if path != "" {
 		log.Println(_heirarchy + " already exist.")
 		logger.Log("Info", "SatdataMstore", map[string]string{"Message": _heirarchy + " already exist."})
-		//Delete cid from mstore--- trigger DELETE API--- if to be removed later
+		//Delete cid from mstore---  if to be removed later
 		if deleteFlag {
 			if err := deleteAPI(cid); err != nil {
 				logger.Log("Error", "SatdataMstore", map[string]string{"CID": cid, "Message": fmt.Sprintf("Error in MstoreDeleteAPI: %s", err.Error())})
@@ -234,7 +234,8 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		logger.Log("Info", "SatdataMstore", map[string]string{"CID": cid, "Message": "Deleted from Mstore"})
 	}
 	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": fmt.Sprintf("%.2fMB", getDirSizeinMB(path)), "Channel": "SES", "AvailableDiskSpace": getDiskInfo()})
+	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "SES"})
+	logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+fmt.Sprintf("%f", getDirSizeinMB(path))+" MB downloaded on the Hub")
 	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
 	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())

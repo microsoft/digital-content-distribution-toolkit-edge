@@ -28,6 +28,13 @@ type DiskStatus struct {
 	Avail uint64
 }
 
+const (
+	B  = 1
+	KB = 1024 * B
+	MB = 1024 * KB
+	GB = 1024 * MB
+)
+
 func DiskUsage(path string) (disk DiskStatus) {
 	fs := syscall.Statfs_t{}
 	err := syscall.Statfs(path, &fs)
@@ -39,16 +46,9 @@ func DiskUsage(path string) (disk DiskStatus) {
 	return
 }
 
-const (
-	B  = 1
-	KB = 1024 * B
-	MB = 1024 * KB
-	GB = 1024 * MB
-)
-
 func getDiskInfo() string {
 	disk := DiskUsage("./")
-	result := fmt.Sprintf("%.2fGB", float64(disk.Avail)/float64(GB)) + "/" + fmt.Sprintf("%.2fGB", float64(disk.Total)/float64(GB))
+	result := fmt.Sprintf("%.2f", float64(disk.Avail)/float64(MB)) + "/" + fmt.Sprintf("%.2f", float64(disk.Total)/float64(MB))
 	return result
 }
 
