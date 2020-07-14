@@ -99,6 +99,7 @@ func getDirSizeinMB(path string) float64 {
 	sizeMB := (size) / float64(MB)
 	return sizeMB
 }
+
 func storeDeadline(path, deadline string) error {
 	if _, f_err := os.Stat(filepath.Join(path, "deadline.txt")); os.IsNotExist(f_err) {
 		f, err := os.OpenFile(filepath.Join(path, "deadline.txt"), os.O_RDWR|os.O_CREATE, 0700)

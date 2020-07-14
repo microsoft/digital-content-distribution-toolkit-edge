@@ -38,7 +38,7 @@ type VodObj struct {
 			PushId      int    `json:"pushId"`
 			AncestorIds string `json:"ancestorIds"`
 			BulkFiles   struct {
-				File struct {
+				File []struct {
 					Filename string `json:"filename"`
 					Checksum string `json:"checksum"`
 					FolderId string `json:"folderId"`
@@ -153,13 +153,11 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 	}
 	fmt.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
-	folderBulkFilesMap[vod.Content.UserDefined.BulkFiles.File.FolderId] = []FileInfo{FileInfo{vod.Content.UserDefined.BulkFiles.File.Filename, vod.Content.UserDefined.BulkFiles.File.Checksum}}
-	// for _, bulkfileEntry := range vod.Content.UserDefined.BulkFiles.File {
-	// 	folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileEntry{bulkfileEntry.Filename, bulkfileEntry.Checksum})
-	// }
-	//folderBulkFilesMap := parseBulkFilesFromJson(vod.Content.UserDefined.BulkFiles.File)
+	for _, bulkfileEntry := range vod.Content.UserDefined.BulkFiles.File {
+		folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileInfo{bulkfileEntry.Filename, bulkfileEntry.Checksum})
+	}
 
-	// fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
+	fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
 	log.Println(hierarchy)
 	subpath := ""
