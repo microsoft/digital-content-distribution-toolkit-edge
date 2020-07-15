@@ -73,6 +73,11 @@ steps:
     script: "docker buildx create --name mybuilder; docker buildx use mybuilder; docker buildx inspect --bootstrap"
 
 - task: CmdLine@2
+  displayName: "Setting up buildx"
+  inputs:
+    script: "export DOCKER_BUILDKIT=1;docker build --platform=local -o . git://github.com/docker/buildx; mkdir -p ~/.docker/cli-plugins;mv buildx ~/.docker/cli-plugins/docker-buildx;"  
+
+- task: CmdLine@2
   displayName: "Building ARM docker image"
   inputs:
     script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar -f ./Dockerfiles/Dockerfile ."
