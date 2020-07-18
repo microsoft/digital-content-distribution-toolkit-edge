@@ -11,9 +11,8 @@ import os
 import grpc
 import datetime
 import json
+from collections import defaultdict
 
-import logger_pb2
-import logger_pb2_grpc
 import commands_pb2
 import commands_pb2_grpc
 
@@ -29,10 +28,10 @@ capabilityModel = None
 provisioning_host = None
 
 def lock_file(f):
-    fcntl.lockf(f, fcntl.LOCK_EX)
+    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
 
 def unlock_file(f):
-    fcntl.lockf(f, fcntl.LOCK_UN)
+    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 class AtomicOpen:
     """
@@ -122,23 +121,49 @@ def iothub_client_init():
     return client
   
 def send_upstream_messages(iot_client):
+    backlog_limit = config.getint("LOGGER", "BACKLOG_LIMIT")
+    print("backlog_limit is ", backlog_limit)
     while True:
-        try:  # keep on spinning this even in case of error in production
+        try:  # keep on spinning this even in case of error
             with AtomicOpen(config.get("LOGGER", "LOG_FILE_PATH"), "r+") as fout:
-                temp = [line.strip() for line in fout.readlines()]
+                lines = [line.strip() for line in fout.readlines()]
                 fout.seek(0)
                 fout.write("")
                 fout.truncate()
             
-            # print(temp)
-            for x in temp:
+            if(len(lines) != 0):
+                print(len(lines))
+            
+            messages = defaultdict(list)
+            for x in lines:
+                print("x =", x)
                 if(len(x) != 0):
                     msg = json.loads(x)
-                    message = Message(json.dumps({list(msg.keys())[0] : json.dumps(list(msg.values())[0])})) 
-                    print(message)
-                    iot_client.send_message(message)
+                    _msg_type = list(msg.keys())[0]
+                    messages[_msg_type].append(list(msg.values())[0])
+
+            backlog = []
+            for k, v in messages.items():
+                if(k == "Liveness"):
+                    v = v[-1:]  # for liveness keep the most recent ping
+                
+                for _msg in v:
+                    msg_json = json.dumps({k : json.dumps(_msg)})
+                    iot_message = Message(msg_json) 
+                    print("iot_messsage =", iot_message)
+                    
+                    try:  # if error in sending, maintain backlog of all messages except liveness
+                        iot_client.send_message(iot_message)
+                    except:
+                        if(k != "Liveness" and int(_msg["TimeStamp"]) >= int(time.time()) - backlog_limit):
+                            backlog.append(json.dumps({k: _msg}))
+
+            with AtomicOpen(config.get("LOGGER", "LOG_FILE_PATH"), "r+") as fout:
+                for bl in backlog:
+                    print(bl, file=fout)
+
         except Exception as ex:
-            message = Message(str({"DeviceId": config.get("DEVICE_INFO", "DEVICE_NAME"), "MessageType": "Critical", "MessageSubType": "DeviceSDK", "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK {}".format(ex)}}))
+            message = Message(str({"DeviceId": config.get("DEVICE_SDK", "deviceId"), "MessageType": "Critical", "MessageSubType": "DeviceSDK", "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK: {}".format(ex)}}))
             print(message)
             iot_client.send_message(message)
 
@@ -157,16 +182,11 @@ def command_listener(iot_client):
         stub = commands_pb2_grpc.RelayCommandStub(channel)
         while True:
             method_request = iot_client.receive_method_request()
-            print (
-                "\nMethod callback called with:\nmethodName = {method_name}\npayload = {payload}".format(
-                    method_name=method_request.name,
-                    payload=method_request.payload
-                )
-            )
-            if method_request.name == "SetTelemetryInterval":
+
+            if method_request.name == "SetTelemetryInterval":  # this is there just for testing, not actually used
                 try:
                     INTERVAL = int(method_request.payload)
-                    print("\nSet Telemetry Interval : {}".format(INTERVAL))
+                    print("Set Telemetry Interval : {}".format(INTERVAL))
                 except ValueError:
                     response_payload = {"Response": "Invalid parameter"}
                     response_status = 400
@@ -195,7 +215,7 @@ def command_listener(iot_client):
                     response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
                     response_status = 400
                 else:
-                    response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
+                    response_payload = {"Response": "Executed method call {}".format(method_request.name)}
                     response_status = 200
             elif(method_request.name == "Delete"):
                 print("Sending request to delete", method_request.payload)
@@ -213,8 +233,23 @@ def command_listener(iot_client):
                     response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
                     response_status = 400
                 else:
-                    response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
+                    response_payload = {"Response": "Executed method call {}".format(method_request.name)}
                     response_status = 200            
+            elif(method_request.name == "AddNewPublicKey"):
+                print("Sending request to add new public key")
+                payload = eval(method_request.payload)
+                print(payload)
+                try:
+                    _public_key = payload["public_key"]
+                    add_params = commands_pb2.AddNewPublicKeyParams(publickey=_public_key)
+                    response = stub.AddNewPublicKey(add_params)
+                    print(response)
+                except Exception as ex:
+                    response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
+                    response_status = 400
+                else:
+                    response_payload = {"Response": "Executed method call {}".format(method_request.name)}
+                    response_status = 200
             else:
                 response_payload = {"Response": "Method call {} not defined".format(method_request.name)}
                 response_status = 404
