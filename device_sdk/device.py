@@ -17,8 +17,8 @@ import logger_pb2_grpc
 import commands_pb2
 import commands_pb2_grpc
 
-from azure.iot.device import IoTHubDeviceClient, Message, ProvisioningDeviceClient
-from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
+from azure.iot.device import IoTHubDeviceClient, Message, ProvisioningDeviceClient, MethodResponse
+
 
 config = configparser.ConfigParser()
 symmetric_key = None
@@ -57,11 +57,11 @@ class AtomicOpen:
             return True
 
 def register_device():
-    provisioning_host = config.get('host', 'provisioningHost')
-    symmetric_key = config.get('section_device', 'sas_key')
-    registration_id = config.get('section_device','deviceId')
-    id_scope = config.get('section_device','scope')
-    capabilityModelId=config.get('section_device','capabilityModelId')
+    provisioning_host = config.get('DEVICE_SDK', 'provisioningHost')
+    symmetric_key = config.get('DEVICE_SDK', 'sas_key')
+    registration_id = config.get('DEVICE_SDK','deviceId')
+    id_scope = config.get('DEVICE_SDK','scope')
+    capabilityModelId=config.get('DEVICE_SDK','capabilityModelId')
     capabilityModel = "{iotcModelId : '" + capabilityModelId + "'}" 
     
     provisioning_device_client = ProvisioningDeviceClient.create_from_symmetric_key(
@@ -77,7 +77,7 @@ def register_device():
 
 def connect_device():
     device_client = None
-    symmetric_key = config.get('section_device', 'sas_key')
+    symmetric_key = config.get('DEVICE_SDK', 'sas_key')
     try:
       registration_result = register_device()
       if registration_result.status == 'assigned':
@@ -94,14 +94,14 @@ def connect_device():
 
 def init_device(device_client):
     # device properties
-    processorArchitecture= config.get('section_device','processorArchitecture')
-    softwareVersion= config.get('section_device','softwareVersion')
-    totalMemory= config.getint('section_device','totalMemory')
-    totalStorage= config.getint('section_device','totalStorage')
-    processorManufacturer= config.get('section_device','processorManufacturer')
-    osName = config.get('section_device','osName')
-    manufacturer= config.get('section_device','manufacturer')
-    model= config.get('section_device','model')
+    processorArchitecture= config.get('DEVICE_SDK','processorArchitecture')
+    softwareVersion= config.get('DEVICE_SDK','softwareVersion')
+    totalMemory= config.getint('DEVICE_SDK','totalMemory')
+    totalStorage= config.getint('DEVICE_SDK','totalStorage')
+    processorManufacturer= config.get('DEVICE_SDK','processorManufacturer')
+    osName = config.get('DEVICE_SDK','osName')
+    manufacturer= config.get('DEVICE_SDK','manufacturer')
+    model= config.get('DEVICE_SDK','model')
     config.read('customerdetails.ini')
     customerName=config.get('customer_details', 'customer_name')
     location=config.get('customer_details', 'location')
@@ -226,13 +226,13 @@ if __name__ == '__main__':
     print(config.sections())
     # device and host configuration are stored in the config file
     config.read('device.ini')
-    provisioning_host = config.get('host', 'provisioningHost')
-    symmetric_key = config.get('section_device', 'sas_key')
-    registration_id = config.get('section_device','deviceId')
-    id_scope = config.get('section_device','scope')
+    provisioning_host = config.get('DEVICE_SDK', 'provisioningHost')
+    symmetric_key = config.get('DEVICE_SDK', 'sas_key')
+    registration_id = config.get('DEVICE_SDK','deviceId')
+    id_scope = config.get('DEVICE_SDK','scope')
     
     # capability Model
-    capabilityModelId=config.get('section_device','capabilityModelId')
+    capabilityModelId=config.get('DEVICE_SDK','capabilityModelId')
     capabilityModel = "{iotcModelId : '" + capabilityModelId + "'}" 
     iot_client = iothub_client_init()
     init_device(iot_client)
