@@ -106,7 +106,7 @@ steps:
 - task: CmdLine@2
   displayName: "Building x86 image"
   inputs:
-    script: "docker build -t $(x86_image_dev):$(Build.SourceVersion) -f ./Dockerfiles/Dockerfile.x86 ."
+    script: "docker build -t $(x86_image_dev) -f ./Dockerfiles/Dockerfile.x86 ."
 
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"
@@ -117,6 +117,20 @@ steps:
   displayName: "Syncing with Noovo"
   inputs:
     script: "./ses-push.sh $(arm_image_dev) $(Build.SourceVersion)"
+
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.6'
+
+- task: CmdLine@2
+  displayName: "Installing requests"
+  inputs:
+    script: "python -m pip install requests"
+
+- task: CmdLine@2
+  displayName: "Installing requests"
+  inputs:
+    script: 'python build-cleanup/$(Build.SourceBranchName)/acr.py $(arm_image_dev) $(Build.SourceVersion) "$(acr_credentials)"'
 
 - task: Docker@2
   displayName: Logout of ACR
