@@ -22,8 +22,8 @@ const lengthOfInt64Bytes int = 8
 // Setup Routes and their handles which the hub exposes
 // Route 1: "/list/files/:parent" returns the children and their metadata of :parent
 func setupRoutes(ginEngine *gin.Engine) {
-	// ginEngine.Use(AuthRequiredMiddleware)
 	ginEngine.Static("/static", "/")
+	ginEngine.Use(AuthRequiredMiddleware)
 	ginEngine.GET("/metadata/", serveSingleMetadata)
 	ginEngine.GET("/list/files/", serveMetadata)
 	ginEngine.GET("/list/leaves/", serveLeaves)
