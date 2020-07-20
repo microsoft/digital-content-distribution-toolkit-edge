@@ -40,7 +40,7 @@ func main() {
 
 	logFile := cfg.Section("LOGGER").Key("LOG_FILE_PATH").String()
 	bufferSize, err := cfg.Section("LOGGER").Key("MEM_BUFFER_SIZE").Int()
-	deviceId := cfg.Section("DEVICE_INFO").Key("DEVICE_NAME").String()
+	deviceId := cfg.Section("DEVICE_SDK").Key("deviceId").String()
 	logger = cl.MakeLogger(deviceId, logFile, bufferSize)
 
 	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
