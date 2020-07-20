@@ -38,7 +38,7 @@ type VodObj struct {
 			PushId      int    `json:"pushId"`
 			AncestorIds string `json:"ancestorIds"`
 			BulkFiles   struct {
-				File struct {
+				File []struct {
 					Filename string `json:"filename"`
 					Checksum string `json:"checksum"`
 					FolderId string `json:"folderId"`
@@ -129,8 +129,8 @@ func callNoovoAPI() error {
 				continue
 			}
 			path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-			logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "SES"})
-			logger.Log("Telemetry", "Storage ", map[string]string{"AvailableDiskSpace": getDiskInfo()})
+			logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "SES"})
+			logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 		}
 	}
 	return nil
@@ -154,13 +154,11 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 	}
 	fmt.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
-	folderBulkFilesMap[vod.Content.UserDefined.BulkFiles.File.FolderId] = []FileInfo{FileInfo{vod.Content.UserDefined.BulkFiles.File.Filename, vod.Content.UserDefined.BulkFiles.File.Checksum}}
-	// for _, bulkfileEntry := range vod.Content.UserDefined.BulkFiles.File {
-	// 	folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileEntry{bulkfileEntry.Filename, bulkfileEntry.Checksum})
-	// }
-	//folderBulkFilesMap := parseBulkFilesFromJson(vod.Content.UserDefined.BulkFiles.File)
+	for _, bulkfileEntry := range vod.Content.UserDefined.BulkFiles.File {
+		folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileInfo{bulkfileEntry.Filename, bulkfileEntry.Checksum})
+	}
 
-	// fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
+	fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
 	log.Println(hierarchy)
 	subpath := ""

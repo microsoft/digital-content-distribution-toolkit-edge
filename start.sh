@@ -1,0 +1,1 @@
+PYTHONPATH=./device_sdk/ python3 ./device_sdk/device_sdk.py & ./bine_arm

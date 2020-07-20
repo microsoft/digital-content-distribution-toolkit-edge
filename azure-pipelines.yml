@@ -4,7 +4,7 @@
 # https://aka.ms/yaml
 
 trigger:
-- master
+- dev
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -68,6 +68,11 @@ steps:
     containerRegistry: $(bineDockerRegistry)
 
 - task: CmdLine@2
+  displayName: "Setting up qemu for buildx"
+  inputs:
+    script: "docker run --rm --privileged docker/binfmt:820fdd95a9972a5308930a2bdfb8573dd4447ad3; cat /proc/sys/fs/binfmt_misc/qemu-aarch64"  
+
+- task: CmdLine@2
   displayName: "Setting up ARM docker builder"
   inputs:
     script: "docker buildx create --name mybuilder; docker buildx use mybuilder; docker buildx inspect --bootstrap"
@@ -75,7 +80,7 @@ steps:
 - task: CmdLine@2
   displayName: "Building ARM docker image"
   inputs:
-    script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar ."
+    script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar -f ./Dockerfiles/Dockerfile ."
 
 - task: CmdLine@2
   displayName: "Loading hub_dev.tar"
@@ -85,12 +90,12 @@ steps:
 - task: CmdLine@2
   displayName: "Tagging docker image"
   inputs:
-    script: "docker tag hub_dev $(arm_image)"
+    script: "docker tag hub_dev $(arm_image_dev):$(Build.SourceVersion)"
 
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"
   inputs:
-    script: "docker push $(arm_image)"
+    script: "docker push $(arm_image_dev)"
 
 - task: Go@0 
   displayName: "Building x86 executable"  
@@ -101,12 +106,17 @@ steps:
 - task: CmdLine@2
   displayName: "Building x86 image"
   inputs:
-    script: "docker build -t $(x86_image) -f ./Dockerfile_x86 ."
+    script: "docker build -t $(x86_image_dev):$(Build.SourceVersion) -f ./Dockerfiles/Dockerfile.x86 ."
 
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"
   inputs:
-    script: "docker push $(x86_image)"
+    script: "docker push $(x86_image_dev)"
+
+- task: CmdLine@2
+  displayName: "Syncing with Noovo"
+  inputs:
+    script: "./ses-push.sh $(arm_image_dev) $(Build.SourceVersion)"
 
 - task: Docker@2
   displayName: Logout of ACR

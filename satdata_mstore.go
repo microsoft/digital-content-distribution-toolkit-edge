@@ -39,7 +39,7 @@ type VodInfo struct {
 				} `json:"file"`
 			} `json:"metadataFiles"`
 			BulkFiles struct {
-				File struct {
+				File []struct {
 					Filename string `json:"filename"`
 					Filesize int    `json:"filesize"`
 					Checksum string `json:"checksum"`
@@ -141,12 +141,19 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	} else {
 		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.MediaId
 	}
-
+	deleteFlag, _ := cfg.Section("DEVICE_INFO").Key("DELETE_FLAG").Bool()
 	path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
 	if path != "" {
 		log.Println(_heirarchy + " already exist.")
-		//return errors.New(_heirarchy + " already exist.")
 		logger.Log("Info", "SatdataMstore", map[string]string{"Message": _heirarchy + " already exist."})
+		//Delete cid from mstore---  if to be removed later
+		if deleteFlag {
+			if err := deleteAPI(cid); err != nil {
+				logger.Log("Error", "SatdataMstore", map[string]string{"CID": cid, "Message": fmt.Sprintf("Error in MstoreDeleteAPI: %s", err.Error())})
+				log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
+			}
+			logger.Log("Info", "SatdataMstore", map[string]string{"CID": cid, "Message": "Deleted from Mstore"})
+		}
 		return _heirarchy, nil
 	}
 	filepathMap := make(map[string]string)
@@ -163,9 +170,11 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	}
 	fmt.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
-	folderBulkFilesMap[vod.Metadata.UserDefined.BulkFiles.File.FolderId] = []FileInfo{FileInfo{vod.Metadata.UserDefined.BulkFiles.File.Filename, vod.Metadata.UserDefined.BulkFiles.File.Checksum}}
-
+	for _, bulkfileEntry := range vod.Metadata.UserDefined.BulkFiles.File {
+		folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileInfo{bulkfileEntry.Filename, bulkfileEntry.Checksum})
+	}
 	fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
+
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
 	log.Println("heirarchy: ", hierarchy)
 	subpath := ""
@@ -216,15 +225,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		fs.PrintFileSystem()
 		log.Println("")
 	}
-	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "SES"})
-	logger.Log("Telemetry", "Storage ", map[string]string{"AvailableDiskSpace": getDiskInfo()})
-	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+fmt.Sprintf("%f", getDirSizeinMB(path))+" MB downloaded on the Hub")
-	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
-	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
-
 	//trigger DELETE API--- if to be removed later
-	deleteFlag, _ := cfg.Section("DEVICE_INFO").Key("DELETE_FLAG").Bool()
 	if deleteFlag {
 		if err := deleteAPI(cid); err != nil {
 			logger.Log("Error", "SatdataMstore", map[string]string{"CID": cid, "Message": fmt.Sprintf("Error in MstoreDeleteAPI: %s", err.Error())})
@@ -232,6 +233,12 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		}
 		logger.Log("Info", "SatdataMstore", map[string]string{"CID": cid, "Message": "Deleted from Mstore"})
 	}
+	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
+	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "SES"})
+	logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
+	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+fmt.Sprintf("%f", getDirSizeinMB(path))+" MB downloaded on the Hub")
+	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
+	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
 	return _heirarchy, nil
 }
 
