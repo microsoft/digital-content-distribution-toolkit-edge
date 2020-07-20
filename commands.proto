@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package pbcommands;
+
+// Interface exported by the server.
+service RelayCommand {
+  
+  rpc Download(DownloadParams) returns (Response) {}
+  rpc Delete(DeleteParams) returns (Response) {}
+  rpc AddNewPublicKey(AddNewPublicKeyParams) returns (Response) {}
+}
+
+message File {
+  string name = 1;
+  string cdn = 2;
+  string hashsum = 3;
+}
+
+message Channel {
+  string channelname = 1;
+}
+
+message DownloadParams {
+
+  string folderpath = 1;
+
+  repeated File metadatafiles = 2;
+  repeated File bulkfiles = 3;
+
+  repeated Channel channels = 4;
+  int64 deadline = 5;
+  bool addtoexisting = 6;
+}
+
+message DeleteParams {
+  string folderpath = 1;
+  bool recursive = 2;
+  int32 deleteafter = 3;
+}
+
+message AddNewPublicKeyParams {
+  string publickey = 1;
+}
+
+message Response {
+  string responsemessage = 1;
+}
