@@ -121,6 +121,7 @@ def iothub_client_init():
     return client
   
 def send_upstream_messages(iot_client):
+    sleep_time = config.getint("LOGGER", "PY_LOGGER_SLEEP")
     backlog_limit = config.getint("LOGGER", "BACKLOG_LIMIT")
     print("backlog_limit is ", backlog_limit)
     while True:
@@ -170,6 +171,8 @@ def send_upstream_messages(iot_client):
             message = Message(json.dumps({"Critical": json.dumps(_msg)}))
             print(message)
             iot_client.send_message(message)
+        finally:
+            time.sleep(sleep_time)
 
 def getFileParams(param):
     fileparams = []
