@@ -2,8 +2,6 @@ import requests
 import json
 import sys
 
-#creds = 'Basic YmluZWxvZ2luOkRxVWtiT2dBeEVUK1ZEWFZCQVZmTURyWUF5ZHl5RXVF'
-
 # Use argument variable to fill this
 class reset_acr():
     def __init__(self, creds):
