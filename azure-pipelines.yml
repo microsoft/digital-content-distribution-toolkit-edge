@@ -130,7 +130,7 @@ steps:
 - task: CmdLine@2
   displayName: "ACR Cleanup"
   inputs:
-    script: 'python ./build-cleanup/$(Build.SourceBranchName)/acr.py $(arm_image_dev) $(Build.SourceVersion) "$(acr_credentials)"'
+    script: 'python ./build-cleanup/$(Build.SourceBranchName)/acr.py $(arm_image_dev_name) $(Build.SourceVersion) "$(acr_credentials)"'
 
 - task: Docker@2
   displayName: Logout of ACR
