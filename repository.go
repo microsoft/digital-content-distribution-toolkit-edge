@@ -184,14 +184,16 @@ func getAvailableFolders() []AvailableFolder {
 					if err == nil {
 						folderSize := getFolderSizeParser(osFsPath)
 						folderMetadata.Size = strconv.FormatInt(folderSize, 10)
-
+						if len(osFsPath) > 1 && osFsPath[0] == '/' {
+							osFsPath = osFsPath[1:]
+						}
 						folderMetadata.Thumbnail = getDownloadableURL(osFsPath, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail))
 						fmt.Println("Thumbnail URL: ", folderMetadata.Thumbnail)
 						folderMetadata.Thumbnail2X = getDownloadableURL(osFsPath, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail2X))
 						folderMetadata.Language = "English"
 						folderMetadata.Path = osFsPath
 						folderMetadata.FolderUrl = "http://{HUB_IP}:5000/static/" + osFsPath
-
+						folderMetadata.Duration = "60"
 						fmt.Println("Folder size is: ", folderSize)
 						parts := strings.Split(leaf, "/")
 
