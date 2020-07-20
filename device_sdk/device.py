@@ -163,16 +163,22 @@ def send_upstream_messages(iot_client):
                     print(bl, file=fout)
 
         except Exception as ex:
-            message = Message(str({"DeviceId": config.get("DEVICE_SDK", "deviceId"), "MessageType": "Critical", "MessageSubType": "DeviceSDK", "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK: {}".format(ex)}}))
+            _msg = {"DeviceId": config.get("DEVICE_SDK", "deviceId"), 
+                    "MessageSubType": "DeviceSDK", 
+                    "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK: {}".format(ex)},
+                    "TimeStamp": int(time.time())}
+            message = Message(json.dumps({"Critical": json.dumps(_msg)}))
             print(message)
             iot_client.send_message(message)
 
 def getFileParams(param):
     fileparams = []
     if param is not None:
-        result = param.split(";")
-        for x in result:
+        files = [x for x in param.split(";") if len(x) > 0]
+        for x in files:
             y = x.split(",")
+            if(len(y) != 3):
+                continue
             fileparams.append(commands_pb2.File(name=y[0], cdn=y[1], hashsum=y[2]))
     return fileparams
 
@@ -194,7 +200,7 @@ def command_listener(iot_client):
                     response_payload = {"Response": "Executed direct method {}".format(method_request.name)}
                     response_status = 200
             elif(method_request.name == "Download"):
-                print("Sending request to downlaoad")
+                print("Sending request to downlaoad", method_request.payload)
                 payload = eval(method_request.payload)
                 try:
                     _folder_path = payload['folder_path']
@@ -202,9 +208,10 @@ def command_listener(iot_client):
                     _bulk_files = getFileParams(payload['bulk_files'])
                     _channels = [commands_pb2.Channel(channelname=x) for x in payload['channels'].split(";")]
                     _deadline = int(payload['deadline'])
+                    _add_to_existing = bool(payload["add_to_existing"])
                     print(dict(folderpath=_folder_path, metadatafiles=_metadata_files,
-                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline
-                    ))
+                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline,
+                    addtoexisting=_add_to_existing))
                     
                     download_params = commands_pb2.DownloadParams(folderpath=_folder_path, metadatafiles=_metadata_files,
                     bulkfiles=_bulk_files, channels=_channels, deadline=_deadline)
@@ -225,7 +232,7 @@ def command_listener(iot_client):
                     _recursive = bool(payload['recursive'])
                     _delete_after = int(payload['delete_after'])
                     delete_params = commands_pb2.DeleteParams(folderpath=_folder_path, recursive=_recursive,
-                    delteafter=_delete_after)
+                    deleteafter=_delete_after)
                     response = stub.Delete(delete_params)
                     print(response)
                 except Exception as ex:
@@ -236,7 +243,7 @@ def command_listener(iot_client):
                     response_payload = {"Response": "Executed method call {}".format(method_request.name)}
                     response_status = 200            
             elif(method_request.name == "AddNewPublicKey"):
-                print("Sending request to add new public key")
+                print("Sending request to add new public key", method_request.payload)
                 payload = eval(method_request.payload)
                 print(payload)
                 try:
