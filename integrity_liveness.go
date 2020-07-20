@@ -122,7 +122,7 @@ func getTotalFiles(folderpath string) int {
 }
 func liveness(interval int) {
 	for true {
-		logger.Log("Telemetry", "Liveness", map[string]string{"STATUS": "ALIVE"})
+		logger.Log("Liveness", "Liveness", map[string]string{"STATUS": "ALIVE"})
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }
