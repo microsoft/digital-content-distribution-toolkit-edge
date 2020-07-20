@@ -87,8 +87,6 @@ func main() {
 	go liveness(liveness_interval)
 	deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
 	go deleteContent(deletion_interval)
-	//testMstore()
-	//go check()
 
 	// setup key manager and load keys
 	pubkeys_dir := cfg.Section("APP_AUTHENTICATION").Key("PUBLIC_KEY_STORE_PATH").String()
