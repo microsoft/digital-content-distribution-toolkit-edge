@@ -131,7 +131,7 @@ def send_upstream_messages(iot_client):
     payload = json.dumps({"Telemetry": json.dumps({"DeviceId":"bine1"})})
     message = Message(payload)
     iot_client.send_message(message)
-    '''
+    
     while True:
         try:  # keep on spinning this even in case of error in production
             with AtomicOpen(config.get("LOGGER", "LOG_FILE_PATH"), "r+") as fout:
@@ -151,7 +151,7 @@ def send_upstream_messages(iot_client):
             message = Message(str({"DeviceId": config.get("DEVICE_INFO", "DEVICE_NAME"), "MessageType": "Critical", "MessageSubType": "DeviceSDK", "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK {}".format(ex)}}))
             print(message)
             iot_client.send_message(message)
-    '''
+    
 def getFileParams(param):
     fileparams = []
     if param is not None:
