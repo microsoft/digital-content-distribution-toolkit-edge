@@ -93,17 +93,43 @@
             "@type": "Property",
             "displayName": "Customer Name",
             "description": "The name of the customer currently operating the device.",
-            "name": "name",
+            "name": "customername",
             "schema": "string",
             "writable": true
           },
 		  {
             "@type": "Property",
-            "displayName": "Customer Location",
-            "description": "The location of the customer currently operating the device.",
-            "name": "location",
+            "displayName": "Customer Contact",
+            "description": "The contact of the customer currently operating the device.",
+            "name": "customercontact",
             "schema": "string",
             "writable": true
+          },
+		  {
+            "@type": "Property",
+            "displayName": "Store Name",
+            "description": "The name of the store currently operating the device.",
+            "name": "storename",
+            "schema": "string",
+            "writable": true
+          },
+		  {
+            "@type": "Property",
+            "displayName": "Store Location",
+            "description": "The location of the store currently operating the device.",
+            "name": "storelocation",
+            "schema": "string",
+            "writable": true
+          },
+		  {
+            "@type": [
+              "Telemetry",
+              "SemanticType/Event"
+            ],
+            "description": "Liveness Logs",
+            "displayName": "Liveness",
+            "name": "Liveness",
+            "schema": "string"
           },
           {
             "@type": [
@@ -155,23 +181,33 @@
             "name": "Error",
             "schema": "string"
           },
-          {
+		  {
+            "@type": [
+              "Telemetry",
+              "SemanticType/Event"
+            ],
+            "description": "Critical Logs",
+            "displayName": "Critical",
+            "name": "Critical",
+            "schema": "string"
+          },
+		  {
             "@type": [
                 "Command"
               ],
-            "description": "This command will begin blinking the LED for given time interval.",
-            "name": "Blink",
+            "description": "This command will AddNewPublicKey",
+            "name": "AddNewPublicKey",
             "commandType": "synchronous",
             "request": {
               "@type": [
                   "SchemaField"
                 ],
               "displayName": "Seconds delay between blinking",
-              "name": "interval",
-              "schema": "long"
+              "name": "public_key",
+              "schema": "string"
             },
             "response": {
-              "name": "blinkResponse",
+              "name": "addNewPublicKeyResponse",
               "schema": {
                 "@type": "Object",
                 "fields": [
@@ -182,30 +218,6 @@
                 ]
               }
             }
-          },
-          {
-            "@type": [
-                "Command"
-              ],
-            "name": "TurnOn",
-            "comment": "This Commands will turn-on the LED light on the device.",
-            "commandType": "synchronous"
-          },
-          {
-            "@type": [
-                "Command"
-              ],
-            "name": "TurnOff",
-            "comment": "This Commands will turn-off the LED light on the device.",
-            "commandType": "synchronous"
-          },
-          {
-            "@type": [
-                "Command"
-              ],
-            "name": "RunDiagnostics",
-            "comment": "This command initiates a diagnostics run.  This will take time and is implemented as an asynchronous command",
-            "commandType": "asynchronous"
           },
 		  {
             "@type": [

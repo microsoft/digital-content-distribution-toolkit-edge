@@ -1,50 +1,140 @@
-from flask import Flask, render_template, redirect, url_for, request
 import configparser
+from flask import Flask, render_template, session, request, redirect, url_for
+from flask_session import Session  
+import msal
+import app_config
+import uuid
+import requests
 
 app = Flask(__name__)
+app.config.from_object(app_config)
+Session(app)
 
 config = configparser.ConfigParser()
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-@app.route('/welcome')
-def welcome():
-    return render_template('welcome.html')
-
-@app.route('/home')
+@app.route("/")
 def home():
-    return render_template('home.html')
+    if not session.get("user"):
+        return redirect(url_for("login"))
+    return render_template('home.html', user=session["user"])
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route("/login")
+def login():
+    session["state"] = str(uuid.uuid4())
+    auth_url = _build_auth_url(scopes=app_config.SCOPE, state=session["state"])
+    return render_template("login.html", auth_url=auth_url)
+
+@app.route(app_config.REDIRECT_PATH)  # Its absolute URL must match your app's redirect_uri set in AAD
+def authorized():
+    if "error" in request.args:  # Authentication/Authorization failure
+        print("error : Authentication/Authorization failure")
+        return render_template("auth_error.html", result=request.args)
+    if request.args.get('code'):
+        cache = _load_cache()
+        result = _build_msal_app(cache=cache).acquire_token_by_authorization_code(
+            request.args['code'],
+            scopes=app_config.SCOPE,  # Misspelled scope would cause an HTTP 400 error here
+            redirect_uri=url_for("authorized", _external=True))
+        if "error" in result:
+            return render_template("auth_error.html", result=result)
+        '''
+        jwt = result.get("id_token")
+        validator = PyJwtValidator(jwt, auto_verify=False)
+        try:
+            payload = validator.verify(True)
+            print(payload)
+        except PyJwtException as e:
+            print("Exception caught. Error: {}".format(e))
+        '''
+        session["user"] = result.get("id_token_claims")
+        _save_cache(cache)
+    return render_template('register.html', user=session["user"])
+
+@app.route('/register', methods=['POST'])
 def start():
     error = None
     if request.method == 'POST':
-        if len(request.form['name']) == 0 or len(request.form['location']) == 0 or len(request.form['phonenumber']) == 0 :
-            error = 'Invalid Name or Store location or Phone Number'
+        if len(request.form['storename']) == 0 or len(request.form['storelocation']) == 0 :
+            error = 'Invalid Store Name or Store location'
         else:
-            name = request.form['name']
-            location = request.form['location']
-            phonenumber = request.form['phonenumber']
-            hubDetails = open('../customerdetails.ini', 'w') 
-            name_config = f'customer_name={name}\n'
-            location_config = f'location={location}\n'
-            phonenumber_config = f'phonenumber={phonenumber}\n'
-            hubDetails.write("[customer_details]\n") 
-            hubDetails.write(name_config)
-            hubDetails.write(location_config)
-            hubDetails.write(phonenumber_config)
-            hubDetails.close() 
+            # save store and user details in customerdetails.ini file
+            customer_name = session["user"].get("name")
+            customer_contact = session["user"].get("signInNames.phoneNumber") # extension_Contact
+            store_name = request.form['storename']
+            store_location = request.form['storelocation']
+            customerDetails = open('../customerdetails.ini', 'w') 
+            customer_name_config = f'customer_name={customer_name}\n'
+            customer_contact_config = f'customer_contact={customer_contact}\n'
+            store_name_config = f'store_name={store_name}\n'
+            store_location_config = f'store_location={store_location}\n'
+            customerDetails.write("[customer_details]\n") 
+            customerDetails.write(customer_name_config)
+            customerDetails.write(customer_contact_config)
+            customerDetails.write(store_name_config)
+            customerDetails.write(store_location_config)
+            customerDetails.close() 
+            
+            #submit the device details and register the device with the CRM application
+            config.read('../device.ini') 
+            payload = {
+                "apiKey":  app_config.HUB_CRM_API_KEY,
+                "device_id": config.get('section_device','deviceId'),
+                "name": customer_name,
+                "shop_name": store_name,
+                "contact": customer_contact
+            }
+            requests.post(url = app_config.HUB_CRM_URL, data = payload)
+            # 
             #Create dummy file in tmp directory
             f = open("../tmp/dummy","w")
             f.close
             error = None
             # run the start_hub.sh script
-            return redirect(url_for('home'))
-    return render_template('login.html', error=error)
+            ############
+            return render_template('home.html', user=session["user"])
+    return render_template('register.html', error=error)
+    
+          
+@app.route("/logout")
+def logout():
+    session.clear()  # Wipe out user and its token cache from session
+    return redirect(  # Also logout from your tenant's web session
+        app_config.PHONE_SIGNUPIN_AUTHORITY + "/oauth2/v2.0/logout" +
+        "?post_logout_redirect_uri=" + url_for("home", _external=True))
 
 @app.route('/<path:dummy>')
 def fallback(dummy):
-    return redirect(url_for('welcome'))
+    return redirect(url_for('home'))
 
+def _build_msal_app(cache=None, authority=None):
+    return msal.ConfidentialClientApplication(
+        app_config.CLIENT_ID, authority=authority or app_config.PHONE_SIGNUPIN_AUTHORITY,
+        client_credential=app_config.CLIENT_SECRET, token_cache=cache)
+
+def _build_auth_url(authority=None, scopes=None, state=None):
+    return _build_msal_app(authority=authority).get_authorization_request_url(
+        scopes or [],
+        state=state or str(uuid.uuid4()),
+        nonce="defaultNonce",
+        #response_type="id_token",
+        prompt="login",
+        redirect_uri=url_for("authorized", _external=True))
+
+def _load_cache():
+    cache = msal.SerializableTokenCache()
+    if session.get("token_cache"):
+        cache.deserialize(session["token_cache"])
+    return cache
+
+def _save_cache(cache):
+    if cache.has_state_changed:
+        session["token_cache"] = cache.serialize()
+
+app.jinja_env.globals.update(_build_auth_url=_build_auth_url)
+        
 if __name__ == '__main__':
     config.read('../hub_config.ini')
     print(config.sections())
-    app.run(debug=True, host="0.0.0.0", port=config.getint("HUB_AUTHENTICATION", "FLASK_PORT"))
+    app.run(debug=True, host="0.0.0.0", port="8080")
