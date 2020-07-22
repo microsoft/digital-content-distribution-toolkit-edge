@@ -4,23 +4,20 @@ package filesys
 import (
 	"bytes"
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 
 	bolt "github.com/boltdb/bolt"
+	"github.com/google/uuid"
 )
 
-const letterBytes = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func RandStringBytes(n int, homeNode []byte) []byte {
+func RandStringBytes(homeNode []byte) []byte {
 	b := homeNode
 	for bytes.Equal(b, homeNode) {
-		b = make([]byte, n)
-		for i := range b {
-			b[i] = letterBytes[rand.Int63()%int64(len(letterBytes))]
-		}
+		uuid_string := uuid.New().String()
+		b = []byte(uuid_string)
 	}
 
 	return b
@@ -35,6 +32,10 @@ func stringInSlice(list []string, a string) bool {
 	return false
 }
 
+func nodeToString(node []byte) string {
+	return string(node)
+}
+
 type downloadFunc func(string, [][]string) error
 type process_child_func func(string) ([]interface{}, error)
 
@@ -45,12 +46,12 @@ type FileSystem struct {
 	nodesDB         *bolt.DB
 }
 
-func MakeFileSystem(nodeLength int, homeDirLocation string, boltdb_location string) (*FileSystem, error) {
+func MakeFileSystem(homeDirLocation string, boltdb_location string) (*FileSystem, error) {
 	nodesDB, err := bolt.Open(boltdb_location, 0600, nil)
 	if err != nil {
 		return nil, fmt.Errorf("[Filesystem][MakeFileSystem]: %e", err)
 	}
-
+	nodeLength := 36
 	fs := FileSystem{nodeLength, []byte(strings.Repeat("z", nodeLength)), homeDirLocation, nodesDB}
 
 	return &fs, nil
@@ -116,7 +117,7 @@ func (fs *FileSystem) CreateHome() error {
 		return err
 	}
 
-	err = os.MkdirAll(filepath.Join(fs.homeDirLocation, string(fs.homeNode)), os.ModePerm)
+	err = os.MkdirAll(filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode)), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -134,7 +135,7 @@ func (fs *FileSystem) InsertNode(node []byte, parent []byte) error {
 
 		children := b.Get(parent)
 		if children == nil {
-			return fmt.Errorf("[Filesystem][InsertNode] parent node %s doesn't exist in Tree Bucket", string(parent))
+			return fmt.Errorf("[Filesystem][InsertNode] parent node %s doesn't exist in Tree Bucket", nodeToString(parent))
 		}
 		if err := b.Put(parent, append(children, node...)); err != nil {
 			return fmt.Errorf("[Filesystem][InsertNode] %s", err)
@@ -171,9 +172,9 @@ func (fs *FileSystem) GetFolderNameForNode(node []byte) (string, error) {
 
 		_temp := b.Get(node)
 		if _temp == nil {
-			return fmt.Errorf("[Filesystem][GetFolderNameForNode] can't find node %s in FolderNameMapping Bucket", string(_temp))
+			return fmt.Errorf("[Filesystem][GetFolderNameForNode] can't find node %s in FolderNameMapping Bucket", nodeToString(_temp))
 		}
-		folder_name = string(_temp)
+		folder_name = nodeToString(_temp)
 		return nil
 	})
 
@@ -181,7 +182,7 @@ func (fs *FileSystem) GetFolderNameForNode(node []byte) (string, error) {
 		return "", err
 	}
 
-	return string(folder_name), nil
+	return folder_name, nil
 }
 
 func (fs *FileSystem) GetChildrenForNode(root []byte) ([]byte, error) {
@@ -191,7 +192,7 @@ func (fs *FileSystem) GetChildrenForNode(root []byte) ([]byte, error) {
 
 		_temp := b.Get(root)
 		if _temp == nil {
-			return fmt.Errorf("[Filesystem][GetChildrenForNode] can't find node %s in Tree Bucket", string(_temp))
+			return fmt.Errorf("[Filesystem][GetChildrenForNode] can't find node %s in Tree Bucket", nodeToString(_temp))
 		}
 		children = append([]byte{}, _temp...)
 
@@ -263,7 +264,7 @@ func (fs *FileSystem) getChildrenNamesForNode(parent []byte) ([]string, error) {
 
 func (fs *FileSystem) CreateFolder(hierarchy []string) (string, error) {
 	folder_name := []byte(hierarchy[len(hierarchy)-1])
-	node := RandStringBytes(fs.nodeLength, fs.homeNode)
+	node := RandStringBytes(fs.homeNode)
 	parent, err := fs.getNodeForPath(hierarchy[0 : len(hierarchy)-1])
 	if err != nil {
 		return "", err
@@ -273,7 +274,7 @@ func (fs *FileSystem) CreateFolder(hierarchy []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if stringInSlice(current_children, string(folder_name)) {
+	if stringInSlice(current_children, nodeToString(folder_name)) {
 		return "", fmt.Errorf("[Filesystem][CreateFolder] %s", "A folder with the same name at the requested level already exists")
 	}
 
@@ -294,12 +295,12 @@ func (fs *FileSystem) CreateFolder(hierarchy []string) (string, error) {
 		return "", err
 	}
 
-	err = os.MkdirAll(filepath.Join(fs.homeDirLocation, string(fs.homeNode), string(node)), os.ModePerm)
+	err = os.MkdirAll(filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node)), os.ModePerm)
 	if err != nil {
 		return "", err
 	}
 
-	return string(node), nil
+	return nodeToString(node), nil
 }
 
 func (fs *FileSystem) DeleteNodeSubtree(node []byte) error {
@@ -347,7 +348,7 @@ func (fs *FileSystem) DeleteFolder(hierarchy []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("node to be deleted", string(node))
+	fmt.Println("node to be deleted", nodeToString(node))
 
 	// update the parent only for the top most node in the hierarchy
 	err = fs.nodesDB.Update(func(tx *bolt.Tx) error {
@@ -377,7 +378,7 @@ func (fs *FileSystem) DeleteFolder(hierarchy []string) error {
 		return err
 	}
 
-	err = os.RemoveAll(filepath.Join(fs.homeDirLocation, string(fs.homeNode), string(node)))
+	err = os.RemoveAll(filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node)))
 	if err != nil {
 		return err
 	}
@@ -402,7 +403,7 @@ func (fs *FileSystem) RecursiveDeleteFolder(hierarchy []string) error {
 			return err
 		}
 
-		if len(children) == 4 {
+		if len(children) == fs.nodeLength {
 			if err := fs.DeleteFolder(hierarchy[0 : i+1]); err != nil {
 				return err
 			}
@@ -423,7 +424,7 @@ func (fs *FileSystem) MoveFile(source_file_path string, destination_folder strin
 	}
 
 	new_file := file_type + "_" + filepath.Base(source_file_path)
-	new_location := filepath.Join(fs.homeDirLocation, string(fs.homeNode), string(node), new_file)
+	new_location := filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node), new_file)
 	err = os.Rename(source_file_path, new_location)
 	if err != nil {
 		return err
@@ -448,7 +449,7 @@ func (fs *FileSystem) GetActualPathForAbstractedPath(path string) (string, error
 	if err != nil {
 		return "", err
 	}
-	actual_path := filepath.Join(fs.homeDirLocation, string(fs.homeNode), string(node))
+	actual_path := filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node))
 
 	return actual_path, nil
 }
@@ -456,7 +457,7 @@ func (fs *FileSystem) GetActualPathForAbstractedPath(path string) (string, error
 func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc downloadFunc, downloadParams [][]string) error {
 	// check if folder creation is a valid operation
 	folder_name := []byte(hierarchy[len(hierarchy)-1])
-	node := RandStringBytes(fs.nodeLength, fs.homeNode)
+	node := RandStringBytes(fs.homeNode)
 	parent, err := fs.getNodeForPath(hierarchy[0 : len(hierarchy)-1])
 	if err != nil {
 		return err
@@ -466,12 +467,12 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 	if err != nil {
 		return err
 	}
-	if stringInSlice(current_children, string(folder_name)) {
+	if stringInSlice(current_children, nodeToString(folder_name)) {
 		return fmt.Errorf("[Filesystem][CreateFolder] %s", "A folder with the same name at the requested level already exists")
 	}
 
 	// create the actual folder
-	actual_path := filepath.Join(fs.homeDirLocation, string(fs.homeNode), string(node))
+	actual_path := filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node))
 	err = os.MkdirAll(actual_path, os.ModePerm)
 	if err != nil {
 		return err
@@ -509,7 +510,7 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 }
 
 func (fs *FileSystem) GetHomeFolder() string {
-	return filepath.Join(fs.homeDirLocation, string(fs.homeNode))
+	return filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode))
 }
 func (fs *FileSystem) GetHomeNode() []byte {
 	return fs.homeNode
@@ -528,7 +529,7 @@ func (fs *FileSystem) GetChildrenInfo(path string, pfunc process_child_func) ([]
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("String node: ", string(node))
+	fmt.Println("String node: ", nodeToString(node))
 	children, err := fs.GetChildrenForNode(node)
 	if err != nil {
 		return nil, err
@@ -537,7 +538,7 @@ func (fs *FileSystem) GetChildrenInfo(path string, pfunc process_child_func) ([]
 	children_info := make([][]interface{}, (len(children)/fs.nodeLength)-1)
 	for i := 0; i < len(children_info); i += 1 {
 		child := children[(i+1)*fs.nodeLength : (i+2)*fs.nodeLength]
-		actual_path := filepath.Join(fs.homeDirLocation, string(fs.homeNode), string(child))
+		actual_path := filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(child))
 
 		children_info[i] = make([]interface{}, 0)
 		folder_name, err := fs.GetFolderNameForNode(child)
