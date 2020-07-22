@@ -23,8 +23,7 @@ func traverse(node []byte, prefix string) string {
 		log.Println("[DeleteContentAfterValidity] Error", fmt.Sprintf("%s", err))
 		logger.Log("Error", "DeleteContentAfterValidity", map[string]string{"Message": err.Error()})
 	}
-	fmt.Println(prefix)
-	if len(children) == fs.GetNodeLength() {
+	if len(children) == fs.GetNodeLength() && strings.LastIndex(prefix, "/") >= 0 {
 		prefix = prefix[:strings.LastIndex(prefix, "/")]
 		return prefix
 	}
@@ -33,10 +32,10 @@ func traverse(node []byte, prefix string) string {
 			continue
 		}
 		actualName, _ := fs.GetFolderNameForNode(children[i : i+fs.GetNodeLength()])
-		//fmt.Println("ActualName::::", actualName)
 		prefix := prefix + "/" + actualName
 		abstractedPath := filepath.Join(fs.GetHomeFolder(), string(children[i:i+fs.GetNodeLength()]))
-		//fmt.Println("Abstracted path-----", abstractedPath)
+		log.Println("[DeleteContentAfterValidity] Checking Actual Path:", prefix)
+		log.Println("[DeleteContentAfterValidity] Checking corresponding Abstracted path:", abstractedPath)
 		err := checkDeadlineAndDelete(abstractedPath, prefix)
 		if err != nil {
 			log.Println("[DeleteContentAfterValidity] Error", fmt.Sprintf("%s", err))
@@ -60,12 +59,11 @@ func checkDeadlineAndDelete(path string, actualPathPrefix string) error {
 	deadline, _ := strconv.ParseInt(string(b[:read]), 10, 64)
 	curr := time.Now().Unix()
 	if curr > deadline {
-		fmt.Println("deleting...... ", actualPathPrefix)
+		log.Println("[DeleteContentAfterValidity] Validity date expired. Deleting ", actualPathPrefix)
 		deletesize := getDirSizeinMB(path)
 		hierarchy := strings.Split(strings.Trim(actualPathPrefix, "/"), "/")
 		err := fs.RecursiveDeleteFolder(hierarchy)
 		if err != nil {
-			//log.Println(err)
 			return err
 		}
 		logger.Log("Telemetry", "DeleteContentAfterValidity", map[string]string{

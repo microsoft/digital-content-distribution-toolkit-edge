@@ -9,6 +9,7 @@ COPY device_sdk ./device_sdk
 COPY bine_arm ./
 COPY *.ini ./
 COPY alive.sh ./
+COPY start_hub.sh ./
 EXPOSE 5000
 
 CMD ["./alive.sh"]

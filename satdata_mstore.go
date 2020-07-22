@@ -67,9 +67,9 @@ type VodInfo struct {
 
 func pollMstore(interval int) {
 	for true {
-		fmt.Println("==================Polling MStore API ==============")
+		log.Println("==================Polling MStore API ==============")
 		if err := checkForVODViaMstore(); err != nil {
-			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
+			log.Println("[SatdataMstore][pollMstore] Error", fmt.Sprintf("%s", err))
 			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
@@ -85,18 +85,17 @@ func checkForVODViaMstore() error {
 	if err != nil {
 		return err
 	}
-	//fmt.Println("RESPONSE::::::::::", string(jsonRes))
 	var vodlist VodList
 	jsonErr := json.Unmarshal(jsonRes, &vodlist)
 	if jsonErr != nil {
 		return jsonErr
 	}
-	fmt.Println(":::::::::::::::::NO. OF CONTENTS:::::::::::", len(vodlist.ListContents))
+	log.Println("[Satdata_mstore][checkForVODViaMstore] NO. OF CONTENTS ON THE SAT: ", len(vodlist.ListContents))
 	for i, id := range vodlist.ListContents {
-		fmt.Println("=======(", i, ") Processing for CID:=====", id.ContentID)
+		log.Println("=======(", i, ") Processing for CID:=====", id.ContentID)
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
-			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
+			log.Println("[SatdataMstore][checkForVODViaMstore] Error", fmt.Sprintf("%s", err))
 			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 			continue
 		}
@@ -153,6 +152,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 				log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 			}
 			logger.Log("Info", "SatdataMstore", map[string]string{"CID": cid, "Message": "Deleted from Mstore"})
+			log.Println("[SatdataMstore][getMstoreFiles] Info ", fmt.Sprintf("Already Exist. Deleted from Mstore Db: %s", _heirarchy))
 		}
 		return _heirarchy, nil
 	}
@@ -168,12 +168,12 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	for _, metadatafileEntry := range vod.Metadata.UserDefined.MetadataFiles.File {
 		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileInfo{metadatafileEntry.Filename, metadatafileEntry.Checksum})
 	}
-	fmt.Println(folderMetadataFilesMap)
+	//fmt.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
 	for _, bulkfileEntry := range vod.Metadata.UserDefined.BulkFiles.File {
 		folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileInfo{bulkfileEntry.Filename, bulkfileEntry.Checksum})
 	}
-	fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
+	//fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
 
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
 	log.Println("heirarchy: ", hierarchy)
@@ -232,13 +232,14 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 		}
 		logger.Log("Info", "SatdataMstore", map[string]string{"CID": cid, "Message": "Deleted from Mstore"})
+		log.Println("[SatdataMstore][getMstoreFiles] Info ", fmt.Sprintf("Downloaded to HUB. Deleted from Mstore Db: %s", _heirarchy))
 	}
 	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
 	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "SES"})
 	logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
-	fmt.Println("Telemetry", "[DownloadSize] "+_heirarchy+" of size :"+fmt.Sprintf("%f", getDirSizeinMB(path))+" MB downloaded on the Hub")
-	fmt.Println("Telemetry", "[ContentSyncChannel] "+_heirarchy+" synced via SES channel: SUCCESS")
-	fmt.Println("Telemetry", "[Storage] "+"Disk space available on the Hub: "+getDiskInfo())
+	log.Println(fmt.Sprintf("[Satdata_mstore][getMstoreFiles] Heirarchy: %s synced via SES", _heirarchy))
+	log.Println(fmt.Sprintf("[Satdata_mstore][getMstoreFiles] AssetSize: %f MB", getDirSizeinMB(path)))
+	log.Println(fmt.Sprintf("[Satdata_mstore][getMstoreFiles] Disk space available on the Hub: %s", getDiskInfo()))
 	return _heirarchy, nil
 }
 
@@ -259,37 +260,30 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 		}
 		fmt.Println(downloadpath)
 		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
-			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err := copySingleFile(downloadpath, x[1])
 		if err != nil {
-			fmt.Println("Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		err = matchSHA256(downloadpath, x[2])
 		if err != nil {
-			fmt.Println("Error", fmt.Sprintf(err.Error()))
 			return errors.New(fmt.Sprintf("Hashsum did not match: %s", err.Error()))
 		}
 		//store it in a file
 		if err := storeHashsum(downloadpath, x[2]); err != nil {
-			fmt.Println("Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 			return errors.New(fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 		}
 	}
 	// store the deadline for the created folder
 	//handled if no files to be downloaded-- only folder created and deadline.txt
 	if err := storeDeadline(filePath, fileInfos[0][4]); err != nil {
-		fmt.Println("Error", fmt.Sprintf("Could not store validity end date: %s", err))
 		return errors.New(fmt.Sprintf("Could not store validity end date: %s", err))
 	}
 	return nil
 }
 
 func copySingleFile(dest, source string) error {
-	//TODO: handle if the source does not exist
-	fmt.Println("SOURCE:", source)
 	t1 := time.Now()
 	sfile, err := os.Open(source)
 	if err != nil {
@@ -305,23 +299,18 @@ func copySingleFile(dest, source string) error {
 	written, err := io.Copy(dfile, sfile)
 	t2 := time.Now()
 	diff := t2.Sub(t1)
-	//log.Println("Transfer with io.Copy() took %f seconds\n", diff.Seconds())
 	log.Println("========Copy speed==(MBps)====== ", float64(written/1024/1024)/diff.Seconds())
-	//fmt.Println("======== Written MB======== ", float64(written/1024/1024))
-
 	return nil
 }
 func deleteAPI(cid string) error {
 	query := "http://localhost:8134/deletecontent/" + cid
 	res, err := http.Get(query)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	defer res.Body.Close()
 	response, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	str := string(response)
@@ -329,7 +318,7 @@ func deleteAPI(cid string) error {
 	result := r.FindStringSubmatch(str)
 	status := strings.Fields(strings.Trim(result[1], "\n"))
 	if status[2] == "OK" {
-		log.Println(" [SATDATA_MSTORE] deleted from mstore: ", cid)
+		log.Println(" [Satdata_mstore][deleteAPI] deleted from mstore: ", cid)
 	} else {
 		return errors.New("Could not Delete from Mstore db")
 	}
