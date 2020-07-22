@@ -5,6 +5,8 @@ import msal
 import app_config
 import uuid
 import requests
+import subprocess
+import os
 
 app = Flask(__name__)
 app.config.from_object(app_config)
@@ -86,13 +88,16 @@ def start():
                 "contact": customer_contact
             }
             requests.post(url = app_config.HUB_CRM_URL, data = payload)
-            # 
+            
             #Create dummy file in tmp directory
             f = open("../tmp/dummy","w")
             f.close
             error = None
+            
             # run the start_hub.sh script
-            ############
+            os.chdir('../')
+            subprocess.run(['./start_hub.sh'])
+            
             return render_template('home.html', user=session["user"])
     return render_template('register.html', error=error)
     
