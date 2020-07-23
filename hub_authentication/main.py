@@ -7,15 +7,13 @@ import uuid
 import requests
 import subprocess
 import os
-from validate_token import *
+from validate_token import validate_jwt
 
 app = Flask(__name__)
 app.config.from_object(app_config)
 Session(app)
 
 config = configparser.ConfigParser()
-from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 @app.route("/")
 def home():
@@ -129,8 +127,6 @@ def _load_cache():
 def _save_cache(cache):
     if cache.has_state_changed:
         session["token_cache"] = cache.serialize()
-
-app.jinja_env.globals.update(_build_auth_url=_build_auth_url)
         
 if __name__ == '__main__':
     config.read('hub_config.ini')
