@@ -40,15 +40,14 @@ func main() {
 
 	logFile := cfg.Section("LOGGER").Key("LOG_FILE_PATH").String()
 	bufferSize, err := cfg.Section("LOGGER").Key("MEM_BUFFER_SIZE").Int()
-	deviceId := cfg.Section("DEVICE_INFO").Key("DEVICE_NAME").String()
+	deviceId := cfg.Section("DEVICE_SDK").Key("deviceId").String()
 	logger = cl.MakeLogger(deviceId, logFile, bufferSize)
 
 	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
 
-	name_length, err := cfg.Section("FILE_SYSTEM").Key("NAME_LENGTH").Int()
 	home_dir_location := cfg.Section("FILE_SYSTEM").Key("HOME_DIR_LOCATION").String()
 	boltdb_location := cfg.Section("FILE_SYSTEM").Key("BOLTDB_LOCATION").String()
-	fs, err = filesys.MakeFileSystem(name_length, home_dir_location, boltdb_location)
+	fs, err = filesys.MakeFileSystem(home_dir_location, boltdb_location)
 	if err != nil {
 		logger.Log("Error", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
 		log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
@@ -87,8 +86,6 @@ func main() {
 	go liveness(liveness_interval)
 	deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
 	go deleteContent(deletion_interval)
-	//testMstore()
-	//go check()
 
 	// setup key manager and load keys
 	pubkeys_dir := cfg.Section("APP_AUTHENTICATION").Key("PUBLIC_KEY_STORE_PATH").String()

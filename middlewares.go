@@ -63,7 +63,7 @@ func AuthRequiredMiddleware(c *gin.Context) {
 	}
 
 	c.Set("userId", claims.Userid)
-	c.Header("hubId", cfg.Section("DEVICE_INFO").Key("DEVICE_NAME").String())
+	c.Header("hubId", cfg.Section("DEVICE_SDK").Key("deviceId").String())
 	// Pass on to the next-in-chain
 	c.Next()
 }

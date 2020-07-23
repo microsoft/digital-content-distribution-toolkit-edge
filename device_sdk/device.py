@@ -11,14 +11,13 @@ import os
 import grpc
 import datetime
 import json
+from collections import defaultdict
 
-import logger_pb2
-import logger_pb2_grpc
 import commands_pb2
 import commands_pb2_grpc
 
-from azure.iot.device import IoTHubDeviceClient, Message, ProvisioningDeviceClient
-from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
+from azure.iot.device import IoTHubDeviceClient, Message, ProvisioningDeviceClient, MethodResponse
+
 
 config = configparser.ConfigParser()
 symmetric_key = None
@@ -36,10 +35,10 @@ deviceName = None
 
 
 def lock_file(f):
-    fcntl.lockf(f, fcntl.LOCK_EX)
+    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
 
 def unlock_file(f):
-    fcntl.lockf(f, fcntl.LOCK_UN)
+    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 class AtomicOpen:
     """
@@ -64,11 +63,11 @@ class AtomicOpen:
             return True
 
 def register_device():
-    provisioning_host = config.get('host', 'provisioningHost')
-    symmetric_key = config.get('section_device', 'sas_key')
-    registration_id = config.get('section_device','deviceId')
-    id_scope = config.get('section_device','scope')
-    capabilityModelId=config.get('section_device','capabilityModelId')
+    provisioning_host = config.get('DEVICE_SDK', 'provisioningHost')
+    symmetric_key = config.get('DEVICE_SDK', 'sas_key')
+    registration_id = config.get('DEVICE_SDK','deviceId')
+    id_scope = config.get('DEVICE_SDK','scope')
+    capabilityModelId=config.get('DEVICE_SDK','capabilityModelId')
     capabilityModel = "{iotcModelId : '" + capabilityModelId + "'}" 
     
     provisioning_device_client = ProvisioningDeviceClient.create_from_symmetric_key(
@@ -84,7 +83,7 @@ def register_device():
 
 def connect_device():
     device_client = None
-    symmetric_key = config.get('section_device', 'sas_key')
+    symmetric_key = config.get('DEVICE_SDK', 'sas_key')
     try:
       registration_result = register_device()
       if registration_result.status == 'assigned':
@@ -101,20 +100,22 @@ def connect_device():
 
 def init_device(device_client):
     # device properties
-    processorArchitecture= config.get('section_device','processorArchitecture')
-    softwareVersion= config.get('section_device','softwareVersion')
-    totalMemory= config.getint('section_device','totalMemory')
-    totalStorage= config.getint('section_device','totalStorage')
-    processorManufacturer= config.get('section_device','processorManufacturer')
-    osName = config.get('section_device','osName')
-    manufacturer= config.get('section_device','manufacturer')
-    model= config.get('section_device','model')
+    processorArchitecture= config.get('DEVICE_SDK','processorArchitecture')
+    softwareVersion= config.get('DEVICE_SDK','softwareVersion')
+    totalMemory= config.getint('DEVICE_SDK','totalMemory')
+    totalStorage= config.getint('DEVICE_SDK','totalStorage')
+    processorManufacturer= config.get('DEVICE_SDK','processorManufacturer')
+    osName = config.get('DEVICE_SDK','osName')
+    manufacturer= config.get('DEVICE_SDK','manufacturer')
+    model= config.get('DEVICE_SDK','model')
+    
     # update the device twin with store/customer information
     device_client.patch_twin_reported_properties({'storelocation':storeLocation})
     device_client.patch_twin_reported_properties({'customername':customerName})
     device_client.patch_twin_reported_properties({'customercontact':customerContact})
     device_client.patch_twin_reported_properties({'storename':storeName})
     device_client.patch_twin_reported_properties({'devicename': deviceName})
+    
     # update the device twin with device details
     device_client.patch_twin_reported_properties({'model':model})
     device_client.patch_twin_reported_properties({'swVersion':softwareVersion})
@@ -130,32 +131,67 @@ def iothub_client_init():
     return client
   
 def send_upstream_messages(iot_client):
+    sleep_time = config.getint("LOGGER", "PY_LOGGER_SLEEP")
+    backlog_limit = config.getint("LOGGER", "BACKLOG_LIMIT")
+    print("backlog_limit is ", backlog_limit)
     while True:
-        try:  # keep on spinning this even in case of error in production
+        try:  # keep on spinning this even in case of error
             with AtomicOpen(config.get("LOGGER", "LOG_FILE_PATH"), "r+") as fout:
-                temp = [line.strip() for line in fout.readlines()]
+                lines = [line.strip() for line in fout.readlines()]
                 fout.seek(0)
                 fout.write("")
                 fout.truncate()
             
-            # print(temp)
-            for x in temp:
+            if(len(lines) != 0):
+                print(len(lines))
+            
+            messages = defaultdict(list)
+            for x in lines:
+                print("x =", x)
                 if(len(x) != 0):
                     msg = json.loads(x)
-                    message = Message(json.dumps({list(msg.keys())[0] : json.dumps(list(msg.values())[0])})) 
-                    print(message)
-                    iot_client.send_message(message)
+                    _msg_type = list(msg.keys())[0]
+                    messages[_msg_type].append(list(msg.values())[0])
+
+            backlog = []
+            for k, v in messages.items():
+                if(k == "Liveness"):
+                    v = v[-1:]  # for liveness keep the most recent ping
+                
+                for _msg in v:
+                    msg_json = json.dumps({k : json.dumps(_msg)})
+                    iot_message = Message(msg_json) 
+                    print("iot_messsage =", iot_message)
+                    
+                    try:  # if error in sending, maintain backlog of all messages except liveness
+                        iot_client.send_message(iot_message)
+                    except:
+                        if(k != "Liveness" and int(_msg["TimeStamp"]) >= int(time.time()) - backlog_limit):
+                            backlog.append(json.dumps({k: _msg}))
+
+            with AtomicOpen(config.get("LOGGER", "LOG_FILE_PATH"), "r+") as fout:
+                for bl in backlog:
+                    print(bl, file=fout)
+
         except Exception as ex:
-            message = Message(str({"DeviceId": config.get("DEVICE_INFO", "DEVICE_NAME"), "MessageType": "Critical", "MessageSubType": "DeviceSDK", "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK {}".format(ex)}}))
+            _msg = {"DeviceId": config.get("DEVICE_SDK", "deviceId"), 
+                    "MessageSubType": "DeviceSDK", 
+                    "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK: {}".format(ex)},
+                    "TimeStamp": int(time.time())}
+            message = Message(json.dumps({"Critical": json.dumps(_msg)}))
             print(message)
             iot_client.send_message(message)
-    
+        finally:
+            time.sleep(sleep_time)
+
 def getFileParams(param):
     fileparams = []
     if param is not None:
-        result = param.split(";")
-        for x in result:
+        files = [x for x in param.split(";") if len(x) > 0]
+        for x in files:
             y = x.split(",")
+            if(len(y) != 3):
+                continue
             fileparams.append(commands_pb2.File(name=y[0], cdn=y[1], hashsum=y[2]))
     return fileparams
 
@@ -165,16 +201,11 @@ def command_listener(iot_client):
         stub = commands_pb2_grpc.RelayCommandStub(channel)
         while True:
             method_request = iot_client.receive_method_request()
-            print (
-                "\nMethod callback called with:\nmethodName = {method_name}\npayload = {payload}".format(
-                    method_name=method_request.name,
-                    payload=method_request.payload
-                )
-            )
-            if method_request.name == "SetTelemetryInterval":
+
+            if method_request.name == "SetTelemetryInterval":  # this is there just for testing, not actually used
                 try:
                     INTERVAL = int(method_request.payload)
-                    print("\nSet Telemetry Interval : {}".format(INTERVAL))
+                    print("Set Telemetry Interval : {}".format(INTERVAL))
                 except ValueError:
                     response_payload = {"Response": "Invalid parameter"}
                     response_status = 400
@@ -182,7 +213,7 @@ def command_listener(iot_client):
                     response_payload = {"Response": "Executed direct method {}".format(method_request.name)}
                     response_status = 200
             elif(method_request.name == "Download"):
-                print("Sending request to downlaoad")
+                print("Sending request to downlaoad", method_request.payload)
                 payload = eval(method_request.payload)
                 try:
                     _folder_path = payload['folder_path']
@@ -190,9 +221,10 @@ def command_listener(iot_client):
                     _bulk_files = getFileParams(payload['bulk_files'])
                     _channels = [commands_pb2.Channel(channelname=x) for x in payload['channels'].split(";")]
                     _deadline = int(payload['deadline'])
+                    _add_to_existing = bool(payload["add_to_existing"])
                     print(dict(folderpath=_folder_path, metadatafiles=_metadata_files,
-                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline
-                    ))
+                    bulkfiles=_bulk_files, channels=_channels, deadline=_deadline,
+                    addtoexisting=_add_to_existing))
                     
                     download_params = commands_pb2.DownloadParams(folderpath=_folder_path, metadatafiles=_metadata_files,
                     bulkfiles=_bulk_files, channels=_channels, deadline=_deadline)
@@ -203,7 +235,7 @@ def command_listener(iot_client):
                     response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
                     response_status = 400
                 else:
-                    response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
+                    response_payload = {"Response": "Executed method call {}".format(method_request.name)}
                     response_status = 200
             elif(method_request.name == "Delete"):
                 print("Sending request to delete", method_request.payload)
@@ -213,7 +245,7 @@ def command_listener(iot_client):
                     _recursive = bool(payload['recursive'])
                     _delete_after = int(payload['delete_after'])
                     delete_params = commands_pb2.DeleteParams(folderpath=_folder_path, recursive=_recursive,
-                    delteafter=_delete_after)
+                    deleteafter=_delete_after)
                     response = stub.Delete(delete_params)
                     print(response)
                 except Exception as ex:
@@ -221,8 +253,23 @@ def command_listener(iot_client):
                     response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
                     response_status = 400
                 else:
-                    response_payload = {"Response": "Executed method  call {}".format(method_request.name)}
+                    response_payload = {"Response": "Executed method call {}".format(method_request.name)}
                     response_status = 200            
+            elif(method_request.name == "AddNewPublicKey"):
+                print("Sending request to add new public key", method_request.payload)
+                payload = eval(method_request.payload)
+                print(payload)
+                try:
+                    _public_key = payload["public_key"]
+                    add_params = commands_pb2.AddNewPublicKeyParams(publickey=_public_key)
+                    response = stub.AddNewPublicKey(add_params)
+                    print(response)
+                except Exception as ex:
+                    response_payload = {"Response": "Error in sending from device SDK: {}".format(ex)}
+                    response_status = 400
+                else:
+                    response_payload = {"Response": "Executed method call {}".format(method_request.name)}
+                    response_status = 200
             else:
                 response_payload = {"Response": "Method call {} not defined".format(method_request.name)}
                 response_status = 404
@@ -232,19 +279,17 @@ def command_listener(iot_client):
 if __name__ == '__main__':
     config.read('hub_config.ini')
     print(config.sections())
-    # device and host configuration are stored in the config file
-    config.read('device.ini')
 
     # store details 
     config.read('customerdetails.ini')
-    customerName = config.get('customer_details', 'customer_name')
-    customerContact = config.get('customer_details', 'customer_contact')
-    storeName = config.get('customer_details', 'store_name')
-    storeLocation = config.get('customer_details', 'store_location')
-    deviceName = config.get('customer_details', 'device_name')
+    customerName = config.get('CUSTOMER_DETAILS', 'customer_name')
+    customerContact = config.get('CUSTOMER_DETAILS', 'customer_contact')
+    storeName = config.get('CUSTOMER_DETAILS', 'store_name')
+    storeLocation = config.get('CUSTOMER_DETAILS', 'store_location')
+    deviceName = config.get('CUSTOMER_DETAILS', 'device_name')
     
     # capability Model
-    capabilityModelId=config.get('section_device','capabilityModelId')
+    capabilityModelId=config.get('DEVICE_SDK','capabilityModelId')
     capabilityModel = "{iotcModelId : '" + capabilityModelId + "'}" 
     iot_client = iothub_client_init()
     init_device(iot_client)

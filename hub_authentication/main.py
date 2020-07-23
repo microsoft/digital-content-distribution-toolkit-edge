@@ -70,7 +70,7 @@ def start():
             device_name_config = f'device_name={device_name}\n'
             store_name_config = f'store_name={store_name}\n'
             store_location_config = f'store_location={store_location}\n'
-            customerDetails.write("[customer_details]\n") 
+            customerDetails.write("[CUSTOMER_DETAILS]\n") 
             customerDetails.write(customer_name_config)
             customerDetails.write(customer_contact_config)
             customerDetails.write(device_name_config)
@@ -79,10 +79,10 @@ def start():
             customerDetails.close() 
             
             #submit the device details and register the device with the CRM application
-            config.read('device.ini') 
+            config.read('hub_config.ini') 
             payload = {
                 "apiKey":  app_config.HUB_CRM_API_KEY,
-                "device_id": config.get('section_device','deviceId'),
+                "device_id": config.get('DEVICE_SDK','deviceId'),
                 "device_name": device_name,
                 "shop_name": store_name,
                 "contact": customer_contact

@@ -22,7 +22,8 @@ type Message struct {
 }
 
 const (
-    Telemetry LogType = "Telemetry"
+	Telemetry LogType = "Telemetry"
+	Liveness = "Liveness"
     Debug = "Debug"
     Info = "Info"
     Warning = "Warning"
@@ -46,7 +47,6 @@ type Logger struct{
 }
 
 func MakeLogger(deviceId string, logFilePath string, bufferSize int) *Logger {
-	fmt.Println(">>>>>>", deviceId, logFilePath, bufferSize)
 	file, err := os.OpenFile(logFilePath, syscall.O_CREAT|syscall.O_WRONLY|syscall.O_APPEND, 0666)
     if err != nil {
         log.Fatalf("[Logger]error in opening file: %s", logFilePath)
@@ -103,7 +103,7 @@ func (l *Logger) Log(messageType string, messageSubType string, messageBody map[
 	}
 
 	l.writer.WriteString(msgString+"\n")
-	if(messageType == "Telemetry" || messageType == "Critical" || messageType == "Error") {
+	if(messageType == "Liveness" || messageType == "Telemetry" || messageType == "Critical" || messageType == "Error") {
 		l.writer.Flush()
 		l.file.Sync()
 	}
@@ -113,25 +113,3 @@ func (l *Logger) Log(messageType string, messageSubType string, messageBody map[
 		log.Println("[Logger] error in unlocking file")
 	}
 }
-
-// Standalone testing of logger module:
-// func dummy(n int, logger Logger) {
-//     for i := 4; i >= 0; i-- {
-//         if(i > 0) {
-//             logger.Log("Message", "valid division"); 
-//         } else {
-//             logger.Log("Critical", "division by zero");
-//         }
-//     }
-// }
-
-// func main() {
-//     fmt.Println("Making logger...");
-//     logger := MakeLogger();
-
-//     logger.Log("Warning", "This is just a dummy testing!")
-
-//     fmt.Println("\n");
-
-//     dummy(4, logger);
-// }

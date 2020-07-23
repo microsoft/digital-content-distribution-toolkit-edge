@@ -1,0 +1,44 @@
+import requests, time
+
+
+# AddNewPublicKey
+payload = dict(
+            public_key=key
+            )
+
+device_id = "deepak-device"
+method = "AddNewPublicKey"
+
+end_point = "https://blendnet-review-iotcentral.azureiotcentral.com/api/preview/devices/{device_id}/components/{component_name}/commands/{command_name}"
+
+iotCentralUrl = end_point.format(device_id = device_id, component_name = "sensor", command_name = method)
+print(iotCentralUrl)
+authHeaders = {"Authorization": "SharedAccessSignature sr=ba46b2f4-cea8-40da-aab7-bb4cfc8c873e&sig=vhO5BEEN%2FwCHp8hOrE8e0%2FcWQ18Wlic0BixiMZTpmr4%3D&skn=admin&se=1625555806346"} 
+        
+response = requests.post(url = iotCentralUrl, json = {"request" : str(payload)}, headers = authHeaders)
+print(int(time.time()))
+print(response.text)
+d = response.json()  # suceeded if `"error" not in d.keys() and ("responseCode" in d.keys() and d["responseCode"] == 200)
+
+#Download
+import requests
+
+payload = dict(
+            folder_path="/MSR/9fc0fb00a8994164021542b75587124f_drm/d77278eda9332b8dc99a4aa726f6f149_drm",
+            metadata_files="bine_metadata.json,https://binemsr.azureedge.net/drm/d77278eda9332b8dc99a4aa726f6f149/bine_metadata.json,6f485eae896bd8ef798bfc9744a6f149de73e8d633e1e99324f561b8a21cc1e3;thumbnail.jpg,https://binemsr.azureedge.net/drm/d77278eda9332b8dc99a4aa726f6f149/thumbnail.jpg,ec30655c7627863855a358bc992e89bf8cfe919bef1d546b2b9713b6267fde1a;thumbnail_2x.jpg,https://binemsr.azureedge.net/drm/d77278eda9332b8dc99a4aa726f6f149/thumbnail_2x.jpg,6e8505e36c33a0d92476d9726468076e5cec77e8065870f06e0ea92d44d74d43",
+            bulk_files="audio.mp4,https://binemsr.azureedge.net/drm/d77278eda9332b8dc99a4aa726f6f149/audio.mp4,9b4193a29897889657716a407fa22b49cdecc513b447b77bc8ec2ba762395a23;h264.mpd,https://binemsr.azureedge.net/drm/d77278eda9332b8dc99a4aa726f6f149/h264.mpd,c6033b2e59d6c2abe9a7258df2378e57130e00c2d52900dd553fe479ce87a63e;video.mp4,https://binemsr.azureedge.net/drm/d77278eda9332b8dc99a4aa726f6f149/video.mp4,0b08478d270ec031b18a1c6b997be19c7d238a68d019caa38a01c8f765b59cd6",
+            channels="wifi;lan",
+            deadline=100
+            )
+
+device_id = "apurv-device"
+method = "Download"
+
+end_point = "https://blendnet-review-iotcentral.azureiotcentral.com/api/preview/devices/{device_id}/components/{component_name}/commands/{command_name}"
+
+iotCentralUrl = end_point.format(device_id = device_id, component_name = "sensor", command_name = method)
+print(iotCentralUrl)
+authHeaders = {"Authorization": "SharedAccessSignature sr=ba46b2f4-cea8-40da-aab7-bb4cfc8c873e&sig=vhO5BEEN%2FwCHp8hOrE8e0%2FcWQ18Wlic0BixiMZTpmr4%3D&skn=admin&se=1625555806346"} 
+
+response = requests.post(url = iotCentralUrl, json = {"request" : str(payload)}, headers = authHeaders)
+print(response.text)
