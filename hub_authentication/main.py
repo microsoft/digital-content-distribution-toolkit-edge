@@ -66,7 +66,7 @@ def start():
             device_name = request.form['devicename']
             store_name = request.form['storename']
             store_location = request.form['storelocation']
-            customerDetails = open('../customerdetails.ini', 'w') 
+            customerDetails = open('customerdetails.ini', 'w') 
             customer_name_config = f'customer_name={customer_name}\n'
             customer_contact_config = f'customer_contact={customer_contact}\n'
             device_name_config = f'device_name={device_name}\n'
@@ -81,7 +81,7 @@ def start():
             customerDetails.close() 
             
             #submit the device details and register the device with the CRM application
-            config.read('../device.ini') 
+            config.read('device.ini') 
             payload = {
                 "apiKey":  app_config.HUB_CRM_API_KEY,
                 "device_id": config.get('section_device','deviceId'),
@@ -89,16 +89,16 @@ def start():
                 "shop_name": store_name,
                 "contact": customer_contact
             }
-            requests.post(url = app_config.HUB_CRM_URL, data = payload)
+            #requests.post(url = app_config.HUB_CRM_URL, data = payload)
             
             #Create dummy file in tmp directory
-            f = open("../tmp/dummy","w")
+            os.mkdir("tmp")
+            f = open("./tmp/dummy","w")
             f.close
             error = None
             
             # run the start_hub.sh script
-            os.chdir('../')
-            subprocess.run(['./start_hub.sh'])
+            #subprocess.run(['./start_hub.sh'])
             
             return render_template('home.html', user=session["user"], deviceName = device_name, storeName = store_name, location = store_location )
     return render_template('register.html', error=error)
@@ -133,6 +133,6 @@ def _save_cache(cache):
 app.jinja_env.globals.update(_build_auth_url=_build_auth_url)
         
 if __name__ == '__main__':
-    config.read('../hub_config.ini')
+    config.read('hub_config.ini')
     print(config.sections())
     app.run(debug=True, host="0.0.0.0", port="8080")
