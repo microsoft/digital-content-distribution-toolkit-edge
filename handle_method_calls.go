@@ -90,23 +90,24 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 			err := DownloadFiles(actualPath, fileInfos)
 			if err != nil {
 				logger.Log("Error", "HandleMethodCalls[Download]", map[string]string{"Message": err.Error()})
-				logger.Log("Telemetry", "AdditionalFileSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": download_params.GetFolderpath(), "Channel": "LAN"})
+				logger.Log("Telemetry", "AdditionalFileSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": download_params.GetFolderpath(), "Channel": "LAN/4G"})
 				log.Println("Error", fmt.Sprintf("%s", err))
 				// delete the partial download request
 				deleteFilesFromExistingFolder(actualPath, fileInfos)
 				return &pb.Response{Responsemessage: fmt.Sprintf("Additional files could not be downloaded: %v", err)}, nil
 			}
-			logger.Log("Telemetry", "AdditionalFileSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "Size": fmt.Sprintf("%f", getDirSizeinMB(actualPath)) + " MB", "Channel": "LAN"})
+			logger.Log("Telemetry", "AdditionalFileSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(actualPath)), "Channel": "LAN/4G"})
+			logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 			return &pb.Response{Responsemessage: "Additional Files downloaded"}, nil
 		}
 		logger.Log("Error", "HandleMethodCalls[Download]", map[string]string{"Message": fmt.Sprintf("Folder path does not already exist")})
-		logger.Log("Telemetry", "AdditionalFileSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": download_params.GetFolderpath(), "Channel": "LAN"})
+		logger.Log("Telemetry", "AdditionalFileSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": download_params.GetFolderpath(), "Channel": "LAN/4G"})
 		return &pb.Response{Responsemessage: fmt.Sprintf("Additional files could not be downloaded: %v", errors.New("Folder does not exist"))}, nil
 	}
 	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos)
 	if err != nil {
 		logger.Log("Error", "HandleMethodCalls[Download]", map[string]string{"Message": err.Error()})
-		logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": download_params.GetFolderpath(), "Channel": "LAN"})
+		logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": download_params.GetFolderpath(), "Channel": "LAN/4G"})
 		log.Println("[Download] Error", fmt.Sprintf("%s", err))
 		return &pb.Response{Responsemessage: fmt.Sprintf("Folder not downloaded: %v", err)}, nil
 	}
@@ -120,8 +121,8 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
 	}
 	path, _ := fs.GetActualPathForAbstractedPath(download_params.GetFolderpath())
-	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "Size": fmt.Sprintf("%f", getDirSizeinMB(path)) + " MB", "Channel": "LAN"})
-	logger.Log("Telemetry", "Storage ", map[string]string{"AvailableDiskSpace": getDiskInfo()})
+	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "LAN/4G"})
+	logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 	return &pb.Response{Responsemessage: "Folder downloaded"}, nil
 }
 func deleteFilesFromExistingFolder(path string, fileInfos [][]string) error {
@@ -244,7 +245,7 @@ func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.Delet
 	fmt.Println("Printing file sys ")
 	fs.PrintFileSystem()
 	logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "SUCCESS", "FolderPath": delete_params.GetFolderpath()})
-	logger.Log("Telemetry", "Storage ", map[string]string{"AvailableDiskSpace": getDiskInfo()})
+	logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 	return &pb.Response{Responsemessage: "Folder deleted"}, nil
 }
 

@@ -1,0 +1,2 @@
+#!/bin/bash
+var=$(docker images --no-trunc | grep "binehub_arm_dev" | head -1 | awk '{print $3}'); url=$(echo "https://ses-push.azurewebsites.net/api/docker-push?code=9thdNrSiXiPtmdvsCYLS8g0JfDq0go1PZDaphXEfHSkEGjGGk242qg==&name=hub_dev&digest=$var&repo=$1&tag=$2&email=dev@microsoft.com&group=223"); wget $url;
