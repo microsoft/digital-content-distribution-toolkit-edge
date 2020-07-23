@@ -81,13 +81,14 @@ def start():
             #submit the device details and register the device with the CRM application
             config.read('hub_config.ini') 
             payload = {
-                "apiKey":  app_config.HUB_CRM_API_KEY,
-                "device_id": config.get('DEVICE_SDK','deviceId'),
-                "device_name": device_name,
-                "shop_name": store_name,
-                "contact": customer_contact
+                "api_key":app_config.HUB_CRM_API_KEY,
+                "deviceID":config.get('DEVICE_SDK','deviceId'),
+                "name":device_name,
+                "shop_name":store_name,
+                "contact":customer_contact
             }
             requests.post(url = app_config.HUB_CRM_URL, data = payload)
+
             
             #Create dummy file in tmp directory
             os.mkdir("tmp")
