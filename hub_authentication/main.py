@@ -89,7 +89,7 @@ def start():
                 "shop_name": store_name,
                 "contact": customer_contact
             }
-            #requests.post(url = app_config.HUB_CRM_URL, data = payload)
+            requests.post(url = app_config.HUB_CRM_URL, data = payload)
             
             #Create dummy file in tmp directory
             os.mkdir("tmp")
@@ -98,7 +98,7 @@ def start():
             error = None
             
             # run the start_hub.sh script
-            #subprocess.run(['./start_hub.sh'])
+            subprocess.run(['./start_hub.sh'])
             
             return render_template('home.html', user=session["user"], deviceName = device_name, storeName = store_name, location = store_location )
     return render_template('register.html', error=error)
