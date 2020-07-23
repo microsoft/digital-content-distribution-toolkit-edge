@@ -32,6 +32,7 @@ customerName = None
 customerContact = None
 storeName = None
 storeLocation = None
+deviceName = None
 
 
 def lock_file(f):
@@ -113,6 +114,7 @@ def init_device(device_client):
     device_client.patch_twin_reported_properties({'customername':customerName})
     device_client.patch_twin_reported_properties({'customercontact':customerContact})
     device_client.patch_twin_reported_properties({'storename':storeName})
+    device_client.patch_twin_reported_properties({'devicename': deviceName})
     # update the device twin with device details
     device_client.patch_twin_reported_properties({'model':model})
     device_client.patch_twin_reported_properties({'swVersion':softwareVersion})
@@ -128,10 +130,6 @@ def iothub_client_init():
     return client
   
 def send_upstream_messages(iot_client):
-    payload = json.dumps({"Telemetry": json.dumps({"DeviceId":"bine1"})})
-    message = Message(payload)
-    iot_client.send_message(message)
-    
     while True:
         try:  # keep on spinning this even in case of error in production
             with AtomicOpen(config.get("LOGGER", "LOG_FILE_PATH"), "r+") as fout:
@@ -243,6 +241,7 @@ if __name__ == '__main__':
     customerContact = config.get('customer_details', 'customer_contact')
     storeName = config.get('customer_details', 'store_name')
     storeLocation = config.get('customer_details', 'store_location')
+    deviceName = config.get('customer_details', 'device_name')
     
     # capability Model
     capabilityModelId=config.get('section_device','capabilityModelId')

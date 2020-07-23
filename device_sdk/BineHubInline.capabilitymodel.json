@@ -105,6 +105,14 @@
             "schema": "string",
             "writable": true
           },
+          {
+            "@type": "Property",
+            "displayName": "Device Name",
+            "description": "The name of the device currently operated.",
+            "name": "devicename",
+            "schema": "string",
+            "writable": true
+          },
 		  {
             "@type": "Property",
             "displayName": "Store Name",
