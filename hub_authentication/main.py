@@ -135,4 +135,4 @@ app.jinja_env.globals.update(_build_auth_url=_build_auth_url)
 if __name__ == '__main__':
     config.read('hub_config.ini')
     print(config.sections())
-    app.run(debug=True, host="0.0.0.0", port="8080")
+    app.run(debug=True, host="0.0.0.0", port=config.getint("HUB_AUTHENTICATION", "FLASK_PORT"))
