@@ -7,6 +7,7 @@ import uuid
 import requests
 import subprocess
 import os
+from validate_token import *
 
 app = Flask(__name__)
 app.config.from_object(app_config)
@@ -41,15 +42,13 @@ def authorized():
             redirect_uri=url_for("authorized", _external=True))
         if "error" in result:
             return render_template("auth_error.html", result=result)
-        '''
+        
         jwt = result.get("id_token")
-        validator = PyJwtValidator(jwt, auto_verify=False)
         try:
-            payload = validator.verify(True)
-            print(payload)
-        except PyJwtException as e:
-            print("Exception caught. Error: {}".format(e))
-        '''
+            validate_jwt(jwt)
+        except Exception as e:
+            print("Exception while validating token caught. Error: {}".format(e))
+        
         session["user"] = result.get("id_token_claims")
         _save_cache(cache)
     return render_template('register.html', user=session["user"])
@@ -64,16 +63,19 @@ def start():
             # save store and user details in customerdetails.ini file
             customer_name = session["user"].get("name")
             customer_contact = session["user"].get("signInNames.phoneNumber") # extension_Contact
+            device_name = request.form['devicename']
             store_name = request.form['storename']
             store_location = request.form['storelocation']
             customerDetails = open('../customerdetails.ini', 'w') 
             customer_name_config = f'customer_name={customer_name}\n'
             customer_contact_config = f'customer_contact={customer_contact}\n'
+            device_name_config = f'device_name={device_name}\n'
             store_name_config = f'store_name={store_name}\n'
             store_location_config = f'store_location={store_location}\n'
             customerDetails.write("[customer_details]\n") 
             customerDetails.write(customer_name_config)
             customerDetails.write(customer_contact_config)
+            customerDetails.write(device_name_config)
             customerDetails.write(store_name_config)
             customerDetails.write(store_location_config)
             customerDetails.close() 
@@ -83,7 +85,7 @@ def start():
             payload = {
                 "apiKey":  app_config.HUB_CRM_API_KEY,
                 "device_id": config.get('section_device','deviceId'),
-                "name": customer_name,
+                "device_name": device_name,
                 "shop_name": store_name,
                 "contact": customer_contact
             }
@@ -98,16 +100,8 @@ def start():
             os.chdir('../')
             subprocess.run(['./start_hub.sh'])
             
-            return render_template('home.html', user=session["user"])
+            return render_template('home.html', user=session["user"], deviceName = device_name, storeName = store_name, location = store_location )
     return render_template('register.html', error=error)
-    
-          
-@app.route("/logout")
-def logout():
-    session.clear()  # Wipe out user and its token cache from session
-    return redirect(  # Also logout from your tenant's web session
-        app_config.PHONE_SIGNUPIN_AUTHORITY + "/oauth2/v2.0/logout" +
-        "?post_logout_redirect_uri=" + url_for("home", _external=True))
 
 @app.route('/<path:dummy>')
 def fallback(dummy):
@@ -123,7 +117,6 @@ def _build_auth_url(authority=None, scopes=None, state=None):
         scopes or [],
         state=state or str(uuid.uuid4()),
         nonce="defaultNonce",
-        #response_type="id_token",
         prompt="login",
         redirect_uri=url_for("authorized", _external=True))
 
