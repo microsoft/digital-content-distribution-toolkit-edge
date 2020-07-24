@@ -19,7 +19,8 @@ config = configparser.ConfigParser()
 def home():
     if not session.get("user"):
         return redirect(url_for("login"))
-    return render_template('home.html', user=session["user"])
+    return render_template('home.html', user=session["user"], deviceDetails = session["deviceDetails"])
+
 
 @app.route("/login")
 def login():
@@ -51,7 +52,7 @@ def authorized():
         _save_cache(cache)
     return render_template('register.html', user=session["user"])
 
-@app.route('/register', methods=['POST'])
+@app.route('/register', methods=['GET','POST'])
 def start():
     error = None
     if request.method == 'POST':
@@ -89,6 +90,14 @@ def start():
             }
             requests.post(url = app_config.HUB_CRM_URL, data = payload)
 
+            #store device details to session
+            deviceDetails = {
+               "device_name": device_name,
+               "store_name": store_name,
+               "store_location": store_location,
+               "device_id": config.get('DEVICE_SDK','deviceId')
+            }
+            session["deviceDetails"] = deviceDetails
             
             #Create dummy file in tmp directory
             os.mkdir("tmp")
@@ -99,12 +108,9 @@ def start():
             # run the start_hub.sh script
             subprocess.run(['./start_hub.sh'])
             
-            return render_template('home.html', user=session["user"], deviceName = device_name, storeName = store_name, location = store_location )
+            return redirect(url_for('home'))
     return render_template('register.html', error=error)
 
-@app.route('/<path:dummy>')
-def fallback(dummy):
-    return redirect(url_for('home'))
 
 def _build_msal_app(cache=None, authority=None):
     return msal.ConfidentialClientApplication(

@@ -7,8 +7,9 @@
     <h1>Welcome to your Mishtu home</h1>
     <h2>Hello {{ user.get("name") }}!</h2>
     <p>Your hub has been started. You can see your basic stats here</p>
-    <h3>Device name : {{deviceName}}</h3>
-    <h3>Store name : {{storeName}}</h3>
-    <h3>Location (city) : {{location}}</h3>
+    <h3>Device name : {{deviceDetails.device_name}}</h3>
+    <h3>Device ID : {{deviceDetails.device_id}}</h3>
+    <h3>Store name : {{deviceDetails.store_name}}</h3>
+    <h3>Location (city) : {{deviceDetails.store_location}}</h3>
 </body>
 </html>

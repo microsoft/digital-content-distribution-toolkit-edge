@@ -2,7 +2,7 @@ import jwt
 import json
 
 # configuration, these can be seen in valid JWTs from Azure B2C:
-valid_audiences = ['f1538c13-fc9d-4c86-a012-4135b7032a07'] # id of the application 
+app_id = 'f1538c13-fc9d-4c86-a012-4135b7032a07' # id of the application 
 issuer = 'https://binehub.b2clogin.com/e8f701ab-e20c-4100-8e12-b82232a4ef56/v2.0/' # iss
 
 
@@ -13,7 +13,7 @@ def validate_jwt(jwt_to_validate):
         jwt.decode(jwt_to_validate, public_key, 
                                     verify=True,
                                     algorithms=['RS256'],
-                                    audience=valid_audiences,
+                                    audience=app_id,
                                     issuer=issuer)
     # the JWT is validated
     #print("***********************token is valid*********************")
