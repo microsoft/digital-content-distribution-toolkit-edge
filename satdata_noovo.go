@@ -82,10 +82,9 @@ type VodObj struct {
 
 func pollNoovo(interval int) {
 	for true {
-		fmt.Println("==================Polling NOOVO API for the content==============")
-		//logger.Log("Info", "Polling NOOVO API for the new content on the SAT")
+		log.Println("==================Polling NOOVO API for the content==============")
 		if err := callNoovoAPI(); err != nil {
-			log.Println(err)
+			log.Println("[Satdata_noovo][pollNoovo] Error", fmt.Sprintf("%s", err))
 			logger.Log("Error", "SatdataNoovo", map[string]string{"Message": err.Error()})
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
@@ -102,13 +101,12 @@ func callNoovoAPI() error {
 	if err != nil {
 		return err
 	}
-	//fmt.Println("RESPONSE::::::::::", string(jsonRes))
 	var vods []VodObj
 	jsonErr := json.Unmarshal(jsonRes, &vods)
 	if jsonErr != nil {
 		return jsonErr
 	}
-	fmt.Println(":::::::::::::::::NO. OF CONTENTS:::::::::::", len(vods))
+	log.Println("[Satdata_noovo][callNoovoAPI] NO. OF CONTENTS ON THE SAT: ", len(vods))
 	for _, vod := range vods {
 		if matched, _ := regexp.MatchString(`^BINE.`, vod.Content.VODInfo.MovieID); matched {
 			var _heirarchy string
@@ -123,7 +121,7 @@ func callNoovoAPI() error {
 				continue
 			}
 			if err := downloadContent(vod, _heirarchy); err != nil {
-				log.Println(err)
+				log.Println("[Satdata_noovo][callNoovoAPI] Error", fmt.Sprintf("%s", err))
 				logger.Log("Error", "SatdataNoovo", map[string]string{"Message": err.Error()})
 				logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": _heirarchy, "Channel": "SES"})
 				continue
@@ -131,12 +129,14 @@ func callNoovoAPI() error {
 			path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
 			logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "SES"})
 			logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
+			log.Println("[Satdata_noovo][callNoovoAPI] Info ", fmt.Sprintf("Downloaded on the HUB: %s", _heirarchy))
 		}
 	}
 	return nil
 }
 
 func downloadContent(vod VodObj, _heirarchy string) error {
+	log.Println("[Satdata_noovo][callNoovoAPI] Info ", fmt.Sprintf("Downloading : %s", _heirarchy))
 	pushId := strconv.Itoa(vod.Content.UserDefined.PushId)
 	deadline := vod.Content.VODInfo.ValidityEndDate
 
@@ -152,13 +152,10 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 	for _, metadatafileEntry := range vod.Content.UserDefined.MetadataFiles.File {
 		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileInfo{metadatafileEntry.Filename, metadatafileEntry.Checksum})
 	}
-	fmt.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
 	for _, bulkfileEntry := range vod.Content.UserDefined.BulkFiles.File {
 		folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileInfo{bulkfileEntry.Filename, bulkfileEntry.Checksum})
 	}
-
-	fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
 	log.Println(hierarchy)
 	subpath := ""
@@ -200,7 +197,7 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 			if err.Error() == "[Filesystem][CreateFolder]A folder with the same name at the requested level already exists" {
 				continue
 			}
-			log.Println("Error", fmt.Sprintf("%s", err))
+			log.Println("[Satdata_noovo][DownloadContent] Error", fmt.Sprintf("%s", err))
 			return err
 		}
 		log.Println("")
