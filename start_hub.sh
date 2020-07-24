@@ -22,4 +22,3 @@ sleep 5s
 
 tmux send -t bine-session:0.left 'go build -o bine; echo' ENTER
 tmux send -t bine-session:0.left './bine' ENTER
-tmux a -t bine-session
