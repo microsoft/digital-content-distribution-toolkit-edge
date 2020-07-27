@@ -41,5 +41,5 @@ SCOPE = []  # Example with two exposed scopes: ["demo.read", "demo.write"]
 
 SESSION_TYPE = "filesystem"  # Specifies the token cache should be stored in server-side session
 
-HUB_CRM_URL = "http://hub-management.azurewebsites.net/api/v1/hub_detail"
+HUB_CRM_URL = "https://hub-management.azurewebsites.net/api/v1/hub_detail"
 HUB_CRM_API_KEY = "@sOGFjdgiwoXVxgALTg+n8h1L0weWPBue0vh"

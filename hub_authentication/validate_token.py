@@ -16,5 +16,5 @@ def validate_jwt(jwt_to_validate):
                                     audience=app_id,
                                     issuer=issuer)
     # the JWT is validated
-    #print("***********************token is valid*********************")
+    print("Token is valid")
     #print(decoded)

@@ -1,5 +1,4 @@
-azure-iot-device==2.1.1
-azure-iot-hub==2.2.0
+azure-iot-device==2.1.3
 grpcio
 grpcio-tools
 flask

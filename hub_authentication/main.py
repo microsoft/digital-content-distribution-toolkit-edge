@@ -17,13 +17,19 @@ config = configparser.ConfigParser()
 
 @app.route("/")
 def home():
-    if not session.get("user"):
-        return redirect(url_for("login"))
-    return render_template('home.html', user=session["user"], deviceDetails = session["deviceDetails"])
+    if session.get("user") and session.get("deviceDetails"):
+        #return redirect(url_for("login"))
+        return render_template('home.html', user=session["user"], deviceDetails = session["deviceDetails"])
+    return redirect(url_for("login"))
 
+@app.route('/<path:dummy>')
+def fallback(dummy):
+    return redirect(url_for('home'))
 
 @app.route("/login")
 def login():
+    if session.get("user") and session.get("deviceDetails"):
+        return redirect(url_for("home"))
     session["state"] = str(uuid.uuid4())
     auth_url = _build_auth_url(scopes=app_config.SCOPE, state=session["state"])
     return render_template("login.html", auth_url=auth_url)
@@ -54,10 +60,14 @@ def authorized():
 
 @app.route('/register', methods=['GET','POST'])
 def start():
+    if session.get("user") and session.get("deviceDetails"):
+        return redirect(url_for("home"))
+    if not session.get("user"):
+        return redirect(url_for("login"))
     error = None
     if request.method == 'POST':
-        if len(request.form['storename']) == 0 or len(request.form['storelocation']) == 0 :
-            error = 'Invalid Store Name or Store location'
+        if len(request.form['storename']) == 0 or len(request.form['storelocation']) == 0 or len(request.form['devicename']) == 0 :
+            error = 'Invalid Device name or Store Name or Store location'
         else:
             # save store and user details in customerdetails.ini file
             customer_name = session["user"].get("name")
@@ -67,13 +77,13 @@ def start():
             store_location = request.form['storelocation']
             customerDetails = open('customerdetails.ini', 'w') 
             customer_name_config = f'customer_name={customer_name}\n'
-            customer_contact_config = f'customer_contact={customer_contact}\n'
+            #customer_contact_config = f'customer_contact={customer_contact}\n'
             device_name_config = f'device_name={device_name}\n'
             store_name_config = f'store_name={store_name}\n'
             store_location_config = f'store_location={store_location}\n'
             customerDetails.write("[CUSTOMER_DETAILS]\n") 
             customerDetails.write(customer_name_config)
-            customerDetails.write(customer_contact_config)
+            #customerDetails.write(customer_contact_config)
             customerDetails.write(device_name_config)
             customerDetails.write(store_name_config)
             customerDetails.write(store_location_config)
@@ -88,7 +98,9 @@ def start():
                 "shop_name":store_name,
                 "contact":customer_contact
             }
-            requests.post(url = app_config.HUB_CRM_URL, data = payload)
+            response = requests.post(url = app_config.HUB_CRM_URL, data = payload)
+            print(response)
+            print(response.content)
 
             #store device details to session
             deviceDetails = {
@@ -100,9 +112,12 @@ def start():
             session["deviceDetails"] = deviceDetails
             
             #Create dummy file in tmp directory
-            os.mkdir("tmp")
-            f = open("./tmp/dummy","w")
-            f.close
+            path = config.get('HUB_AUTHENTICATION','INDICATE_AUTHENTICATED_FILE_DIR')
+            filename = config.get('HUB_AUTHENTICATION','INDICATE_AUTHENTICATED_FILE')
+            if not os.path.exists(path) and not os.path.exists(filename) :
+                os.makedirs(path)
+                f = open(filename,"w")
+                f.close
             error = None
             
             # run the start_hub.sh script

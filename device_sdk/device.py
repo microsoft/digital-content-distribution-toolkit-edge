@@ -112,7 +112,7 @@ def init_device(device_client):
     # update the device twin with store/customer information
     device_client.patch_twin_reported_properties({'storelocation':storeLocation})
     device_client.patch_twin_reported_properties({'customername':customerName})
-    device_client.patch_twin_reported_properties({'customercontact':customerContact})
+    #device_client.patch_twin_reported_properties({'customercontact':customerContact})
     device_client.patch_twin_reported_properties({'storename':storeName})
     device_client.patch_twin_reported_properties({'devicename': deviceName})
     
@@ -283,7 +283,7 @@ if __name__ == '__main__':
     # store details 
     config.read('customerdetails.ini')
     customerName = config.get('CUSTOMER_DETAILS', 'customer_name')
-    customerContact = config.get('CUSTOMER_DETAILS', 'customer_contact')
+    #customerContact = config.get('CUSTOMER_DETAILS', 'customer_contact')
     storeName = config.get('CUSTOMER_DETAILS', 'store_name')
     storeLocation = config.get('CUSTOMER_DETAILS', 'store_location')
     deviceName = config.get('CUSTOMER_DETAILS', 'device_name')
