@@ -26,13 +26,21 @@ var logger *cl.Logger
 var fs *filesys.FileSystem
 var km *keymanager.KeyManager
 var cfg *ini.File
+var device_cfg *ini.File
 
 func main() {
-	var err error
+	var err, device_err error
 	cfg, err = ini.Load("hub_config.ini")
+	device_cfg, device_err := ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
+
 	if err != nil {
-		logger.Log("Critical", "Config.ini", map[string]string{"Message": fmt.Sprintf("Failed to read config file: %s", err)})
+		logger.Log("Critical", "hub_config.ini", map[string]string{"Message": fmt.Sprintf("Failed to read config file: %s", err)})
 		fmt.Printf("Failed to read config file: %v", err)
+		os.Exit(1)
+	}
+	if device_err != nil {
+		logger.Log("Critical", "device_detail.ini", map[string]string{"Message": fmt.Sprintf("Failed to read config file: %s", device_err)})
+		fmt.Printf("Failed to read config file: %v", device_err)
 		os.Exit(1)
 	}
 
@@ -40,7 +48,7 @@ func main() {
 
 	logFile := cfg.Section("LOGGER").Key("LOG_FILE_PATH").String()
 	bufferSize, err := cfg.Section("LOGGER").Key("MEM_BUFFER_SIZE").Int()
-	deviceId := cfg.Section("DEVICE_SDK").Key("deviceId").String()
+	deviceId := device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String()
 	logger = cl.MakeLogger(deviceId, logFile, bufferSize)
 
 	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()

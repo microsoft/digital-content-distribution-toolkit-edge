@@ -27,8 +27,8 @@ capabilityModelId = None
 capabilityModel = None 
 provisioning_host = None
 
-customerName = None
-customerContact = None
+retailerName = None
+retailerContact = None
 storeName = None
 storeLocation = None
 deviceName = None
@@ -63,11 +63,13 @@ class AtomicOpen:
             return True
 
 def register_device():
-    provisioning_host = config.get('DEVICE_SDK', 'provisioningHost')
-    symmetric_key = config.get('DEVICE_SDK', 'sas_key')
-    registration_id = config.get('DEVICE_SDK','deviceId')
-    id_scope = config.get('DEVICE_SDK','scope')
-    capabilityModelId=config.get('DEVICE_SDK','capabilityModelId')
+    # device and iot-c details for connection
+    provisioning_host = config.get('DEVICE_DETAIL', 'provisioningHost')
+    symmetric_key = config.get('DEVICE_DETAIL', 'sas_key')
+    registration_id = config.get('DEVICE_DETAIL','deviceId')
+    id_scope = config.get('DEVICE_DETAIL','scope')
+    # capability Model (IOT device template)
+    capabilityModelId=config.get('DEVICE_DETAIL','capabilityModelId')
     capabilityModel = "{iotcModelId : '" + capabilityModelId + "'}" 
     
     provisioning_device_client = ProvisioningDeviceClient.create_from_symmetric_key(
@@ -83,7 +85,8 @@ def register_device():
 
 def connect_device():
     device_client = None
-    symmetric_key = config.get('DEVICE_SDK', 'sas_key')
+   
+    symmetric_key = config.get('DEVICE_DETAIL', 'sas_key')
     try:
       registration_result = register_device()
       if registration_result.status == 'assigned':
@@ -100,19 +103,18 @@ def connect_device():
 
 def init_device(device_client):
     # device properties
-    processorArchitecture= config.get('DEVICE_SDK','processorArchitecture')
-    softwareVersion= config.get('DEVICE_SDK','softwareVersion')
-    totalMemory= config.getint('DEVICE_SDK','totalMemory')
-    totalStorage= config.getint('DEVICE_SDK','totalStorage')
-    processorManufacturer= config.get('DEVICE_SDK','processorManufacturer')
-    osName = config.get('DEVICE_SDK','osName')
-    manufacturer= config.get('DEVICE_SDK','manufacturer')
-    model= config.get('DEVICE_SDK','model')
+    processorArchitecture= config.get('DEVICE_PROPERTIES','processorArchitecture')
+    softwareVersion= config.get('DEVICE_PROPERTIES','softwareVersion')
+    totalMemory= config.getint('DEVICE_PROPERTIES','totalMemory')
+    totalStorage= config.getint('DEVICE_PROPERTIES','totalStorage')
+    processorManufacturer= config.get('DEVICE_PROPERTIES','processorManufacturer')
+    osName = config.get('DEVICE_PROPERTIES','osName')
+    manufacturer= config.get('DEVICE_PROPERTIES','manufacturer')
+    model= config.get('DEVICE_PROPERTIES','model')
     
-    # update the device twin with store/customer information
+    # update the device twin with store/retailer information
     device_client.patch_twin_reported_properties({'storelocation':storeLocation})
-    device_client.patch_twin_reported_properties({'customername':customerName})
-    #device_client.patch_twin_reported_properties({'customercontact':customerContact})
+    device_client.patch_twin_reported_properties({'retailername':retailerName})
     device_client.patch_twin_reported_properties({'storename':storeName})
     device_client.patch_twin_reported_properties({'devicename': deviceName})
     
@@ -134,6 +136,7 @@ def send_upstream_messages(iot_client):
     sleep_time = config.getint("LOGGER", "PY_LOGGER_SLEEP")
     backlog_limit = config.getint("LOGGER", "BACKLOG_LIMIT")
     print("backlog_limit is ", backlog_limit)
+
     while True:
         try:  # keep on spinning this even in case of error
             with AtomicOpen(config.get("LOGGER", "LOG_FILE_PATH"), "r+") as fout:
@@ -162,6 +165,8 @@ def send_upstream_messages(iot_client):
                     msg_json = json.dumps({k : json.dumps(_msg)})
                     iot_message = Message(msg_json) 
                     print("iot_messsage =", iot_message)
+                    iot_message.content_encoding ="utf-8"
+                    iot_message.content_type ="application/json"
                     
                     try:  # if error in sending, maintain backlog of all messages except liveness
                         iot_client.send_message(iot_message)
@@ -174,15 +179,18 @@ def send_upstream_messages(iot_client):
                     print(bl, file=fout)
 
         except Exception as ex:
-            _msg = {"DeviceId": config.get("DEVICE_SDK", "deviceId"), 
+            _msg = {"DeviceId": config.get("DEVICE_DETAIL", "deviceId"), 
                     "MessageSubType": "DeviceSDK", 
                     "MessageBody": {"Message": "exception in send_upstream_messages in deivce SDK: {}".format(ex)},
                     "TimeStamp": int(time.time())}
             message = Message(json.dumps({"Critical": json.dumps(_msg)}))
             print(message)
+            message.content_encoding ="utf-8"
+            message.content_type ="application/json"
             iot_client.send_message(message)
         finally:
             time.sleep(sleep_time)
+        
 
 def getFileParams(param):
     fileparams = []
@@ -280,17 +288,16 @@ if __name__ == '__main__':
     config.read('hub_config.ini')
     print(config.sections())
 
-    # store details 
-    config.read('customerdetails.ini')
-    customerName = config.get('CUSTOMER_DETAILS', 'customer_name')
-    #customerContact = config.get('CUSTOMER_DETAILS', 'customer_contact')
-    storeName = config.get('CUSTOMER_DETAILS', 'store_name')
-    storeLocation = config.get('CUSTOMER_DETAILS', 'store_location')
-    deviceName = config.get('CUSTOMER_DETAILS', 'device_name')
+    # read the retailer and store detail from the file configured in hub_config.ini
+    config.read(config.get('HUB_AUTHENTICATION','RETAILER_DETAIL_FILE'))
+    retailerName = config.get('RETAILER_DETAIL', 'retailer_name')
+    storeName = config.get('RETAILER_DETAIL', 'store_name')
+    storeLocation = config.get('RETAILER_DETAIL', 'store_location')
+    deviceName = config.get('RETAILER_DETAIL', 'device_name')
     
-    # capability Model
-    capabilityModelId=config.get('DEVICE_SDK','capabilityModelId')
-    capabilityModel = "{iotcModelId : '" + capabilityModelId + "'}" 
+    # read the device detail to connect to the IOTC from the file configured in hub_config.ini
+    config.read(config.get('HUB_AUTHENTICATION','DEVICE_DETAIL_FILE')) 
+    
     iot_client = iothub_client_init()
     init_device(iot_client)
     

@@ -5,4 +5,5 @@ flask
 msal>=0.6.1,<2
 flask-session~=0.3.2
 requests>=2,<3
-
+azure-keyvault-secrets
+azure-identity

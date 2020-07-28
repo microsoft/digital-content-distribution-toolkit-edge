@@ -91,17 +91,9 @@
           },
           {
             "@type": "Property",
-            "displayName": "Customer Name",
-            "description": "The name of the customer currently operating the device.",
-            "name": "customername",
-            "schema": "string",
-            "writable": true
-          },
-		  {
-            "@type": "Property",
-            "displayName": "Customer Contact",
-            "description": "The contact of the customer currently operating the device.",
-            "name": "customercontact",
+            "displayName": "Retailer Name",
+            "description": "The name of the retailer currently operating the device.",
+            "name": "retailername",
             "schema": "string",
             "writable": true
           },

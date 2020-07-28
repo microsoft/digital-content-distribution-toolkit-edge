@@ -8,6 +8,7 @@ import requests
 import subprocess
 import os
 from validate_token import validate_jwt
+from key_vault import retrieve_client_secret
 
 app = Flask(__name__)
 app.config.from_object(app_config)
@@ -69,34 +70,38 @@ def start():
         if len(request.form['storename']) == 0 or len(request.form['storelocation']) == 0 or len(request.form['devicename']) == 0 :
             error = 'Invalid Device name or Store Name or Store location'
         else:
-            # save store and user details in customerdetails.ini file
-            customer_name = session["user"].get("name")
-            customer_contact = session["user"].get("signInNames.phoneNumber") # extension_Contact
+            # save store and user details in retailerdetails.ini file
+            retailer_name = session["user"].get("name")
+            retailer_contact = session["user"].get("signInNames.phoneNumber") # extension_Contact
             device_name = request.form['devicename']
             store_name = request.form['storename']
             store_location = request.form['storelocation']
-            customerDetails = open('customerdetails.ini', 'w') 
-            customer_name_config = f'customer_name={customer_name}\n'
-            #customer_contact_config = f'customer_contact={customer_contact}\n'
+            
+            retailer_name_config = f'retailer_name={retailer_name}\n'
             device_name_config = f'device_name={device_name}\n'
             store_name_config = f'store_name={store_name}\n'
             store_location_config = f'store_location={store_location}\n'
-            customerDetails.write("[CUSTOMER_DETAILS]\n") 
-            customerDetails.write(customer_name_config)
-            #customerDetails.write(customer_contact_config)
-            customerDetails.write(device_name_config)
-            customerDetails.write(store_name_config)
-            customerDetails.write(store_location_config)
-            customerDetails.close() 
+            
+            # Create retailer details file in path given in hub_config.ini file
+            # the directory has to be present as device_details is also stored in same directory
+            retailer_detail_file = config.get('HUB_AUTHENTICATION','RETAILER_DETAIL_FILE')
+            retailerDetails = open(retailer_detail_file,"w")
+            retailerDetails.write("[RETAILER_DETAIL]\n") 
+            retailerDetails.write(retailer_name_config)
+            retailerDetails.write(device_name_config)
+            retailerDetails.write(store_name_config)
+            retailerDetails.write(store_location_config)
+            retailerDetails.close() 
             
             #submit the device details and register the device with the CRM application
-            config.read('hub_config.ini') 
+            config.read(config.get('HUB_AUTHENTICATION','DEVICE_DETAIL_FILE')) 
+            device_id = config.get('DEVICE_DETAIL','deviceId')
             payload = {
                 "api_key":app_config.HUB_CRM_API_KEY,
-                "deviceID":config.get('DEVICE_SDK','deviceId'),
+                "deviceID": device_id,
                 "name":device_name,
                 "shop_name":store_name,
-                "contact":customer_contact
+                "contact":retailer_contact
             }
             response = requests.post(url = app_config.HUB_CRM_URL, data = payload)
             print(response)
@@ -107,17 +112,9 @@ def start():
                "device_name": device_name,
                "store_name": store_name,
                "store_location": store_location,
-               "device_id": config.get('DEVICE_SDK','deviceId')
+               "device_id": device_id
             }
             session["deviceDetails"] = deviceDetails
-            
-            #Create dummy file in tmp directory
-            path = config.get('HUB_AUTHENTICATION','INDICATE_AUTHENTICATED_FILE_DIR')
-            filename = config.get('HUB_AUTHENTICATION','INDICATE_AUTHENTICATED_FILE')
-            if not os.path.exists(path) and not os.path.exists(filename) :
-                os.makedirs(path)
-                f = open(filename,"w")
-                f.close
             error = None
             
             # run the start_hub.sh script
@@ -130,7 +127,7 @@ def start():
 def _build_msal_app(cache=None, authority=None):
     return msal.ConfidentialClientApplication(
         app_config.CLIENT_ID, authority=authority or app_config.PHONE_SIGNUPIN_AUTHORITY,
-        client_credential=app_config.CLIENT_SECRET, token_cache=cache)
+        client_credential=retrieve_client_secret(), token_cache=cache)
 
 def _build_auth_url(authority=None, scopes=None, state=None):
     return _build_msal_app(authority=authority).get_authorization_request_url(
