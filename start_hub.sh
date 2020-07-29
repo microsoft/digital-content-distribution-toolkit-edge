@@ -1,3 +1,4 @@
+#!/bin/sh
 # remove the database file and file system, may not be required in real life but for testing
 # TODO: dynamically see the folder instead of hardcode zzzz/
 #rm -rf test.db zzzz/
@@ -21,4 +22,3 @@ sleep 5s
 
 tmux send -t bine-session:0.left 'go build -o bine; echo' ENTER
 tmux send -t bine-session:0.left './bine' ENTER
-tmux a -t bine-session

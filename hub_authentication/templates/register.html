@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<body>
+  <h1>Welcome to your Mishtu home</h1>
+  <h2>Hello {{ user.get("name") }}!</h2>
+
+  <div class="container">
+    <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+      <h1 class="navbar-brand">Please Register to start the device</h1>
+    </nav>
+    <br>
+    <form action="/register" method="post">
+      <div class="form-group">
+        <input type="text" class="form-control" placeholder="Device Name" name="devicename"
+          value="{{request.form.devicename }}">
+      </div>
+      <br>
+      <div class="form-group">
+        <input type="text" class="form-control" placeholder="Store Name" name="storename"
+          value="{{request.form.storename }}">
+      </div>
+      <br>
+      <div class="form-group">
+        <input type="text" class="form-control" placeholder="Store Location (City)" name="storelocation"
+          value="{{request.form.storelocation }}">
+      </div>
+      <br>
+      <input class="btn btn-primary" type="submit" value="Register">
+  </div>
+  <br>
+  </form>
+  {% if error %}
+  <p class="error"><strong>Error:</strong> {{ error }}
+    {% endif %}
+    </div>
+</body>
+
+</html>
