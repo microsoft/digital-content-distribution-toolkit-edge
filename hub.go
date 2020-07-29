@@ -127,7 +127,7 @@ func main() {
 	
 
 	var keys []PublicKey
-	err = json.Unmarshal([]byte(string(body)), &keys)
+	err = json.Unmarshal(body, &keys)
 	if(err != nil) {
 		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
 		log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
