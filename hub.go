@@ -8,6 +8,9 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	ini "gopkg.in/ini.v1"
@@ -17,11 +20,13 @@ import (
 	cl "./logger"
 )
 
-// TODO: Implement remote update of code
-// TODO: Implement update of part of a content
-// TODO: Implement Acknowledgement of content update
-// TODO: Have HUB ID (speak to Cloud which Vinod will write)
-// TODO: Add unit tests to go functions
+
+type PublicKey struct {
+	TimeStamp string  `json:"timestamp"`
+	PublicKey string `json:"value"`
+}
+
+
 var logger *cl.Logger
 var fs *filesys.FileSystem
 var km *keymanager.KeyManager
@@ -94,12 +99,63 @@ func main() {
 	go liveness(liveness_interval)
 	deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
 	go deleteContent(deletion_interval)
-
+	
 	// setup key manager and load keys
+	storage_url := cfg.Section("APP_AUTHENTICATION").Key("BLOB_STORAGE_KEYS_GET_URL").String()
 	pubkeys_dir := cfg.Section("APP_AUTHENTICATION").Key("PUBLIC_KEY_STORE_PATH").String()
 	keys_cache_size, err := cfg.Section("APP_AUTHENTICATION").Key("KEY_MANAGER_CACHE_SIZE").Int()
 
 	km, _ = keymanager.MakeKeyManager(keys_cache_size, pubkeys_dir)
+
+	_, err = os.Stat(pubkeys_dir)
+ 
+	if os.IsNotExist(err) {
+		log.Println("Making public keys directory")
+		errDir := os.MkdirAll(pubkeys_dir, 0755)
+		if errDir != nil {
+			logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to make public keys directory: %v", err)})
+			log.Println(fmt.Sprintf("Failed to make public keys directory: %v", err))
+		}
+ 
+	}
+
+	// get public keys from blob storage
+	resp, err := http.Get(storage_url)
+	if(err != nil) {
+		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to get keys from blob storage: %v", err)})
+		log.Println(fmt.Sprintf("Failed to fetch blob storage url: %v", err))
+	}
+	defer resp.Body.Close()
+	
+	body, err := ioutil.ReadAll(resp.Body)
+	if(err != nil) {
+		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
+		log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
+	}
+	
+
+	var keys []PublicKey
+	err = json.Unmarshal(body, &keys)
+	if(err != nil) {
+		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
+		log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
+	}
+	
+	log.Println(fmt.Sprintf("Got %v keys from blob storage", len(keys)))
+	for _, key := range keys {
+		filePath := filepath.Join(km.PubkeysDir, fmt.Sprintf("%v.pem", key.TimeStamp))
+		f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Println("[AddNewPublicKey] Error", fmt.Sprintf("%s", err))
+		}
+		defer f.Close()
+
+		_, err = f.WriteString(key.PublicKey)
+		if err != nil {
+			log.Println("[AddNewPublicKey] Error", fmt.Sprintf("%s", err))
+		}
+	}
+
 
 	file_times := make([]int64, 0)
 	err = filepath.Walk(pubkeys_dir, func(path string, info os.FileInfo, err error) error {
