@@ -6,9 +6,7 @@ WORKDIR /usr/bine/
 COPY device_sdk ./device_sdk
 
 ## Adding depnedencies
-RUN apt-get install python3-pip -y
 RUN pip3 install -r device_sdk/requirements.txt
-RUN apt-get remove python3-pip -y
 
 RUN rm -rf ~/.cache/
 
