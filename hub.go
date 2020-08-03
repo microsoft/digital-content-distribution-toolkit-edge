@@ -36,7 +36,7 @@ var device_cfg *ini.File
 func main() {
 	var err, device_err error
 	cfg, err = ini.Load("hub_config.ini")
-	device_cfg, device_err := ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
+	device_cfg, device_err = ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
 
 	if err != nil {
 		fmt.Printf("Failed to read config file: %v", err)
