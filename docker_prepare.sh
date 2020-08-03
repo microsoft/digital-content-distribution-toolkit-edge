@@ -1,0 +1,2 @@
+#!/bin/bash
+cp $1 Dockerfile_tmp; sed -i 's/adb2c_client_id/$(adb2c_client_id)/g' Dockerfile_tmp; sed -i 's/adb2c_client_secret/$(adb2c_client_secret)/g' Dockerfile_tmp; sed -i 's/adb2c_tenant_id/$(adb2c_tenant_id)/g' Dockerfile_tmp; sed -i 's/key_vault_name/$(key_vault_name)/g' Dockerfile_tmp; cat Dockerfilie_tmp;
