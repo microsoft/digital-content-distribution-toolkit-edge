@@ -39,12 +39,10 @@ func main() {
 	device_cfg, device_err := ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
 
 	if err != nil {
-		logger.Log("Critical", "hub_config.ini", map[string]string{"Message": fmt.Sprintf("Failed to read config file: %s", err)})
 		fmt.Printf("Failed to read config file: %v", err)
 		os.Exit(1)
 	}
 	if device_err != nil {
-		logger.Log("Critical", "device_detail.ini", map[string]string{"Message": fmt.Sprintf("Failed to read config file: %s", device_err)})
 		fmt.Printf("Failed to read config file: %v", device_err)
 		os.Exit(1)
 	}
@@ -133,6 +131,7 @@ func main() {
 		log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
 	}
 	
+	log.Println(fmt.Sprintf("got body %v from blob storage", string(body)))
 
 	var keys []PublicKey
 	err = json.Unmarshal(body, &keys)
