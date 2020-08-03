@@ -7,6 +7,7 @@ COPY hub_authentication ./hub_authentication
 ## Adding depnedencies
 RUN pip3 install -r device_sdk/requirements.txt
 RUN apt-get install tmux -y
+RUN apt-get install psmisc -y
 RUN rm -rf ~/.cache/
 
 ## Environment variables
