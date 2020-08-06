@@ -164,7 +164,7 @@ func getMetadataStruct(filePath string) (*FolderMetadata, error) {
 }
 
 func getAvailableFolders() []AvailableFolder {
-	leaves := fs.GetLeavesList()
+	leaves, _ := fs.GetLeavesList("")
 	var result []AvailableFolder
 	fmt.Println("Leaves length: ", len(leaves))
 	for _, leaf := range leaves {

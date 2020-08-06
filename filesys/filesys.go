@@ -588,14 +588,30 @@ func (fs *FileSystem) preOrderTraversal(root []byte, prefix string) []string {
 	return ans
 }
 
-func (fs *FileSystem) GetLeavesList() []string {
-	homeNodeName, _ := fs.GetFolderNameForNode(fs.homeNode)
-	temp := fs.preOrderTraversal(fs.homeNode, "")
-	for i, _ := range temp {
-		temp[i] = temp[i][len(homeNodeName)+1:]
+func (fs *FileSystem) GetLeavesList(actual_path string) ([]string, error) {
+	var startingNode []byte
+	var err error = nil
+	if(strings.Trim(actual_path, "/") == "") {
+		startingNode = fs.homeNode
+	} else {
+		hierarchy := strings.Split(strings.Trim(actual_path, "/"), "/")
+		startingNode, err = fs.getNodeForPath(hierarchy)
 	}
 
-	return temp
+	if err != nil {
+		return nil, err
+	}
+
+	ans := fs.preOrderTraversal(startingNode, "")
+
+	if(strings.Trim(actual_path, "/") == "") { //when giving all leaf nodes, omit the home folder from path
+		homeNodeName, _ := fs.GetFolderNameForNode(startingNode)
+		for i, _ := range ans {
+			ans[i] = ans[i][len(homeNodeName)+1:]
+		}
+	}
+
+	return ans, nil
 }
 
 func (fs *FileSystem) PrintBuckets() {
