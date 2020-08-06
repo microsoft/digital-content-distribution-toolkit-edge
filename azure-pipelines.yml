@@ -76,9 +76,14 @@ steps:
     script: "docker buildx create --name mybuilder; docker buildx use mybuilder; docker buildx inspect --bootstrap"
 
 - task: CmdLine@2
+  displayName: "Setting up TEMP arm docker file"
+  inputs:
+      script: "./docker_prepare.sh ./Dockerfiles/Dockerfile"
+
+- task: CmdLine@2
   displayName: "Building ARM docker image"
   inputs:
-    script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar -f ./Dockerfiles/Dockerfile ."
+    script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar -f Dockerfile_tmp .; rm Dockerfile_tmp"
 
 - task: CmdLine@2
   displayName: "Loading hub_dev.tar"
@@ -102,9 +107,14 @@ steps:
     arguments: '-o bine'
 
 - task: CmdLine@2
+  displayName: "Setting up TEMP x86 docker file"
+  inputs:
+      script: "./docker_prepare.sh ./Dockerfiles/Dockerfile.x86"
+
+- task: CmdLine@2
   displayName: "Building x86 image"
   inputs:
-    script: "docker build -t $(x86_image_dev) -f ./Dockerfiles/Dockerfile.x86 ."
+    script: "docker build -t $(x86_image_dev) -f ./Dockerfile_tmp .; rm Dockerfile_tmp"
 
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"

@@ -4,7 +4,16 @@
     <meta charset="UTF-8">
 </head>
 <body>
-    <h1>Welcome to your Mishtu home</h1>
+    <table width="100%">
+        <tr>
+          <td width="90%">
+            <h1>Welcome to your Mishtu home</h1>
+          </td>
+          <td width="10%">
+            <a href="/logout">Logout</a>
+          </td>
+        </tr>
+      </table>
     <h2>Hello {{ user.get("name") }}!</h2>
     <p>Your hub has been started. You can see your basic stats here</p>
     <h3>Device name : {{deviceDetails.device_name}}</h3>

@@ -19,7 +19,9 @@
    ```  
 
 #### set the environment variables to access the Azure key-vault
+   ``` 
    export AZURE_CLIENT_ID="22f54f66-df06-42c1-b689-f089aedf9d26"
    export AZURE_CLIENT_SECRET="6jC-D43p3om4_xlUHRX56R27~HVODd1BY"
    export AZURE_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
    export KEY_VAULT_NAME="mishtu"
+   ``` 

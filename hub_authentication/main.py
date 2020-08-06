@@ -49,6 +49,7 @@ def authorized():
         if "error" in result:
             return render_template("auth_error.html", result=result)
         
+        print(result)
         jwt = result.get("id_token")
         try:
             validate_jwt(jwt)
@@ -104,8 +105,11 @@ def start():
                 "contact":retailer_contact
             }
             response = requests.post(url = app_config.HUB_CRM_URL, data = payload)
-            print(response)
             print(response.content)
+            print(response.status_code)
+            if not response.status_code == 201: 
+                return render_template('register.html', error=response.content, user=session["user"])
+            
 
             #store device details to session
             deviceDetails = {
@@ -121,8 +125,15 @@ def start():
             subprocess.run(['./start_hub.sh'])
             
             return redirect(url_for('home'))
-    return render_template('register.html', error=error)
+    return render_template('register.html', error=error, user=session["user"])
 
+          
+@app.route("/logout")
+def logout():
+    session.clear()  # Wipe out user and its token cache from session
+    return redirect(  # Also logout from your tenant's web session
+        app_config.PHONE_SIGNUPIN_AUTHORITY + "/oauth2/v2.0/logout" +
+        "?post_logout_redirect_uri=" + url_for("home", _external=True))
 
 def _build_msal_app(cache=None, authority=None):
     return msal.ConfidentialClientApplication(
