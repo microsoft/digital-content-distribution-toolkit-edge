@@ -21,4 +21,4 @@ tmux send -t bine-session:0.right 'PYTHONPATH=./device_sdk/ python3 ./device_sdk
 sleep 5s
 
 tmux send -t bine-session:0.left 'go build -o bine; echo' ENTER
-tmux send -t bine-session:0.left './bine' ENTER
+tmux send -t bine-session:0.left './bine_arm' ENTER
