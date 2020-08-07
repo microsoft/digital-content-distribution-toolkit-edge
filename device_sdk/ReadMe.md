@@ -25,3 +25,7 @@
    export AZURE_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
    export KEY_VAULT_NAME="mishtu"
    ``` 
+#### create self sign certificate for the bine portal application
+   ```
+   openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out mishtu.crt -keyout mishtu.key
+   ```

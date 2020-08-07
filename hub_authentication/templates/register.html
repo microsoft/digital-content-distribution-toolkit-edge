@@ -6,7 +6,16 @@
 </head>
 
 <body>
-  <h1>Welcome to your Mishtu home</h1>
+  <table width="100%">
+    <tr>
+      <td width="90%">
+        <h1>Welcome to your Mishtu home</h1>
+      </td>
+      <td width="10%">
+        <a href="/logout">Logout</a>
+      </td>
+    </tr>
+  </table>
   <h2>Hello {{ user.get("name") }}!</h2>
 
   <div class="container">
@@ -34,9 +43,9 @@
   </div>
   <br>
   </form>
-  {% if error %}
-  <p class="error"><strong>Error:</strong> {{ error }}
-    {% endif %}
+    {% if error %}
+    <p class="error"><strong>Error:</strong> {{ error }}
+      {% endif %}
     </div>
 </body>
 
