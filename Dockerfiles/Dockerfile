@@ -20,7 +20,6 @@ ENV KEY_VAULT_NAME="key_vault_name"
 
 ## SETUP CRON
 RUN apt-get install cron -y
-RUN systemctl enable cron
 COPY alive-cron /etc/cron.d/alive-cron
 RUN chmod 0644 /etc/cron.d/alive-cron
 RUN crontab /etc/cron.d/alive-cron
@@ -33,4 +32,4 @@ COPY start_hub.sh ./
 COPY run_go_python_sides.sh ./
 EXPOSE 5000
 
-CMD ["./start_hub.sh; ./alive.sh"]
+CMD ["crontab /etc/cron.d/alive-cron; ./start_hub.sh; ./alive.sh"]
