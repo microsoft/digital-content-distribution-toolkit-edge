@@ -1,0 +1,1 @@
+*/2 * * * * /usr/bine/run_go_python_sides.sh /media/sda1/MSR/cron.log >> /media/sda1/MSR/cron.log 2>&1

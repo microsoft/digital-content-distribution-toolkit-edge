@@ -18,10 +18,19 @@ ENV AZURE_CLIENT_SECRET="adb2c_client_secret"
 ENV AZURE_TENANT_ID="adb2c_tenant_id"
 ENV KEY_VAULT_NAME="key_vault_name"
 
+## SETUP CRON
+RUN apt-get install cron -y
+RUN systemctl enable cron
+COPY alive-cron /etc/cron.d/alive-cron
+RUN chmod 0644 /etc/cron.d/alive-cron
+RUN crontab /etc/cron.d/alive-cron
+
 COPY bine_arm ./
+COPY certs/* ./
 COPY *.ini ./
 COPY alive.sh ./
 COPY start_hub.sh ./
+COPY run_go_python_sides.sh ./
 EXPOSE 5000
 
-CMD ["./alive.sh"]
+CMD ["./start_hub.sh; ./alive.sh"]

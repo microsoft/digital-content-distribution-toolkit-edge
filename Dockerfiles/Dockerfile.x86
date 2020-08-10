@@ -17,6 +17,7 @@ ENV AZURE_TENANT_ID="adb2c_tenant_id"
 ENV KEY_VAULT_NAME="key_vault_name"
 
 COPY bine ./
+COPY certs/* ./
 COPY *.ini ./
 COPY alive.sh ./
 COPY start_hub.sh ./
