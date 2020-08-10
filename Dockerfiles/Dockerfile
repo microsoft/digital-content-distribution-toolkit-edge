@@ -32,4 +32,4 @@ COPY start_hub.sh ./
 COPY run_go_python_sides.sh ./
 EXPOSE 5000
 
-CMD ["crontab /etc/cron.d/alive-cron; ./start_hub.sh; ./alive.sh"]
+CMD ["./alive.sh"]
