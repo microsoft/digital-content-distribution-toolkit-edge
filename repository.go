@@ -163,7 +163,7 @@ func getMetadataStruct(filePath string) (*FolderMetadata, error) {
 	return &data, nil
 }
 
-func durationInMinutes(duration string) (string, error) {
+func getDurationInSeconds(duration string) (string, error) {
 	parts := strings.Split(duration, ":")
 	// condition to handle hh:mm:ss
 	if len(parts) == 3 {
@@ -178,9 +178,14 @@ func durationInMinutes(duration string) (string, error) {
 			return "", err
 		}
 		minutesDuration += value
+		minutesDuration *= 60
 		return strconv.FormatInt(minutesDuration, 10), nil
 	}
-	return duration, nil
+	value, err := strconv.ParseInt(duration, 10, 32)
+	if err != nil {
+		return "", err
+	}
+	return strconv.FormatInt(value*60, 10), nil
 }
 
 func getAvailableFolders() []AvailableFolder {
@@ -215,7 +220,14 @@ func getAvailableFolders() []AvailableFolder {
 						folderMetadata.FolderUrl = "http://{HUB_IP}:5000/static/" + osFsPath
 						fmt.Println("Folder size is: ", folderSize)
 						parts := strings.Split(leaf, "/")
-
+						secondsDuration, err := getDurationInSeconds(folderMetadata.Duration)
+						if err != nil {
+							secondsDuration = "100"
+							fmt.Println("Folder duratioon ERROR: ", err)
+						} else {
+							fmt.Println("Folder duration in seconds: ", secondsDuration)
+							folderMetadata.Duration = secondsDuration
+						}
 						availableFolder := AvailableFolder{ID: parts[len(parts)-1], Metadata: folderMetadata}
 						result = append(result, availableFolder)
 					} else {

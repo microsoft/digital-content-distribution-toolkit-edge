@@ -611,7 +611,14 @@ func (fs *FileSystem) GetLeavesList(actual_path string) ([]string, error) {
 		}
 	}
 
-	return ans, nil
+	ret := make([]string, 0)
+	for _, x := range ans {
+		if(len(x) != 0) {
+			ret = append(ret, x)
+		}
+	}
+
+	return ret, nil
 }
 
 func (fs *FileSystem) PrintBuckets() {
