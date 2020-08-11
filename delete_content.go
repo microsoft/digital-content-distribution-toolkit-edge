@@ -20,8 +20,8 @@ func deleteContent(interval int) {
 func traverse(node []byte, prefix string) string {
 	children, err := fs.GetChildrenForNode(node)
 	if err != nil {
-		log.Println("[DeleteContentAfterValidity] Error", fmt.Sprintf("%s", err))
-		logger.Log("Error", "DeleteContentAfterValidity", map[string]string{"Message": err.Error()})
+		log.Println("[DeleteContentOnExpiry] Error", fmt.Sprintf("%s", err))
+		logger.Log("Error", "DeleteContentOnExpiry", map[string]string{"Message": err.Error()})
 	}
 	if len(children) == fs.GetNodeLength() && strings.LastIndex(prefix, "/") >= 0 {
 		prefix = prefix[:strings.LastIndex(prefix, "/")]
@@ -34,12 +34,12 @@ func traverse(node []byte, prefix string) string {
 		actualName, _ := fs.GetFolderNameForNode(children[i : i+fs.GetNodeLength()])
 		prefix := prefix + "/" + actualName
 		abstractedPath := filepath.Join(fs.GetHomeFolder(), string(children[i:i+fs.GetNodeLength()]))
-		log.Println("[DeleteContentAfterValidity] Checking Actual Path:", prefix)
-		log.Println("[DeleteContentAfterValidity] Checking corresponding Abstracted path:", abstractedPath)
+		log.Println("[DeleteContentOnExpiry] Checking Actual Path:", prefix)
+		log.Println("[DeleteContentOnExpiry] Checking corresponding Abstracted path:", abstractedPath)
 		err := checkDeadlineAndDelete(abstractedPath, prefix)
 		if err != nil {
-			log.Println("[DeleteContentAfterValidity] Error", fmt.Sprintf("%s", err))
-			logger.Log("Error", "DeleteContentAfterValidity", map[string]string{"Message": err.Error()})
+			log.Println("[DeleteContentOnExpiry] Error", fmt.Sprintf("%s", err))
+			logger.Log("Error", "DeleteContentOnExpiry", map[string]string{"Message": err.Error()})
 			return prefix
 		}
 		prefix = traverse(children[i:i+fs.GetNodeLength()], prefix)
@@ -59,16 +59,18 @@ func checkDeadlineAndDelete(path string, actualPathPrefix string) error {
 	deadline, _ := strconv.ParseInt(string(b[:read]), 10, 64)
 	curr := time.Now().Unix()
 	if curr > deadline {
-		log.Println("[DeleteContentAfterValidity] Validity date expired. Deleting ", actualPathPrefix)
-		deletesize := getDirSizeinMB(path)
+		log.Println("[DeleteContentOnExpiry] Validity date expired. Deleting ", actualPathPrefix)
+		//deletesize := getDirSizeinMB(path)
 		hierarchy := strings.Split(strings.Trim(actualPathPrefix, "/"), "/")
 		err := fs.RecursiveDeleteFolder(hierarchy)
 		if err != nil {
 			return err
 		}
-		logger.Log("Telemetry", "DeleteContentAfterValidity", map[string]string{
+		logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{
 			"Status": "SUCCESS", "FolderPath": actualPathPrefix,
-			"Size": fmt.Sprintf("%f", deletesize) + " MB", "Message": "Recursively deleted the folder"})
+			"Mode": "Expired"})
+		logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
+
 	}
 	return nil
 }
