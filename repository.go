@@ -208,7 +208,7 @@ func getAvailableFolders() []AvailableFolder {
 					folderMetadata, err := getMetadataStruct(metadataJSONFilePath)
 					if err == nil {
 						folderSize := getFolderSizeParser(osFsPath)
-						folderMetadata.Size = strconv.FormatInt(folderSize, 10)
+						folderMetadata.Size = folderSize
 						if len(osFsPath) > 1 && osFsPath[0] == '/' {
 							osFsPath = osFsPath[1:]
 						}
@@ -221,7 +221,7 @@ func getAvailableFolders() []AvailableFolder {
 						parts := strings.Split(leaf, "/")
 						secondsDuration, err := getDurationInSeconds(folderMetadata.Duration)
 						if err != nil {
-							secondsDuration = "100"
+							secondsDuration = "3600"
 							fmt.Println("Folder duratioon ERROR: ", err)
 						} else {
 							fmt.Println("Folder duration in seconds: ", secondsDuration)

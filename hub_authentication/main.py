@@ -122,7 +122,7 @@ def start():
             error = None
             
             # run the start_hub.sh script
-            subprocess.run(['./start_hub.sh'])
+            subprocess.run(['./run_go_python_sides.sh'])
             
             return redirect(url_for('home'))
     return render_template('register.html', error=error, user=session["user"])
