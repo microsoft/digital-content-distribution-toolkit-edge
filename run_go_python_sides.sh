@@ -7,7 +7,7 @@ then
 fi
 
 # starting tmux if not running
-if [ "$(tmux ls | grep -c "bine-session:")" -eq 0 ]; 
+if [ -f "/media/sda1/MSR/retailer_detail.ini" ] && [ "$(tmux ls | grep -c "bine-session:")" -eq 0 ];
 then
 	/usr/bine/start_hub.sh
 fi
