@@ -17,6 +17,9 @@ ENV AZURE_CLIENT_ID="adb2c_client_id"
 ENV AZURE_CLIENT_SECRET="adb2c_client_secret"
 ENV AZURE_TENANT_ID="adb2c_tenant_id"
 ENV KEY_VAULT_NAME="key_vault_name"
+ENV b2c_app_tenant_id="b2c_app_tenant_id_val"
+ENV CLIENT_ID="CLIENT_ID_val"
+ENV HUB_CRM_API_KEY="HUB_CRM_API_KEY_val"
 
 ## SETUP CRON
 RUN apt-get install cron -y
