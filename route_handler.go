@@ -290,18 +290,21 @@ func writeFile(context *gin.Context, fileHandle *os.File, fileSize int64) int64 
 
 //FolderMetadata ... represents metadata of an available folder on the hub
 type FolderMetadata struct {
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	VideoFiles  []string `json:"videoFiles"`
-	AudioFiles  []string `json:"audioFiles"`
-	Thumbnail   string   `json:"thumbnail"`
-	Thumbnail2X string   `json:"thumbnail_2x"`
-	Language    string   `json:"language"`
-	Size        string   `json:"size"`
-	Duration    string   `json:"duration"`
-	Path        string   `json:"path"`
-	MPDFile     string   `json:"mpdFile"`
-	FolderUrl   string   `json:"folderUrl"`
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	VideoFiles    []string `json:"videoFiles"`
+	AudioFiles    []string `json:"audioFiles"`
+	Thumbnail     string   `json:"thumbnail"`
+	Thumbnail2X   string   `json:"thumbnail_2x"`
+	Language      string   `json:"language"`
+	Size          int64    `json:"size"`
+	Duration      string   `json:"duration"`
+	Keywords      []string `json:"keywords"`
+	CastInfo      []string `json:"castInfo"`
+	YearOfRelease int      `json:"yearOfRelease"`
+	Path          string   `json:"path"`
+	MPDFile       string   `json:"mpdFile"`
+	FolderUrl     string   `json:"folderUrl"`
 }
 
 //AvailableFolder ... represents folders on the hub

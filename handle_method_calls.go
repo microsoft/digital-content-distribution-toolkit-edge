@@ -57,12 +57,12 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	fmt.Println("Printing file sys")
 	fs.PrintFileSystem()
 	fmt.Println("====================")
-
 	deadline := download_params.GetDeadline()
 	addToExisting := download_params.GetAddtoexisting()
 	metafilesLen := len(download_params.GetMetadatafiles())
 	bulkfilesLen := len(download_params.GetBulkfiles())
 	fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
+	isAssetFlag := false
 	for i, x := range download_params.GetMetadatafiles() {
 		log.Println("\t", (*x).Name)
 		fileInfos[i] = make([]string, 5)
@@ -80,6 +80,7 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		fileInfos[metafilesLen+i][2] = (*x).Hashsum
 		fileInfos[metafilesLen+i][3] = "bulkfile"
 		fileInfos[metafilesLen+i][4] = strconv.FormatInt(deadline, 10)
+		isAssetFlag = true
 	}
 	fileInfos[metafilesLen+bulkfilesLen] = make([]string, 5)
 	fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline, 10)
@@ -120,11 +121,13 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	log.Println("")
 	// to be removed later
 	if len(fileInfos) == 1 {
-		logger.Log("Info", "ContentSyncInfo", map[string]string{"Message": "Folder created. Download request does not have file infos "})
+		logger.Log("Info", "ContentSyncInfo", map[string]string{"FolderPath": download_params.GetFolderpath(), "Message": "Folder created. Download request does not have file infos "})
 		return &pb.Response{Responsemessage: "Folder created. No files to download"}, nil
 	}
 	path, _ := fs.GetActualPathForAbstractedPath(download_params.GetFolderpath())
-	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "LAN/4G"})
+	if isAssetFlag {
+		logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": download_params.GetFolderpath(), "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "LAN/4G"})
+	}
 	logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 	log.Println(fmt.Sprintf("[HandleMethodCalls][Download] Heirarchy: %s synced via LAN/4G", download_params.GetFolderpath()))
 	log.Println(fmt.Sprintf("[HandleMethodCalls][Download] AssetSize: %f MB", getDirSizeinMB(path)))
@@ -246,7 +249,7 @@ func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.Delet
 	fs.PrintBuckets()
 	fmt.Println("Printing file sys ")
 	fs.PrintFileSystem()
-	logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "SUCCESS", "FolderPath": delete_params.GetFolderpath()})
+	logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "SUCCESS", "FolderPath": delete_params.GetFolderpath(), "Mode": "CloudCommand"})
 	logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 	log.Println(fmt.Sprintf("[HandleMethodCalls][Delete] Heirarchy deleted: %s ", delete_params.GetFolderpath()))
 	log.Println(fmt.Sprintf("[HandleMethodCalls][Delete] Disk space available on the Hub: %s", getDiskInfo()))

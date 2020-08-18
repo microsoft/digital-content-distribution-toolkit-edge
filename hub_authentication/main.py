@@ -152,7 +152,7 @@ def start():
             error = None
             
             # run the start_hub.sh script
-            subprocess.run(['./start_hub.sh'])
+            subprocess.run(['./run_go_python_sides.sh'])
             
             return redirect(url_for('home'))
     return render_template('register.html', error=error, user=session["user"])
@@ -191,4 +191,4 @@ def _save_cache(cache):
 if __name__ == '__main__':
     config.read('hub_config.ini')
     print(config.sections())
-    app.run(debug=True, host="0.0.0.0", port=config.getint("HUB_AUTHENTICATION", "FLASK_PORT"), ssl_context=('mishtu.crt', 'mishtu.key'))
+    app.run(debug=False, host="0.0.0.0", port=config.getint("HUB_AUTHENTICATION", "FLASK_PORT"), ssl_context=('mishtu.crt', 'mishtu.key'))

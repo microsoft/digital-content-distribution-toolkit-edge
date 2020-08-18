@@ -163,8 +163,33 @@ func getMetadataStruct(filePath string) (*FolderMetadata, error) {
 	return &data, nil
 }
 
+func getDurationInSeconds(duration string) (string, error) {
+	parts := strings.Split(duration, ":")
+	// condition to handle hh:mm:ss
+	if len(parts) == 3 {
+		var minutesDuration int64 = 0
+		value, err := strconv.ParseInt(parts[0], 10, 32)
+		if err != nil {
+			return "", err
+		}
+		minutesDuration += value * 60
+		value, err = strconv.ParseInt(parts[1], 10, 32)
+		if err != nil {
+			return "", err
+		}
+		minutesDuration += value
+		minutesDuration *= 60
+		return strconv.FormatInt(minutesDuration, 10), nil
+	}
+	value, err := strconv.ParseInt(duration, 10, 32)
+	if err != nil {
+		return "", err
+	}
+	return strconv.FormatInt(value*60, 10), nil
+}
+
 func getAvailableFolders() []AvailableFolder {
-	leaves := fs.GetLeavesList()
+	leaves, _ := fs.GetLeavesList("")
 	var result []AvailableFolder
 	fmt.Println("Leaves length: ", len(leaves))
 	for _, leaf := range leaves {
@@ -183,20 +208,25 @@ func getAvailableFolders() []AvailableFolder {
 					folderMetadata, err := getMetadataStruct(metadataJSONFilePath)
 					if err == nil {
 						folderSize := getFolderSizeParser(osFsPath)
-						folderMetadata.Size = strconv.FormatInt(folderSize, 10)
+						folderMetadata.Size = folderSize
 						if len(osFsPath) > 1 && osFsPath[0] == '/' {
 							osFsPath = osFsPath[1:]
 						}
 						folderMetadata.Thumbnail = getDownloadableURL(osFsPath, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail))
 						fmt.Println("Thumbnail URL: ", folderMetadata.Thumbnail)
 						folderMetadata.Thumbnail2X = getDownloadableURL(osFsPath, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail2X))
-						folderMetadata.Language = "English"
 						folderMetadata.Path = osFsPath
 						folderMetadata.FolderUrl = "http://{HUB_IP}:5000/static/" + osFsPath
-						folderMetadata.Duration = "60"
 						fmt.Println("Folder size is: ", folderSize)
 						parts := strings.Split(leaf, "/")
-
+						secondsDuration, err := getDurationInSeconds(folderMetadata.Duration)
+						if err != nil {
+							secondsDuration = "3600"
+							fmt.Println("Folder duratioon ERROR: ", err)
+						} else {
+							fmt.Println("Folder duration in seconds: ", secondsDuration)
+							folderMetadata.Duration = secondsDuration
+						}
 						availableFolder := AvailableFolder{ID: parts[len(parts)-1], Metadata: folderMetadata}
 						result = append(result, availableFolder)
 					} else {
