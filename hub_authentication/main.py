@@ -59,11 +59,12 @@ def authorized():
         session["user"] = result.get("id_token_claims")
         _save_cache(cache)
         
-        config.read('hub_config.ini')
+        # if the retailer_detail.ini file is already present, indicates that the retailer has registered.
+        # Fetch the existing details from the file on the welcome page
         if os.path.isfile(config.get('HUB_AUTHENTICATION','RETAILER_DETAIL_FILE')):
             config.read(config.get('HUB_AUTHENTICATION','DEVICE_DETAIL_FILE')) 
             device_id_info = config.get('DEVICE_DETAIL','deviceId')
-            #get and store device details to session from the retailer ini file
+            # get and store device details to session from the retailer ini file
             retailer_file = open(config.get('HUB_AUTHENTICATION','RETAILER_DETAIL_FILE'), "r")
             file_lines = retailer_file.readlines()
             for line in file_lines:
@@ -161,6 +162,9 @@ def start():
 @app.route("/logout")
 def logout():
     session.clear()  # Wipe out user and its token cache from session
+    # delete the retailer details, if exists
+    if os.path.isfile(config.get('HUB_AUTHENTICATION','RETAILER_DETAIL_FILE')):
+        os.remove(config.get('HUB_AUTHENTICATION','RETAILER_DETAIL_FILE'))
     return redirect(  # Also logout from your tenant's web session
         app_config.PHONE_SIGNUPIN_AUTHORITY + "/oauth2/v2.0/logout" +
         "?post_logout_redirect_uri=" + url_for("home", _external=True))
