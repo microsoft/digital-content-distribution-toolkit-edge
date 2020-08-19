@@ -84,7 +84,7 @@ def authorized():
                 "device_id": device_id_info
             }
             session["deviceDetails"] = deviceDetails
-            # run the start_hub.sh script
+            # run the run_go_python_sides.sh script
             subprocess.run(['./run_go_python_sides.sh'])
             return redirect(url_for('home'))
         
@@ -152,7 +152,7 @@ def start():
             session["deviceDetails"] = deviceDetails
             error = None
             
-            # run the start_hub.sh script
+            # run the run_go_python_sides.sh script
             subprocess.run(['./run_go_python_sides.sh'])
             
             return redirect(url_for('home'))
