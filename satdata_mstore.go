@@ -95,7 +95,7 @@ func checkForVODViaMstore() error {
 		log.Println("=======(", i, ") Processing for CID:=====", id.ContentID)
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
-			log.Println("[SatdataMstore][checkForVODViaMstore] Error", fmt.Sprintf("%s", err))
+			log.Println("[SatdataMstore][checkForVODViaMstore] Error ", fmt.Sprintf("%s", err))
 			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 			continue
 		}
@@ -119,10 +119,14 @@ func getMetadataAPI(contentId string) error {
 	if jsonErr != nil {
 		return jsonErr
 	}
-	// check if the status is 0
 	if vod.Status == "15" {
-		return errors.New("No metadata available")
+		return fmt.Errorf("getMetadataAPI: No metadata available for CID %s ", contentId)
 	}
+	if !strings.HasPrefix(vod.Metadata.MovieId, "BINE_") {
+		log.Println("[SatdataMstore][checkForVODViaMstore] Not a BINE Content")
+		return nil
+	}
+
 	if _heirarchy, err := getMstoreFiles(vod); err != nil {
 		logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": _heirarchy, "Channel": "SES"})
 		return err

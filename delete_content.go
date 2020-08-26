@@ -67,7 +67,7 @@ func checkDeadlineAndDelete(path string, actualPathPrefix string) error {
 			return err
 		}
 		logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{
-			"Status": "SUCCESS", "FolderPath": actualPathPrefix,
+			"DeleteStatus": "SUCCESS", "FolderPath": actualPathPrefix,
 			"Mode": "Expired"})
 		logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 
