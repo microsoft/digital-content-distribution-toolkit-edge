@@ -58,6 +58,36 @@ def authorized():
         
         session["user"] = result.get("id_token_claims")
         _save_cache(cache)
+        
+        # if the retailer_detail.ini file is already present, indicates that the retailer has registered.
+        # Fetch the existing details from the file on the welcome page
+        if os.path.isfile(config.get('HUB_AUTHENTICATION','RETAILER_DETAIL_FILE')):
+            config.read(config.get('HUB_AUTHENTICATION','DEVICE_DETAIL_FILE')) 
+            device_id_info = config.get('DEVICE_DETAIL','deviceId')
+            # get and store device details to session from the retailer ini file
+            retailer_file = open(config.get('HUB_AUTHENTICATION','RETAILER_DETAIL_FILE'), "r")
+            file_lines = retailer_file.readlines()
+            for line in file_lines:
+                index = line.find("=")
+                if index != -1:
+                    if line.find("device_name") != -1:
+                        device_name_info = line[index+1:]
+                    elif line.find("store_name") != -1:
+                        store_name_info = line[index+1:]
+                    elif line.find("store_location") != -1:
+                        store_location_info = line[index+1:]
+                        
+            deviceDetails = {
+                "device_name": device_name_info,
+                "store_name": store_name_info,
+                "store_location": store_location_info,
+                "device_id": device_id_info
+            }
+            session["deviceDetails"] = deviceDetails
+            # run the run_go_python_sides.sh script
+            subprocess.run(['./run_go_python_sides.sh'])
+            return redirect(url_for('home'))
+        
     return render_template('register.html', user=session["user"])
 
 @app.route('/register', methods=['GET','POST'])
@@ -67,6 +97,7 @@ def start():
     if not session.get("user"):
         return redirect(url_for("login"))
     error = None
+    
     if request.method == 'POST':
         if len(request.form['storename']) == 0 or len(request.form['storelocation']) == 0 or len(request.form['devicename']) == 0 :
             error = 'Invalid Device name or Store Name or Store location'
@@ -121,7 +152,7 @@ def start():
             session["deviceDetails"] = deviceDetails
             error = None
             
-            # run the start_hub.sh script
+            # run the run_go_python_sides.sh script
             subprocess.run(['./run_go_python_sides.sh'])
             
             return redirect(url_for('home'))
@@ -131,6 +162,9 @@ def start():
 @app.route("/logout")
 def logout():
     session.clear()  # Wipe out user and its token cache from session
+    # delete the retailer details, if exists
+    if os.path.isfile(config.get('HUB_AUTHENTICATION','RETAILER_DETAIL_FILE')):
+        os.remove(config.get('HUB_AUTHENTICATION','RETAILER_DETAIL_FILE'))
     return redirect(  # Also logout from your tenant's web session
         app_config.PHONE_SIGNUPIN_AUTHORITY + "/oauth2/v2.0/logout" +
         "?post_logout_redirect_uri=" + url_for("home", _external=True))
