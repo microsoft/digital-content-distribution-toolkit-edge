@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/natefinch/lumberjack"
 	"github.com/gin-gonic/gin"
 	ini "gopkg.in/ini.v1"
 
@@ -37,6 +38,20 @@ func main() {
 	var err, device_err error
 	cfg, err = ini.Load("hub_config.ini")
 	device_cfg, device_err = ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
+
+
+	codeLogsFile := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_PATH").String()
+	codeLogsFileMaxSize, err := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_MAX_SIZE").Int()
+	codeLogsFileMaxBackups, err := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_MAX_BACKUPS").Int()
+	codeLogsFileMaxAge, err := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_MAX_AGE").Int()
+
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   codeLogsFile,
+		MaxSize:    codeLogsFileMaxSize,  // megabytes after which new file is created
+		MaxBackups: codeLogsFileMaxBackups,  // number of backups
+		MaxAge:     codeLogsFileMaxAge, //days
+	})
+
 
 	if err != nil {
 		fmt.Printf("Failed to read config file: %v", err)
