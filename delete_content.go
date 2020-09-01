@@ -13,7 +13,7 @@ import (
 func deleteContent(interval int) {
 	for true {
 		time.Sleep(time.Duration(interval) * time.Second)
-		fmt.Println("--------Checking for validity dates of the Contents----------")
+		log.Println("--------Checking for validity dates of the Contents----------")
 		traverse(fs.GetHomeNode(), "")
 	}
 }
@@ -67,7 +67,7 @@ func checkDeadlineAndDelete(path string, actualPathPrefix string) error {
 			return err
 		}
 		logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{
-			"Status": "SUCCESS", "FolderPath": actualPathPrefix,
+			"DeleteStatus": "SUCCESS", "FolderPath": actualPathPrefix,
 			"Mode": "Expired"})
 		logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 

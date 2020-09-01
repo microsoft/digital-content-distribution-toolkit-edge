@@ -161,12 +161,12 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 	subpath := ""
 	for _, folder := range hierarchy {
 		subpath = subpath + folder + "/"
-		fmt.Println("Printing buckets")
+		log.Println("Printing buckets")
 		fs.PrintBuckets()
-		fmt.Println("Printing file sys")
+		log.Println("Printing file sys")
 		fs.PrintFileSystem()
-		fmt.Println("====================")
-		fmt.Println(subpath)
+		log.Println("====================")
+		log.Println(subpath)
 		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
 		fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
 		for i, x := range folderMetadataFilesMap[folder] {

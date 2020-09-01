@@ -95,11 +95,18 @@ func checkForVODViaMstore() error {
 		log.Println("=======(", i, ") Processing for CID:=====", id.ContentID)
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
-			log.Println("[SatdataMstore][checkForVODViaMstore] Error", fmt.Sprintf("%s", err))
+			log.Println("[SatdataMstore][checkForVODViaMstore] Error ", fmt.Sprintf("%s", err))
 			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 			continue
 		}
 	}
+	// Printing the final file sys after processing all the SAT contents
+	log.Println("=========================")
+	log.Println("Printing final buckets after processing all the contents on the SAT....")
+	fs.PrintBuckets()
+	log.Println("Printing final file sys")
+	fs.PrintFileSystem()
+	log.Println("==========================")
 	return nil
 }
 
@@ -119,10 +126,14 @@ func getMetadataAPI(contentId string) error {
 	if jsonErr != nil {
 		return jsonErr
 	}
-	// check if the status is 0
 	if vod.Status == "15" {
-		return errors.New("No metadata available")
+		return fmt.Errorf("getMetadataAPI: No metadata available for CID %s ", contentId)
 	}
+	if !strings.HasPrefix(vod.Metadata.MovieId, "BINE_") {
+		log.Println("[SatdataMstore][checkForVODViaMstore] Not a BINE Content")
+		return nil
+	}
+
 	if _heirarchy, err := getMstoreFiles(vod); err != nil {
 		logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": _heirarchy, "Channel": "SES"})
 		return err
@@ -168,24 +179,24 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	for _, metadatafileEntry := range vod.Metadata.UserDefined.MetadataFiles.File {
 		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileInfo{metadatafileEntry.Filename, metadatafileEntry.Checksum})
 	}
-	//fmt.Println(folderMetadataFilesMap)
+	//log.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
 	for _, bulkfileEntry := range vod.Metadata.UserDefined.BulkFiles.File {
 		folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileInfo{bulkfileEntry.Filename, bulkfileEntry.Checksum})
 	}
-	//fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
+	//log.Println("\nBulkfiles Map", folderBulkFilesMap)
 
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
-	log.Println("heirarchy: ", hierarchy)
+	log.Println("heirarchy of the Content from SAT: ", hierarchy)
 	subpath := ""
 	for _, folder := range hierarchy {
 		subpath = subpath + folder + "/"
-		fmt.Println("Printing buckets")
+		log.Println("Printing buckets")
 		fs.PrintBuckets()
-		fmt.Println("Printing file sys")
+		log.Println("Printing file sys")
 		fs.PrintFileSystem()
-		fmt.Println("====================")
-		fmt.Println("subpath: ", subpath)
+		log.Println("====================")
+		log.Println("Creating subpath of the heirarchy: ", subpath)
 		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
 		fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
 		for i, x := range folderMetadataFilesMap[folder] {
@@ -214,17 +225,21 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 			// 	continue
 			// }
 			if err.Error() == "[Filesystem][CreateFolder] A folder with the same name at the requested level already exists" {
+				log.Println("[SatdataMstore] ", fmt.Sprintf("Path -> %s ::", subpath), fmt.Sprintf("%s", err))
 				continue
 			}
 			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 			return _heirarchy, err
 		}
 
-		log.Println("")
-		fs.PrintBuckets()
-		fs.PrintFileSystem()
-		log.Println("")
+		log.Println("Subpath heirarchy created in the file sys.")
 	}
+	log.Println("Printing the heirarchy created...")
+	log.Println("Printing buckets")
+	fs.PrintBuckets()
+	log.Println("Printing file sys")
+	fs.PrintFileSystem()
+	log.Println("====================")
 	//trigger DELETE API--- if to be removed later
 	if deleteFlag {
 		if err := deleteAPI(cid); err != nil {
@@ -258,7 +273,7 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 			log.Println("Invalid File type: ", x[0])
 			continue
 		}
-		fmt.Println(downloadpath)
+		log.Println(downloadpath)
 		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
 			return err
 		}
@@ -325,17 +340,17 @@ func deleteAPI(cid string) error {
 	return nil
 }
 func testMstore() error {
-	fmt.Println("TEST")
+	log.Println("TEST")
 	file, err := os.Open("test/resp3.json")
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
 	defer file.Close()
 	bytevalue, _ := ioutil.ReadAll(file)
 	var vod VodInfo
 	if err = json.Unmarshal(bytevalue, &vod); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
 	if vod.Status == "15" {
