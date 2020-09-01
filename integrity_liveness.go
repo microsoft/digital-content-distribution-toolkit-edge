@@ -21,7 +21,7 @@ func checkIntegrity(interval int) {
 				continue
 			}
 			folder_name, _ := fs.GetFolderNameForNode(children[i : i+fs.GetNodeLength()])
-			fmt.Println("-----------", folder_name)
+			log.Println("----checking Folder: ------", folder_name)
 			abstractedPath := filepath.Join(fs.GetHomeFolder(), string(children[i:i+fs.GetNodeLength()]))
 			fmt.Println(abstractedPath)
 			m_c, m_t := checkfiles(abstractedPath, cfg.Section("DEVICE_INFO").Key("METADATA_FOLDER").String())

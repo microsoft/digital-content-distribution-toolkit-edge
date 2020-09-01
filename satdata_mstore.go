@@ -101,12 +101,12 @@ func checkForVODViaMstore() error {
 		}
 	}
 	// Printing the final file sys after processing all the SAT contents
-	fmt.Println("=========================")
-	fmt.Println("Printing final buckets after processing all the contents on the SAT....")
+	log.Println("=========================")
+	log.Println("Printing final buckets after processing all the contents on the SAT....")
 	fs.PrintBuckets()
-	fmt.Println("Printing final file sys")
+	log.Println("Printing final file sys")
 	fs.PrintFileSystem()
-	fmt.Println("==========================")
+	log.Println("==========================")
 	return nil
 }
 
@@ -179,24 +179,24 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	for _, metadatafileEntry := range vod.Metadata.UserDefined.MetadataFiles.File {
 		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileInfo{metadatafileEntry.Filename, metadatafileEntry.Checksum})
 	}
-	//fmt.Println(folderMetadataFilesMap)
+	//log.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
 	for _, bulkfileEntry := range vod.Metadata.UserDefined.BulkFiles.File {
 		folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileInfo{bulkfileEntry.Filename, bulkfileEntry.Checksum})
 	}
-	//fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
+	//log.Println("\nBulkfiles Map", folderBulkFilesMap)
 
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
-	fmt.Println("heirarchy of the Content from SAT: ", hierarchy)
+	log.Println("heirarchy of the Content from SAT: ", hierarchy)
 	subpath := ""
 	for _, folder := range hierarchy {
 		subpath = subpath + folder + "/"
-		fmt.Println("Printing buckets")
+		log.Println("Printing buckets")
 		fs.PrintBuckets()
-		fmt.Println("Printing file sys")
+		log.Println("Printing file sys")
 		fs.PrintFileSystem()
-		fmt.Println("====================")
-		fmt.Println("Creating subpath of the heirarchy: ", subpath)
+		log.Println("====================")
+		log.Println("Creating subpath of the heirarchy: ", subpath)
 		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
 		fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
 		for i, x := range folderMetadataFilesMap[folder] {
@@ -234,12 +234,12 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 
 		log.Println("Subpath heirarchy created in the file sys.")
 	}
-	fmt.Println("Printing the heirarchy created...")
-	fmt.Println("Printing buckets")
+	log.Println("Printing the heirarchy created...")
+	log.Println("Printing buckets")
 	fs.PrintBuckets()
-	fmt.Println("Printing file sys")
+	log.Println("Printing file sys")
 	fs.PrintFileSystem()
-	fmt.Println("====================")
+	log.Println("====================")
 	//trigger DELETE API--- if to be removed later
 	if deleteFlag {
 		if err := deleteAPI(cid); err != nil {
@@ -273,7 +273,7 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 			log.Println("Invalid File type: ", x[0])
 			continue
 		}
-		fmt.Println(downloadpath)
+		log.Println(downloadpath)
 		if err := os.MkdirAll(filepath.Dir(downloadpath), 0700); err != nil {
 			return err
 		}
@@ -340,17 +340,17 @@ func deleteAPI(cid string) error {
 	return nil
 }
 func testMstore() error {
-	fmt.Println("TEST")
+	log.Println("TEST")
 	file, err := os.Open("test/resp3.json")
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
 	defer file.Close()
 	bytevalue, _ := ioutil.ReadAll(file)
 	var vod VodInfo
 	if err = json.Unmarshal(bytevalue, &vod); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
 	if vod.Status == "15" {

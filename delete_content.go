@@ -13,7 +13,7 @@ import (
 func deleteContent(interval int) {
 	for true {
 		time.Sleep(time.Duration(interval) * time.Second)
-		fmt.Println("--------Checking for validity dates of the Contents----------")
+		log.Println("--------Checking for validity dates of the Contents----------")
 		traverse(fs.GetHomeNode(), "")
 	}
 }

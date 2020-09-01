@@ -52,11 +52,11 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 
 	log.Println("[HandleMethodCalls][Download]", fmt.Sprintf("Path to be downloaded/added: %s", download_params.GetFolderpath()))
 	hierarchy := strings.Split(strings.Trim(download_params.GetFolderpath(), "/"), "/")
-	fmt.Println("Printing buckets before download")
+	log.Println("Printing buckets before download")
 	fs.PrintBuckets()
-	fmt.Println("Printing file sys")
+	log.Println("Printing file sys")
 	fs.PrintFileSystem()
-	fmt.Println("====================")
+	log.Println("====================")
 	deadline := download_params.GetDeadline()
 	addToExisting := download_params.GetAddtoexisting()
 	metafilesLen := len(download_params.GetMetadatafiles())
@@ -222,11 +222,11 @@ func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.Delet
 	folder_path := delete_params.GetFolderpath()
 	log.Println("[HandleMethodCalls][Delete]", fmt.Sprintf("Path to be deleted: %s", folder_path))
 	hierarchy := strings.Split(strings.Trim(folder_path, "/"), "/")
-	fmt.Println("Printing buckets before deletion")
+	log.Println("Printing buckets before deletion")
 	fs.PrintBuckets()
-	fmt.Println("Printing file sys")
+	log.Println("Printing file sys")
 	fs.PrintFileSystem()
-	fmt.Println("====================")
+	log.Println("====================")
 	if delete_params.GetRecursive() {
 		err := fs.RecursiveDeleteFolder(hierarchy)
 		if err != nil {
@@ -244,10 +244,10 @@ func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.Delet
 			return &pb.Response{Responsemessage: fmt.Sprintf("Folder not deleted: %v", err)}, nil
 		}
 	}
-	fmt.Println("=========== After deletion =================")
-	fmt.Println("Printing buckets")
+	log.Println("=========== After deletion =================")
+	log.Println("Printing buckets")
 	fs.PrintBuckets()
-	fmt.Println("Printing file sys ")
+	log.Println("Printing file sys ")
 	fs.PrintFileSystem()
 	logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "SUCCESS", "FolderPath": delete_params.GetFolderpath(), "Mode": "CloudCommand"})
 	logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
