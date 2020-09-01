@@ -100,6 +100,13 @@ func checkForVODViaMstore() error {
 			continue
 		}
 	}
+	// Printing the final file sys after processing all the SAT contents
+	fmt.Println("=========================")
+	fmt.Println("Printing final buckets after processing all the contents on the SAT....")
+	fs.PrintBuckets()
+	fmt.Println("Printing final file sys")
+	fs.PrintFileSystem()
+	fmt.Println("==========================")
 	return nil
 }
 
@@ -180,7 +187,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	//fmt.Println("\nBulkfiles Map", folderBulkFilesMap)
 
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
-	log.Println("heirarchy: ", hierarchy)
+	fmt.Println("heirarchy of the Content from SAT: ", hierarchy)
 	subpath := ""
 	for _, folder := range hierarchy {
 		subpath = subpath + folder + "/"
@@ -189,7 +196,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		fmt.Println("Printing file sys")
 		fs.PrintFileSystem()
 		fmt.Println("====================")
-		fmt.Println("subpath: ", subpath)
+		fmt.Println("Creating subpath of the heirarchy: ", subpath)
 		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
 		fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
 		for i, x := range folderMetadataFilesMap[folder] {
@@ -218,17 +225,21 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 			// 	continue
 			// }
 			if err.Error() == "[Filesystem][CreateFolder] A folder with the same name at the requested level already exists" {
+				log.Println("[SatdataMstore] ", fmt.Sprintf("Path -> %s ::", subpath), fmt.Sprintf("%s", err))
 				continue
 			}
 			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 			return _heirarchy, err
 		}
 
-		log.Println("")
-		fs.PrintBuckets()
-		fs.PrintFileSystem()
-		log.Println("")
+		log.Println("Subpath heirarchy created in the file sys.")
 	}
+	fmt.Println("Printing the heirarchy created...")
+	fmt.Println("Printing buckets")
+	fs.PrintBuckets()
+	fmt.Println("Printing file sys")
+	fs.PrintFileSystem()
+	fmt.Println("====================")
 	//trigger DELETE API--- if to be removed later
 	if deleteFlag {
 		if err := deleteAPI(cid); err != nil {
