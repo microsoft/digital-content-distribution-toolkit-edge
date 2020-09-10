@@ -40,12 +40,13 @@ func verifyToken(token string) (*Claims, error) {
 		}
 		fmt.Println(err.Error())
 		fmt.Println(i)
+		logger.Log("Debug", "Middleware", map[string]string{"Token": token, "Function": "verifyToken", "Error": err.Error(), "publicKey": string(i)})
 	}
-
 	return nil, fmt.Errorf("Token is invalid")
 }
 
 func AuthRequiredMiddleware(c *gin.Context) {
+	logger.Log("Debug", "Middleware", map[string]string{"Request path": c.FullPath(), "Request queries": ""})
 	authToken := c.GetHeader("Authorization")
 	fmt.Println("Received token is: ", authToken)
 	authToken = strings.Replace(authToken, "Bearer ", "", 1)

@@ -53,7 +53,11 @@ steps:
     command: 'get'
     arguments: '-u github.com/google/uuid'
     workingDirectory: '$(System.DefaultWorkingDirectory)'
-
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: 'github.com/natefinch/lumberjack'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
 - task: CmdLine@2
   displayName: "Building ARM executable"
   inputs:
