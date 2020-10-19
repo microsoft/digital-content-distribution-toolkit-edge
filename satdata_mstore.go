@@ -187,7 +187,9 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	//log.Println("\nBulkfiles Map", folderBulkFilesMap)
 
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
-	log.Println("heirarchy of the Content from SAT: ", hierarchy)
+	log.Println("heirarchy of Contents from SAT before splicing: ", hierarchy)
+	hierarchy = hierarchy[:len(hierarchy)-1]
+	log.Println("heirarchy of the Content from SAT after splicing: ", hierarchy)
 	subpath := ""
 	for _, folder := range hierarchy {
 		subpath = subpath + folder + "/"
@@ -219,7 +221,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		fileInfos[metafilesLen+bulkfilesLen] = make([]string, 5)
 		fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline.Unix(), 10)
 		subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
-		err := fs.CreateDownloadNewFolder(subpathA, copyFiles, fileInfos)
+		err := fs.CreateDownloadNewFolder(subpathA, copyFiles, fileInfos, false, "")
 		if err != nil {
 			// if eval, ok := err.(*fs.FolderExistError); ok {
 			// 	continue
@@ -233,6 +235,14 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		}
 
 		log.Println("Subpath heirarchy created in the file sys.")
+	}
+	subpathA := strings.Split(strings.Trim(_heirarchy, "/"), "/")
+	satelliteFilePath := filepath.Dir(vod.Metadata.VideoFilename)
+	log.Println("[SatdataMstore] Inserting Satellite folder in db from", satelliteFilePath)
+	err := fs.CreateDownloadNewFolder(subpathA, copyFiles, nil, true, satelliteFilePath)
+	if err != nil {
+		log.Println("[SatdataMstore] ", fmt.Sprintf("Path %s not downloaded", _heirarchy))
+		return _heirarchy, err
 	}
 	log.Println("Printing the heirarchy created...")
 	log.Println("Printing buckets")

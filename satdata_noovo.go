@@ -188,7 +188,7 @@ func downloadContent(vod VodObj, _heirarchy string) error {
 		fileInfos[metafilesLen+bulkfilesLen] = make([]string, 5)
 		fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline.Unix(), 10)
 		subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
-		err := fs.CreateDownloadNewFolder(subpathA, DownloadFiles, fileInfos)
+		err := fs.CreateDownloadNewFolder(subpathA, DownloadFiles, fileInfos, false, "")
 		if err != nil {
 			log.Println(err)
 			// if eval, ok := err.(*fs.FolderExistError); ok {

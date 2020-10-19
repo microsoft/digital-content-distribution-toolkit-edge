@@ -195,6 +195,7 @@ func getAvailableFolders() []AvailableFolder {
 	for _, leaf := range leaves {
 		fmt.Println("Leaf is : ", leaf)
 		osFsPath, err := fs.GetActualPathForAbstractedPath(leaf)
+		isSatellite := fs.IsSatelliteFolder(leaf)
 		fmt.Println("Os file path: ", osFsPath)
 		leaf = strings.Replace(leaf, "MSR", "", 1)
 		leaf = strings.Replace(leaf, "//", "/", 1)
@@ -212,9 +213,13 @@ func getAvailableFolders() []AvailableFolder {
 						if len(osFsPath) > 1 && osFsPath[0] == '/' {
 							osFsPath = osFsPath[1:]
 						}
-						folderMetadata.Thumbnail = getDownloadableURL(osFsPath, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail))
+						var prefix string = "/%s"
+						if !isSatellite {
+							prefix = "/metadatafiles/%s"
+						}
+						folderMetadata.Thumbnail = getDownloadableURL(osFsPath, fmt.Sprintf(prefix, folderMetadata.Thumbnail))
 						fmt.Println("Thumbnail URL: ", folderMetadata.Thumbnail)
-						folderMetadata.Thumbnail2X = getDownloadableURL(osFsPath, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail2X))
+						folderMetadata.Thumbnail2X = getDownloadableURL(osFsPath, fmt.Sprintf(prefix, folderMetadata.Thumbnail2X))
 						folderMetadata.Path = osFsPath
 						folderMetadata.FolderUrl = "http://{HUB_IP}:5000/static/" + osFsPath
 						fmt.Println("Folder size is: ", folderSize)
