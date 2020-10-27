@@ -141,6 +141,31 @@ func getMetadataAPI(contentId string) error {
 	return nil
 }
 
+func populateFileInfos(folder string, pushId string, folderMetadataFilesMap map[string][]FileInfo, folderBulkFilesMap map[string][]FileInfo, filepathMap map[string]string, deadline time.Time) [][]string {
+	metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
+	fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
+	for i, x := range folderMetadataFilesMap[folder] {
+		fileInfos[i] = make([]string, 5)
+		fileInfos[i][0] = x.Name
+		fileInfos[i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
+		fileInfos[i][2] = x.Hashsum
+		fileInfos[i][3] = "metadata"
+		fileInfos[i][4] = strconv.FormatInt(deadline.Unix(), 10)
+	}
+	for i, x := range folderBulkFilesMap[folder] {
+		fileInfos[metafilesLen+i] = make([]string, 5)
+		fileInfos[metafilesLen+i][0] = x.Name
+		fileInfos[metafilesLen+i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
+		fileInfos[metafilesLen+i][2] = x.Hashsum
+		fileInfos[metafilesLen+i][3] = "bulkfile"
+		fileInfos[metafilesLen+i][4] = strconv.FormatInt(deadline.Unix(), 10)
+	}
+	// info for the folder deadline
+	fileInfos[metafilesLen+bulkfilesLen] = make([]string, 5)
+	fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline.Unix(), 10)
+	return fileInfos
+}
+
 func getMstoreFiles(vod VodInfo) (string, error) {
 	pushId := strconv.Itoa(vod.Metadata.UserDefined.PushId)
 	cid := vod.Metadata.CID
@@ -188,10 +213,10 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
 	log.Println("heirarchy of Contents from SAT before splicing: ", hierarchy)
-	hierarchy = hierarchy[:len(hierarchy)-1]
 	log.Println("heirarchy of the Content from SAT after splicing: ", hierarchy)
 	subpath := ""
-	for _, folder := range hierarchy {
+	var leafFileInfos [][]string
+	for idx, folder := range hierarchy {
 		subpath = subpath + folder + "/"
 		log.Println("Printing buckets")
 		fs.PrintBuckets()
@@ -199,47 +224,34 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		fs.PrintFileSystem()
 		log.Println("====================")
 		log.Println("Creating subpath of the heirarchy: ", subpath)
-		metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
-		fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
-		for i, x := range folderMetadataFilesMap[folder] {
-			fileInfos[i] = make([]string, 5)
-			fileInfos[i][0] = x.Name
-			fileInfos[i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
-			fileInfos[i][2] = x.Hashsum
-			fileInfos[i][3] = "metadata"
-			fileInfos[i][4] = strconv.FormatInt(deadline.Unix(), 10)
-		}
-		for i, x := range folderBulkFilesMap[folder] {
-			fileInfos[metafilesLen+i] = make([]string, 5)
-			fileInfos[metafilesLen+i][0] = x.Name
-			fileInfos[metafilesLen+i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
-			fileInfos[metafilesLen+i][2] = x.Hashsum
-			fileInfos[metafilesLen+i][3] = "bulkfile"
-			fileInfos[metafilesLen+i][4] = strconv.FormatInt(deadline.Unix(), 10)
-		}
-		// info for the folder deadline
-		fileInfos[metafilesLen+bulkfilesLen] = make([]string, 5)
-		fileInfos[metafilesLen+bulkfilesLen][4] = strconv.FormatInt(deadline.Unix(), 10)
-		subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
-		err := fs.CreateDownloadNewFolder(subpathA, copyFiles, fileInfos, false, "")
-		if err != nil {
-			// if eval, ok := err.(*fs.FolderExistError); ok {
-			// 	continue
-			// }
-			if err.Error() == "[Filesystem][CreateFolder] A folder with the same name at the requested level already exists" {
-				log.Println("[SatdataMstore] ", fmt.Sprintf("Path -> %s ::", subpath), fmt.Sprintf("%s", err))
-				continue
-			}
-			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
-			return _heirarchy, err
-		}
 
-		log.Println("Subpath heirarchy created in the file sys.")
+		if idx != len(hierarchy)-1 {
+			fileInfos := populateFileInfos(folder, pushId, folderMetadataFilesMap, folderBulkFilesMap, filepathMap, deadline)
+
+			subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
+			err := fs.CreateDownloadNewFolder(subpathA, copyFiles, fileInfos, false, "")
+			if err != nil {
+				// if eval, ok := err.(*fs.FolderExistError); ok {
+				// 	continue
+				// }
+				if err.Error() == "[Filesystem][CreateFolder] A folder with the same name at the requested level already exists" {
+					log.Println("[SatdataMstore] ", fmt.Sprintf("Path -> %s ::", subpath), fmt.Sprintf("%s", err))
+					continue
+				}
+				log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
+				return _heirarchy, err
+			}
+
+			log.Println("Subpath heirarchy created in the file sys.")
+		} else {
+			leafFileInfos = populateFileInfos(folder, pushId, folderMetadataFilesMap, folderBulkFilesMap, filepathMap, deadline)
+			log.Println("Skipping last element of hierarchy ")
+		}
 	}
 	subpathA := strings.Split(strings.Trim(_heirarchy, "/"), "/")
 	satelliteFilePath := filepath.Dir(vod.Metadata.VideoFilename)
 	log.Println("[SatdataMstore] Inserting Satellite folder in db from", satelliteFilePath)
-	err := fs.CreateDownloadNewFolder(subpathA, copyFiles, nil, true, satelliteFilePath)
+	err := fs.CreateDownloadNewFolder(subpathA, generateSatelliteFolderIntegrity, leafFileInfos, true, satelliteFilePath)
 	if err != nil {
 		log.Println("[SatdataMstore] ", fmt.Sprintf("Path %s not downloaded", _heirarchy))
 		return _heirarchy, err
@@ -304,6 +316,20 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 	//handled if no files to be downloaded-- only folder created and deadline.txt
 	if err := storeDeadline(filePath, fileInfos[0][4]); err != nil {
 		return errors.New(fmt.Sprintf("Could not store validity end date: %s", err))
+	}
+	return nil
+}
+
+func generateSatelliteFolderIntegrity(folderPath string, fileInfos [][]string) error {
+	for _, x := range fileInfos {
+		err := matchSHA256(x[1], x[2])
+		if err != nil {
+			return errors.New(fmt.Sprintf("Hashsum did not match: %s", err.Error()))
+		}
+		//store it in a file
+		if err := storeHashsum(x[1], x[2]); err != nil {
+			return errors.New(fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
+		}
 	}
 	return nil
 }

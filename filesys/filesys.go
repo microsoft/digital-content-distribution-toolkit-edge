@@ -525,13 +525,16 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 		return err
 	}
 
-	if !isSatellite {
-		// downlaod the files, check hashsum is done in dfunc
-		err = dfunc(actual_path, downloadParams)
-	} else {
+	if isSatellite {
 		fmt.Println("Marking folder ", node, " as satellite with path pointing to ", satelliteFolderPath)
 		err = fs.MarkFolderSatellite(node, satelliteFolderPath)
+		if err != nil {
+			fmt.Println("Error while marking folder ", node, " as satellite, err: ", err)
+			return err
+		}
 	}
+
+	err = dfunc(actual_path, downloadParams)
 
 	if err != nil {
 		f_err := os.RemoveAll(actual_path)
