@@ -488,6 +488,16 @@ func (fs *FileSystem) IsSatelliteFolder(node string) bool {
 	return err == nil
 }
 
+func (fs *FileSystem) IsSatelliteLeaf(abstractPath string) bool {
+	hierarchy := strings.Split(strings.Trim(abstractPath, "/"), "/")
+	node, err := fs.getNodeForPath(hierarchy)
+	if err != nil {
+		return false
+	}
+	_, err = fs.GetSatelliteFolderPath(nodeToString(node))
+	return err == nil
+}
+
 func (fs *FileSystem) GetSatelliteFolderPath(node string) (string, error) {
 	var path []byte
 	err := fs.nodesDB.View(func(tx *bolt.Tx) error {

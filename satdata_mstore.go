@@ -46,7 +46,7 @@ type VodInfo struct {
 					FolderId string `json:"folderId"`
 				} `json:"file"`
 			} `json:"bulkFiles"`
-			PushId int `json:"pushId"`
+			PushId string `json:"pushId"`
 		} `json:"userDefined"`
 		MovieId         string    `json:"movieID"`
 		CID             string    `json:"CID"`
@@ -147,7 +147,7 @@ func populateFileInfos(folder string, pushId string, folderMetadataFilesMap map[
 	for i, x := range folderMetadataFilesMap[folder] {
 		fileInfos[i] = make([]string, 5)
 		fileInfos[i][0] = x.Name
-		fileInfos[i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
+		fileInfos[i][1] = filepathMap[x.Name]
 		fileInfos[i][2] = x.Hashsum
 		fileInfos[i][3] = "metadata"
 		fileInfos[i][4] = strconv.FormatInt(deadline.Unix(), 10)
@@ -155,7 +155,7 @@ func populateFileInfos(folder string, pushId string, folderMetadataFilesMap map[
 	for i, x := range folderBulkFilesMap[folder] {
 		fileInfos[metafilesLen+i] = make([]string, 5)
 		fileInfos[metafilesLen+i][0] = x.Name
-		fileInfos[metafilesLen+i][1] = filepathMap[pushId+"_"+folder+"_"+x.Name]
+		fileInfos[metafilesLen+i][1] = filepathMap[x.Name]
 		fileInfos[metafilesLen+i][2] = x.Hashsum
 		fileInfos[metafilesLen+i][3] = "bulkfile"
 		fileInfos[metafilesLen+i][4] = strconv.FormatInt(deadline.Unix(), 10)
@@ -167,7 +167,7 @@ func populateFileInfos(folder string, pushId string, folderMetadataFilesMap map[
 }
 
 func getMstoreFiles(vod VodInfo) (string, error) {
-	pushId := strconv.Itoa(vod.Metadata.UserDefined.PushId)
+	pushId := (vod.Metadata.UserDefined.PushId)
 	cid := vod.Metadata.CID
 	deadline := vod.Metadata.ValidityEndDate
 	var _heirarchy string
@@ -253,7 +253,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	log.Println("[SatdataMstore] Inserting Satellite folder in db from", satelliteFilePath)
 	err := fs.CreateDownloadNewFolder(subpathA, generateSatelliteFolderIntegrity, leafFileInfos, true, satelliteFilePath)
 	if err != nil {
-		log.Println("[SatdataMstore] ", fmt.Sprintf("Path %s not downloaded", _heirarchy))
+		log.Println("[SatdataMstore] ", fmt.Sprintf("Path %s not downloaded", _heirarchy, " Error: ", err))
 		return _heirarchy, err
 	}
 	log.Println("Printing the heirarchy created...")
@@ -282,6 +282,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 
 func copyFiles(filePath string, fileInfos [][]string) error {
 	for i, x := range fileInfos {
+		log.Println("CopyFiles: ", x)
 		if i == len(fileInfos)-1 {
 			break
 		}
@@ -321,21 +322,32 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 }
 
 func generateSatelliteFolderIntegrity(folderPath string, fileInfos [][]string) error {
-	for _, x := range fileInfos {
+	if len(fileInfos) == 0 {
+		return errors.New(fmt.Sprintf("FileInfos length is 0 for folder ", folderPath, " in generateSatelliteFolder"))
+	}
+	for i, x := range fileInfos {
+		if i == len(fileInfos)-1 {
+			break
+		}
+		log.Println("generateSatelliteFolderIntegrity: ", x)
 		err := matchSHA256(x[1], x[2])
 		if err != nil {
-			return errors.New(fmt.Sprintf("Hashsum did not match: %s", err.Error()))
+			return errors.New(fmt.Sprintf("Hashsum did not match: %s for file: %s value: %s", err.Error(), x[1], x[2]))
 		}
 		//store it in a file
 		if err := storeHashsum(x[1], x[2]); err != nil {
 			return errors.New(fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 		}
 	}
+	if err := storeDeadline(folderPath, fileInfos[0][4]); err != nil {
+		return errors.New(fmt.Sprintf("Could not store validity end date: %s", err))
+	}
 	return nil
 }
 
 func copySingleFile(dest, source string) error {
 	t1 := time.Now()
+	log.Println("Copy single file: ", " Src: ", source, " Dest: ", dest)
 	sfile, err := os.Open(source)
 	if err != nil {
 		return err
@@ -376,8 +388,8 @@ func deleteAPI(cid string) error {
 	return nil
 }
 func testMstore() error {
-	log.Println("TEST")
-	file, err := os.Open("test/resp3.json")
+	fmt.Println("TEST")
+	file, err := os.Open("./test.json")
 	if err != nil {
 		log.Println(err)
 		return err
@@ -395,6 +407,9 @@ func testMstore() error {
 	if _, err = getMstoreFiles(vod); err != nil {
 		return err
 	}
+	fmt.Println("Printing buckets")
+	fs.PrintBuckets()
+	fmt.Println("Printing file sys")
+	fs.PrintFileSystem()
 	return nil
-
 }
