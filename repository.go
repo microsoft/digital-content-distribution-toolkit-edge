@@ -195,46 +195,56 @@ func getAvailableFolders() []AvailableFolder {
 	for _, leaf := range leaves {
 		fmt.Println("Leaf is : ", leaf)
 		osFsPath, err := fs.GetActualPathForAbstractedPath(leaf)
+		isSatellite := fs.IsSatelliteLeaf(leaf)
 		fmt.Println("Os file path: ", osFsPath)
+		fmt.Println("Is satellite: ", isSatellite)
 		leaf = strings.Replace(leaf, "MSR", "", 1)
 		leaf = strings.Replace(leaf, "//", "/", 1)
+		parts := strings.Split(leaf, "/")
 		if err == nil {
+			folderId := parts[len(parts)-1]
 			metadataFilesDirectory := path.Join(osFsPath, "metadatafiles")
-			if _, err := os.Stat(metadataFilesDirectory); err == nil {
-				fmt.Println("Metadata files directory for: ", metadataFilesDirectory, " exists")
-				metadataJSONFilePath := path.Join(metadataFilesDirectory, "bine_metadata.json")
-				if _, err := os.Stat(metadataJSONFilePath); err == nil {
-					fmt.Println("Metadata bine_json also exists at: ", metadataJSONFilePath)
-					folderMetadata, err := getMetadataStruct(metadataJSONFilePath)
-					if err == nil {
-						folderSize := getFolderSizeParser(osFsPath)
-						folderMetadata.Size = folderSize
-						if len(osFsPath) > 1 && osFsPath[0] == '/' {
-							osFsPath = osFsPath[1:]
-						}
-						folderMetadata.Thumbnail = getDownloadableURL(osFsPath, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail))
-						fmt.Println("Thumbnail URL: ", folderMetadata.Thumbnail)
-						folderMetadata.Thumbnail2X = getDownloadableURL(osFsPath, fmt.Sprintf("/metadatafiles/%s", folderMetadata.Thumbnail2X))
-						folderMetadata.Path = osFsPath
-						folderMetadata.FolderUrl = "http://{HUB_IP}:5000/static/" + osFsPath
-						fmt.Println("Folder size is: ", folderSize)
-						parts := strings.Split(leaf, "/")
-						secondsDuration, err := getDurationInSeconds(folderMetadata.Duration)
-						if err != nil {
-							secondsDuration = "3600"
-							fmt.Println("Folder duratioon ERROR: ", err)
-						} else {
-							fmt.Println("Folder duration in seconds: ", secondsDuration)
-							folderMetadata.Duration = secondsDuration
-						}
-						availableFolder := AvailableFolder{ID: parts[len(parts)-1], Metadata: folderMetadata}
-						result = append(result, availableFolder)
-					} else {
-						logger.Log("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error())})
+			metadataJSONFilePath := path.Join(metadataFilesDirectory, "bine_metadata.json")
+			if isSatellite {
+				metadataJSONFilePath = path.Join(osFsPath, folderId+"_bine_metadata.json")
+			}
+			if _, err := os.Stat(metadataJSONFilePath); err == nil {
+				fmt.Println("Metadata bine_json also exists at: ", metadataJSONFilePath)
+				folderMetadata, err := getMetadataStruct(metadataJSONFilePath)
+				if err == nil {
+					folderSize := getFolderSizeParser(osFsPath)
+					folderMetadata.Size = folderSize
+					if len(osFsPath) > 1 && osFsPath[0] == '/' {
+						osFsPath = osFsPath[1:]
 					}
+					var prefix string = "/%s"
+					if !isSatellite {
+						prefix = "/metadatafiles/%s"
+					}
+					folderMetadata.Thumbnail = getDownloadableURL(osFsPath, fmt.Sprintf(prefix, folderMetadata.Thumbnail))
+					fmt.Println("Thumbnail URL: ", folderMetadata.Thumbnail)
+					folderMetadata.Thumbnail2X = getDownloadableURL(osFsPath, fmt.Sprintf(prefix, folderMetadata.Thumbnail2X))
+					folderMetadata.Path = osFsPath
+					folderMetadata.FolderUrl = "http://{HUB_IP}:5000/static/" + osFsPath
+					if !isSatellite {
+						folderMetadata.FolderUrl += "/bulkFiles"
+					}
+					fmt.Println("Folder size is: ", folderSize)
+					secondsDuration, err := getDurationInSeconds(folderMetadata.Duration)
+					if err != nil {
+						secondsDuration = "3600"
+						fmt.Println("Folder duratioon ERROR: ", err)
+					} else {
+						fmt.Println("Folder duration in seconds: ", secondsDuration)
+						folderMetadata.Duration = secondsDuration
+					}
+					availableFolder := AvailableFolder{ID: folderId, Metadata: folderMetadata}
+					result = append(result, availableFolder)
+				} else {
+					logger.Log("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error())})
 				}
 			} else {
-				logger.Log("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata directory %s for abstract path %s threw error %s", metadataFilesDirectory, leaf, err.Error())})
+				logger.Log("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata directory %s for abstract path %s threw error %s", metadataJSONFilePath, leaf, err.Error())})
 			}
 		} else {
 			fmt.Println("Error: ", err.Error())
