@@ -108,7 +108,7 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 		log.Println("[HandleMethodCalls][Download][AdditionalFilesSync] Info", fmt.Sprintf("Folder path does not already exist"))
 		return &pb.Response{Responsemessage: fmt.Sprintf("Additional files could not be downloaded: %v", errors.New("Folder does not exist"))}, nil
 	}
-	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos)
+	err := fs.CreateDownloadNewFolder(hierarchy, DownloadFiles, fileInfos, false, "")
 	if err != nil {
 		logger.Log("Error", "HandleMethodCalls[Download]", map[string]string{"Message": err.Error()})
 		logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": download_params.GetFolderpath(), "Channel": "LAN/4G"})

@@ -67,6 +67,11 @@ func (fs *FileSystem) InitFileSystem() error {
 		return err
 	}
 
+	err = fs.CreateBucket("SatelliteMapping")
+	if err != nil {
+		return err
+	}
+
 	err = fs.CreateHome()
 	if err != nil {
 		return err
@@ -449,12 +454,65 @@ func (fs *FileSystem) GetActualPathForAbstractedPath(path string) (string, error
 	if err != nil {
 		return "", err
 	}
-	actual_path := filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node))
-
+	fmt.Println("Node path is ", nodeToString(node))
+	// Check if node path is in SES map
+	var actual_path string
+	if fs.IsSatelliteFolder(nodeToString(node)) {
+		actual_path, err = fs.GetSatelliteFolderPath(nodeToString(node))
+		if err != nil {
+			fmt.Println("Could not find satellite folder path for ", path)
+			return "", err
+		}
+		fmt.Println("Done setting satellite path")
+	} else {
+		// if yes, return that file path
+		actual_path = filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node))
+	}
+	fmt.Println("Actual path is ", actual_path)
 	return actual_path, nil
 }
 
-func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc downloadFunc, downloadParams [][]string) error {
+func (fs *FileSystem) MarkFolderSatellite(node []byte, satelliteFolderPath string) error {
+	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("SatelliteMapping"))
+		fmt.Println("Marking node ", nodeToString(node), " as satellite")
+		if err := b.Put(node, []byte(satelliteFolderPath)); err != nil {
+			return fmt.Errorf("[Filesystem][MarkFolderSatellite] %s", err)
+		}
+		return nil
+	})
+	return err
+}
+
+func (fs *FileSystem) IsSatelliteFolder(node string) bool {
+	_, err := fs.GetSatelliteFolderPath(node)
+	return err == nil
+}
+
+func (fs *FileSystem) IsSatelliteLeaf(abstractPath string) bool {
+	hierarchy := strings.Split(strings.Trim(abstractPath, "/"), "/")
+	node, err := fs.getNodeForPath(hierarchy)
+	if err != nil {
+		return false
+	}
+	_, err = fs.GetSatelliteFolderPath(nodeToString(node))
+	return err == nil
+}
+
+func (fs *FileSystem) GetSatelliteFolderPath(node string) (string, error) {
+	var path []byte
+	err := fs.nodesDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("SatelliteMapping"))
+		path = b.Get([]byte(node))
+		if path == nil {
+			return fmt.Errorf("Satellite folder %s does not exist", node)
+		}
+		return nil
+	})
+	return string(path), err
+}
+
+func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc downloadFunc, downloadParams [][]string, isSatellite bool, satelliteFolderPath string) error {
 	// check if folder creation is a valid operation
 	folder_name := []byte(hierarchy[len(hierarchy)-1])
 	node := RandStringBytes(fs.homeNode)
@@ -478,8 +536,17 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 		return err
 	}
 
-	// downlaod the files, check hashsum is done in dfunc
+	if isSatellite {
+		fmt.Println("Marking folder ", node, " as satellite with path pointing to ", satelliteFolderPath)
+		err = fs.MarkFolderSatellite(node, satelliteFolderPath)
+		if err != nil {
+			fmt.Println("Error while marking folder ", node, " as satellite, err: ", err)
+			return err
+		}
+	}
+
 	err = dfunc(actual_path, downloadParams)
+
 	if err != nil {
 		f_err := os.RemoveAll(actual_path)
 		if f_err != nil {
