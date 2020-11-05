@@ -4,6 +4,7 @@ package filesys
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	bolt "github.com/boltdb/bolt"
 	"github.com/google/uuid"
 )
-
 
 func RandStringBytes(homeNode []byte) []byte {
 	b := homeNode
@@ -508,7 +508,25 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 
 	return nil
 }
-
+func (fs *FileSystem) MoveFolder(source_folder string, destination_folder string) error {
+	if _, err := os.Stat(source_folder); os.IsNotExist(err) {
+		return fmt.Errorf("[Filesystem][MoveFolder] %s", "Source Folder path does not exist")
+	}
+	if _, err := os.Stat(destination_folder); os.IsNotExist(err) {
+		return fmt.Errorf("[Filesystem][MoveFolder] %s", "Destination Folder path does not exist")
+	}
+	subdirs, err := ioutil.ReadDir(source_folder)
+	if err != nil {
+		return fmt.Errorf("[Filesystem][MoveFolder] %s", err)
+	}
+	for _, subdir := range subdirs {
+		err := os.Rename(filepath.Join(source_folder, subdir.Name()), filepath.Join(destination_folder, subdir.Name()))
+		if err != nil {
+			return fmt.Errorf("[Filesystem][MoveFolder] %s", err)
+		}
+	}
+	return nil
+}
 func (fs *FileSystem) GetHomeFolder() string {
 	return filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode))
 }
@@ -591,7 +609,7 @@ func (fs *FileSystem) preOrderTraversal(root []byte, prefix string) []string {
 func (fs *FileSystem) GetLeavesList(actual_path string) ([]string, error) {
 	var startingNode []byte
 	var err error = nil
-	if(strings.Trim(actual_path, "/") == "") {
+	if strings.Trim(actual_path, "/") == "" {
 		startingNode = fs.homeNode
 	} else {
 		hierarchy := strings.Split(strings.Trim(actual_path, "/"), "/")
@@ -604,7 +622,7 @@ func (fs *FileSystem) GetLeavesList(actual_path string) ([]string, error) {
 
 	ans := fs.preOrderTraversal(startingNode, "")
 
-	if(strings.Trim(actual_path, "/") == "") { //when giving all leaf nodes, omit the home folder from path
+	if strings.Trim(actual_path, "/") == "" { //when giving all leaf nodes, omit the home folder from path
 		homeNodeName, _ := fs.GetFolderNameForNode(startingNode)
 		for i, _ := range ans {
 			ans[i] = ans[i][len(homeNodeName)+1:]
@@ -613,7 +631,7 @@ func (fs *FileSystem) GetLeavesList(actual_path string) ([]string, error) {
 
 	ret := make([]string, 0)
 	for _, x := range ans {
-		if(len(x) != 0) {
+		if len(x) != 0 {
 			ret = append(ret, x)
 		}
 	}
