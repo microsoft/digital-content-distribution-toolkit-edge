@@ -463,7 +463,7 @@ func (fs *FileSystem) GetActualPathForAbstractedPath(path string) (string, error
 			fmt.Println("Could not find satellite folder path for ", path)
 			return "", err
 		}
-		fmt.Println("Done setting satellite path")
+		fmt.Println("Satellite folder- Done getting satellite path")
 	} else {
 		// if yes, return that file path
 		actual_path = filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node))
@@ -536,15 +536,6 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 		return err
 	}
 
-	if isSatellite {
-		fmt.Println("Marking folder ", node, " as satellite with path pointing to ", satelliteFolderPath)
-		err = fs.MarkFolderSatellite(node, satelliteFolderPath)
-		if err != nil {
-			fmt.Println("Error while marking folder ", node, " as satellite, err: ", err)
-			return err
-		}
-	}
-
 	err = dfunc(actual_path, downloadParams)
 
 	if err != nil {
@@ -555,7 +546,7 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 		return err
 	}
 
-	// once the actual folder is created, create the folder in abstraction
+	// once the actual folder is created, create the folder in abstraction and mark folder satellie if true
 	err = fs.nodesDB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("FolderNameMapping"))
 		if err := b.Put(node, folder_name); err != nil {
@@ -571,6 +562,14 @@ func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc download
 	err = fs.InsertNode(node, parent)
 	if err != nil {
 		return err
+	}
+	if isSatellite {
+		fmt.Println("Marking folder ", node, " as satellite with path pointing to ", satelliteFolderPath)
+		err = fs.MarkFolderSatellite(node, satelliteFolderPath)
+		if err != nil {
+			fmt.Println("Error while marking folder ", node, " as satellite, err: ", err)
+			return err
+		}
 	}
 
 	return nil
@@ -719,6 +718,14 @@ func (fs *FileSystem) PrintBuckets() {
 		fmt.Println()
 
 		b = tx.Bucket([]byte("FolderNameMapping"))
+
+		c = b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			fmt.Printf("key=%s, value=%s\n", k, v)
+		}
+
+		fmt.Println()
+		b = tx.Bucket([]byte("SatelliteMapping"))
 
 		c = b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
