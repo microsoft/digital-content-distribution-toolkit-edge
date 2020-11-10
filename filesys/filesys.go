@@ -197,7 +197,7 @@ func (fs *FileSystem) GetChildrenForNode(root []byte) ([]byte, error) {
 
 		_temp := b.Get(root)
 		if _temp == nil {
-			return fmt.Errorf("[Filesystem][GetChildrenForNode] can't find node %s in Tree Bucket", nodeToString(_temp))
+			return fmt.Errorf("[Filesystem][GetChildrenForNode] can't find node %s in Tree Bucket. Empty node", nodeToString(_temp))
 		}
 		children = append([]byte{}, _temp...)
 
@@ -344,7 +344,35 @@ func (fs *FileSystem) DeleteNodeSubtree(node []byte) error {
 	if err != nil {
 		return err
 	}
+	if fs.IsSatelliteFolder(nodeToString(node)) {
+		satelliteFolderPath, _ := fs.GetSatelliteFolderPath(nodeToString(node))
+		if err != nil {
+			fmt.Println("Could not find satellite folder path to delete for ", nodeToString(node))
+			return err
+		}
+		err = fs.nodesDB.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte("SatelliteMapping"))
+			if err := b.Delete(node); err != nil {
+				return fmt.Errorf("[Filesystem][DeleteNodeSubtree] %s", err)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println("deleting satellite folder Path:", satelliteFolderPath)
+		err = os.RemoveAll(satelliteFolderPath)
+		if err != nil {
+			return err
+		}
+	}
+	// delete from home folder
 
+	fmt.Println("subtree path deleting....", filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node)))
+	err = os.RemoveAll(filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node)))
+	if err != nil {
+		return err
+	}
 	return err
 }
 
@@ -376,18 +404,28 @@ func (fs *FileSystem) DeleteFolder(hierarchy []string) error {
 
 		return nil
 	})
-
+	if fs.IsSatelliteFolder(nodeToString(node)) {
+		satelliteFolderPath, _ := fs.GetSatelliteFolderPath(nodeToString(node))
+		if err != nil {
+			fmt.Println("Could not find satellite folder path to delete for ", nodeToString(node))
+			return err
+		}
+		err = os.RemoveAll(satelliteFolderPath)
+		if err != nil {
+			return err
+		}
+	}
+	fmt.Println("path deleting....", filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node)))
+	err = os.RemoveAll(filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node)))
+	if err != nil {
+		fmt.Errorf(err.Error())
+		return err
+	}
 	fmt.Println("Deleting from Tree")
 	err = fs.DeleteNodeSubtree(node)
 	if err != nil {
 		return err
 	}
-
-	err = os.RemoveAll(filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node)))
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
