@@ -344,6 +344,7 @@ func (fs *FileSystem) DeleteNodeSubtree(node []byte) error {
 	if err != nil {
 		return err
 	}
+
 	if fs.IsSatelliteFolder(nodeToString(node)) {
 		satelliteFolderPath, _ := fs.GetSatelliteFolderPath(nodeToString(node))
 		if err != nil {
@@ -361,10 +362,15 @@ func (fs *FileSystem) DeleteNodeSubtree(node []byte) error {
 			return err
 		}
 		fmt.Println("deleting satellite folder Path:", satelliteFolderPath)
-		err = os.RemoveAll(satelliteFolderPath)
-		if err != nil {
-			return err
+		if _, err = os.Stat(satelliteFolderPath); os.IsNotExist(err) {
+			fmt.Println("Satellite Folder location does not exist : ", satelliteFolderPath)
+		} else {
+			err = os.RemoveAll(satelliteFolderPath)
+			if err != nil {
+				return err
+			}
 		}
+
 	}
 	// delete from home folder
 
