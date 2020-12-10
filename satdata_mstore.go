@@ -141,7 +141,7 @@ func getMetadataAPI(contentId string) error {
 	return nil
 }
 
-func populateFileInfos(folder string, pushId string, folderMetadataFilesMap map[string][]FileInfo, folderBulkFilesMap map[string][]FileInfo, filepathMap map[string]string, deadline time.Time) [][]string {
+func populateFileInfos(folder string, folderMetadataFilesMap map[string][]FileInfo, folderBulkFilesMap map[string][]FileInfo, filepathMap map[string]string, deadline time.Time) [][]string {
 	metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
 	fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
 	for i, x := range folderMetadataFilesMap[folder] {
@@ -167,8 +167,9 @@ func populateFileInfos(folder string, pushId string, folderMetadataFilesMap map[
 }
 
 func getMstoreFiles(vod VodInfo) (string, error) {
-	pushId := (vod.Metadata.UserDefined.PushId)
+
 	cid := vod.Metadata.CID
+
 	deadline := vod.Metadata.ValidityEndDate
 	var _heirarchy string
 	if vod.Metadata.UserDefined.AncestorIds != "" {
@@ -176,7 +177,8 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	} else {
 		_heirarchy = vod.Metadata.UserDefined.MediaHouse + "/" + vod.Metadata.UserDefined.MediaId
 	}
-	deleteFlag, _ := cfg.Section("DEVICE_INFO").Key("DELETE_FLAG").Bool()
+	fmt.Println("Heirarchy ", _heirarchy)
+	deleteFlag := false
 	path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
 	if path != "" {
 		log.Println(_heirarchy + " already exist.")
@@ -204,12 +206,10 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	for _, metadatafileEntry := range vod.Metadata.UserDefined.MetadataFiles.File {
 		folderMetadataFilesMap[metadatafileEntry.FolderId] = append(folderMetadataFilesMap[metadatafileEntry.FolderId], FileInfo{metadatafileEntry.Filename, metadatafileEntry.Checksum})
 	}
-	//log.Println(folderMetadataFilesMap)
 	folderBulkFilesMap := make(map[string][]FileInfo)
 	for _, bulkfileEntry := range vod.Metadata.UserDefined.BulkFiles.File {
 		folderBulkFilesMap[bulkfileEntry.FolderId] = append(folderBulkFilesMap[bulkfileEntry.FolderId], FileInfo{bulkfileEntry.Filename, bulkfileEntry.Checksum})
 	}
-	//log.Println("\nBulkfiles Map", folderBulkFilesMap)
 
 	hierarchy := strings.Split(strings.Trim(_heirarchy, "/"), "/")
 	log.Println("heirarchy of Contents from SAT before splicing: ", hierarchy)
@@ -226,7 +226,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		log.Println("Creating subpath of the heirarchy: ", subpath)
 
 		if idx != len(hierarchy)-1 {
-			fileInfos := populateFileInfos(folder, pushId, folderMetadataFilesMap, folderBulkFilesMap, filepathMap, deadline)
+			fileInfos := populateFileInfos(folder, folderMetadataFilesMap, folderBulkFilesMap, filepathMap, deadline)
 
 			subpathA := strings.Split(strings.Trim(subpath, "/"), "/")
 			err := fs.CreateDownloadNewFolder(subpathA, copyFiles, fileInfos, false, "")
@@ -244,7 +244,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 
 			log.Println("Subpath heirarchy created in the file sys.")
 		} else {
-			leafFileInfos = populateFileInfos(folder, pushId, folderMetadataFilesMap, folderBulkFilesMap, filepathMap, deadline)
+			leafFileInfos = populateFileInfos(folder, folderMetadataFilesMap, folderBulkFilesMap, filepathMap, deadline)
 			log.Println("Skipping last element of hierarchy ")
 		}
 	}
@@ -309,7 +309,7 @@ func copyFiles(filePath string, fileInfos [][]string) error {
 			return errors.New(fmt.Sprintf("Hashsum did not match: %s", err.Error()))
 		}
 		//store it in a file
-		if err := storeHashsum(downloadpath, x[2]); err != nil {
+		if err := storeHashsum(filepath.Dir(downloadpath), filepath.Base(downloadpath), x[2]); err != nil {
 			return errors.New(fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 		}
 	}
@@ -334,8 +334,9 @@ func generateSatelliteFolderIntegrity(folderPath string, fileInfos [][]string) e
 		if err != nil {
 			return errors.New(fmt.Sprintf("Hashsum did not match: %s for file: %s value: %s", err.Error(), x[1], x[2]))
 		}
+
 		//store it in a file
-		if err := storeHashsum(x[1], x[2]); err != nil {
+		if err := storeHashsum(folderPath, filepath.Base(x[1]), x[2]); err != nil {
 			return errors.New(fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 		}
 	}
@@ -388,19 +389,28 @@ func deleteAPI(cid string) error {
 	return nil
 }
 func testMstore() error {
-	fmt.Println("TEST")
-	file, err := os.Open("./test.json")
+	fmt.Println("Printing buckets")
+	fs.PrintBuckets()
+	fmt.Println("Printing file sys")
+	fs.PrintFileSystem()
+	fmt.Println("TEST file")
+	file, err := os.Open("test/mstore_test.json")
 	if err != nil {
-		log.Println(err)
+		log.Println("ERROR::::::::", err)
 		return err
 	}
 	defer file.Close()
-	bytevalue, _ := ioutil.ReadAll(file)
-	var vod VodInfo
-	if err = json.Unmarshal(bytevalue, &vod); err != nil {
-		log.Println(err)
+	bytevalue, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Println("ERROR::::::::", err)
 		return err
 	}
+	var vod VodInfo
+	if err = json.Unmarshal(bytevalue, &vod); err != nil {
+		log.Println("ERROR::::::::", err)
+		return err
+	}
+	//fmt.Println("Status.......", vod)
 	if vod.Status == "15" {
 		return errors.New("No metadata available")
 	}

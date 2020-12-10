@@ -81,6 +81,21 @@ func matchSHA256(filePath string, trueSHA string) error {
 	}
 	return errors.New("hashsum did not match")
 }
+
+func storeHashsum(pathdir, filename, hash string) error {
+	fileHashStr := filename + "=>" + hash + "\n"
+	fmt.Println("StoreHashsum: ", pathdir)
+	f, err := os.OpenFile(filepath.Join(pathdir, "hashsum.txt"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(fileHashStr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func getDirSizeinMB(path string) float64 {
 	var size float64 = 0
 	err := filepath.Walk(path,

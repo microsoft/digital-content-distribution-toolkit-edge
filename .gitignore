@@ -1,8 +1,8 @@
-static
+static/
 *.db
 *.db.lock
 bine-hub
-MSR
+MSR/
 392.json
 bine*
 resp*
@@ -10,3 +10,7 @@ zzzz
 __pycache__/
 upstream.log
 start_hub.sh
+test_hub_config.ini
+logs/
+test_bine
+public_keys/

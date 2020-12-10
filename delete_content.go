@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -14,7 +15,18 @@ func deleteContent(interval int) {
 	for true {
 		time.Sleep(time.Duration(interval) * time.Second)
 		log.Println("--------Checking for validity dates of the Contents----------")
+		fmt.Println("--------Checking for validity dates of the Contents----------")
+		fmt..Println("Printing buckets before deletion")
+		fs.PrintBuckets()
+		fmt.Println("Printing file sys before deletion")
+		fs.PrintFileSystem()
+		fmt.Println("====================")
 		traverse(fs.GetHomeNode(), "")
+		fmt.Println("Printing buckets after deletion")
+		fs.PrintBuckets()
+		fmt.Println("Printing file sys after deletion")
+		fs.PrintFileSystem()
+		fmt.Println("====================")
 	}
 }
 func traverse(node []byte, prefix string) string {
@@ -34,8 +46,8 @@ func traverse(node []byte, prefix string) string {
 		actualName, _ := fs.GetFolderNameForNode(children[i : i+fs.GetNodeLength()])
 		prefix := prefix + "/" + actualName
 		abstractedPath := filepath.Join(fs.GetHomeFolder(), string(children[i:i+fs.GetNodeLength()]))
-		log.Println("[DeleteContentOnExpiry] Checking Actual Path:", prefix)
-		log.Println("[DeleteContentOnExpiry] Checking corresponding Abstracted path:", abstractedPath)
+		log.Println("[DeleteContentOnExpiry] Checking Abstracted Path:", prefix)
+		log.Println("[DeleteContentOnExpiry] Checking corresponding Actual path:", abstractedPath)
 		err := checkDeadlineAndDelete(abstractedPath, prefix)
 		if err != nil {
 			log.Println("[DeleteContentOnExpiry] Error", fmt.Sprintf("%s", err))
@@ -46,17 +58,23 @@ func traverse(node []byte, prefix string) string {
 	}
 	return prefix
 }
-
-func checkDeadlineAndDelete(path string, actualPathPrefix string) error {
+func getDeadline(path string) (int64, error) {
 	f, err := os.OpenFile(filepath.Join(path, "deadline.txt"), os.O_RDONLY, 0700)
 	if err != nil {
 		log.Println(err)
-		return err
+		return -1, err
 	}
 	defer f.Close()
 	b := make([]byte, 64)
 	read, err := f.Read(b)
 	deadline, _ := strconv.ParseInt(string(b[:read]), 10, 64)
+	return deadline, nil
+}
+func checkDeadlineAndDelete(path string, actualPathPrefix string) error {
+	deadline, err := getDeadline(path)
+	if err != nil || deadline < 0 {
+		return errors.New(fmt.Sprintf("Error in getting the deadline: ", err))
+	}
 	curr := time.Now().Unix()
 	if curr > deadline {
 		log.Println("[DeleteContentOnExpiry] Validity date expired. Deleting ", actualPathPrefix)
@@ -66,6 +84,7 @@ func checkDeadlineAndDelete(path string, actualPathPrefix string) error {
 		if err != nil {
 			return err
 		}
+		log.Println("[DeleteContentOnExpiry] Deleted folder %s and its subtree..", hierarchy)
 		logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{
 			"DeleteStatus": "SUCCESS", "FolderPath": actualPathPrefix,
 			"Mode": "Expired"})

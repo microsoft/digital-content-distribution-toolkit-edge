@@ -1,0 +1,120 @@
+{
+  "status": "0",
+  "metadata": {
+      "editorID": "SES",
+      "displayedName": "",
+      "videoVersion": "SD",
+      "keywords": "",
+      "audioVersion": "",
+      "productionDate": "0",
+      "longSummary": "",
+      "category": "Education",
+      "shortSummary": "This is a dummy short summary",
+      "productionNationality": "",
+      "shortTitle": "This is a dummy short title",
+      "longTitle": "",
+      "actors": "",
+      "comment": "",
+      "directors": "",
+      "duration": "PT00H17M01S",
+      "series": "false",
+      "userDefined": {
+          "mediaHouse": "MSR",
+          "genreDescription": "9fc0fb00a8994164021542b75587124f",
+          "description": "d77278eda9332b8dc99a4aa726f6f149",
+          "isDRM": false,
+          "genreTitle": "9fc0fb00a8994164021542b75587124f",
+          "mediaId": "MachineLearningL1",
+          "parentId": "MachineLearning",
+          "title": "d77278eda9332b8dc99a4aa726f6f149",
+          "parentTitle": "9fc0fb00a8994164021542b75587124f",
+          "metadataFiles": {
+              "file": [
+                {
+                  "filename": "MachineLearningL1_cover.png",
+                  "checksum": "e02d7821816870ee0e58918e35d7f8916144d5359c4b9c02ca5e1b756f87899f",
+                  "filesize": 2104,
+                  "folderId": "MachineLearningL1",
+                  "type": "metadata"
+                },
+                {
+                  "filename": "MachineLearningL1_thumbnail.jpg",
+                  "checksum": "b1f2a066e355ba7be9c01a3afe1843148f50c1868e650ac5290664a580c344cd",
+                  "filesize": 9723,
+                  "folderId": "MachineLearningL1",
+                  "type": "metadata"
+                },
+                {
+                  "filename": "MachineLearningL1_metadata.xml",
+                  "checksum": "7b4bb8b01c333e7fa8145bcec20244197c7763786ef47c9de962effb017d01de",
+                  "filesize": 53790,
+                  "folderId": "MachineLearningL1",
+                  "type": "metadata"
+                },
+                {
+                    "filename": "MachineLearning_metadata.xml",
+                    "checksum": "7b4bb8b01c333e7fa8145bcec20244197c7763786ef47c9de962effb017d01de",
+                    "filesize": 53790,
+                    "folderId": "MachineLearning",
+                    "type": "metadata"
+                },
+                {
+                    "filename": "MachineLearning_genre_cover.png",
+                    "checksum": "e02d7821816870ee0e58918e35d7f8916144d5359c4b9c02ca5e1b756f87899f",
+                    "filesize": 2104,
+                    "folderId": "MachineLearning",
+                    "type": "metadata"
+                  }
+              ]
+            },
+            "pushId": "10",
+            "ancestorIds": "/MachineLearning",
+            "hierarchyLevels": 2,
+            "bulkFiles": {
+              "file": [
+                {
+                  "filename": "MachineLearningL1_vod.mp4",
+                  "checksum": "e754ddcf735de06ac797915b814c933771276831b1d802022036036e0edd4294",
+                  "filesize": 168089812,
+                  "folderId": "MachineLearningL1",
+                  "type": "bulkfile" 
+                  }
+              ]
+                
+            
+            }
+      },
+      "parentalGuidance": "",
+      "movieID": "BINE_0e7ca960-0141-4be3-85b8-bc1a66de7770-b",
+      "price": "0.00",
+      "validityStartDate": "2020-06-02T12:24:56+00:00",
+      "validityEndDate": "2020-06-04T18:24:56+00:00",
+      "CID": "597",
+      "theoricDuration": "",
+      "video filename": "./static/dummyContent/MachineLearningL1_vod.mp4",
+      "trailer filename": "",
+      "cover filename": "./static/dummyContent/MachineLearningL1_cover.png",
+      "thumbnail filename": "./static/dummyContent/MachineLearningL1_thumbnail.jpg",
+      "ad filename": "/media/sda1/mstore/QCAST.ipts/storage/AdsList/04_597_200604065953.ads",
+      "uRLForDataFiles":"./static/dummyContent/",
+      "dataFiles": {
+        "file": [
+          {
+            "filename": "MachineLearning_genre_cover.png",
+            "filesize": 2104,
+            "checksum": ""
+          },
+          {
+            "filename": "MachineLearning_metadata.xml",
+            "filesize": 2104,
+            "checksum": ""
+          },
+          {
+            "filename": "MachineLearningL1_metadata.xml",
+            "filesize": 2104,
+            "checksum": ""
+          }
+        ]
+      }
+  }
+}

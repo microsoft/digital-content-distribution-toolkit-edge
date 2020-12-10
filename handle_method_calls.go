@@ -189,7 +189,7 @@ func DownloadFiles(filePath string, fileInfos [][]string) error {
 			return errors.New(fmt.Sprintf("Hashsum did not match: %s", err.Error()))
 		}
 		//store it in a file
-		if err := storeHashsum(downloadpath, x[2]); err != nil {
+		if err := storeHashsum(filepath.Dir(downloadpath), filepath.Base(downloadpath), x[2]); err != nil {
 			log.Println("[HandleMethodCalls][DownloadFiles] Error", fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 			return errors.New(fmt.Sprintf("Could not store Hashsum in the text file: %s", err))
 		}
@@ -199,21 +199,6 @@ func DownloadFiles(filePath string, fileInfos [][]string) error {
 	if err := storeDeadline(filePath, fileInfos[0][4]); err != nil {
 		log.Println("HandleMethodCalls][DownloadFiles] Error", fmt.Sprintf("Could not store validity end date: %s", err))
 		return errors.New(fmt.Sprintf("Could not store validity end date: %s", err))
-	}
-	return nil
-}
-
-func storeHashsum(path, hash string) error {
-	fileHashStr := filepath.Base(path) + "=>" + hash + "\n"
-	pathdir := filepath.Dir(path)
-	f, err := os.OpenFile(filepath.Join(pathdir, "hashsum.txt"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = f.WriteString(fileHashStr)
-	if err != nil {
-		return err
 	}
 	return nil
 }

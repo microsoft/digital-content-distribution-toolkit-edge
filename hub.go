@@ -1,19 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"sync"
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
 
-	"github.com/natefinch/lumberjack"
 	"github.com/gin-gonic/gin"
+	"github.com/natefinch/lumberjack"
 	ini "gopkg.in/ini.v1"
 
 	filesys "./filesys"
@@ -21,12 +21,10 @@ import (
 	cl "./logger"
 )
 
-
 type PublicKey struct {
-	TimeStamp string  `json:"timestamp"`
+	TimeStamp string `json:"timestamp"`
 	PublicKey string `json:"value"`
 }
-
 
 var logger *cl.Logger
 var fs *filesys.FileSystem
@@ -37,8 +35,8 @@ var device_cfg *ini.File
 func main() {
 	var err, device_err error
 	cfg, err = ini.Load("hub_config.ini")
+	//cfg, err = ini.Load("test_hub_config.ini")
 	device_cfg, device_err = ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
-
 
 	codeLogsFile := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_PATH").String()
 	codeLogsFileMaxSize, err := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_MAX_SIZE").Int()
@@ -47,11 +45,10 @@ func main() {
 
 	log.SetOutput(&lumberjack.Logger{
 		Filename:   codeLogsFile,
-		MaxSize:    codeLogsFileMaxSize,  // megabytes after which new file is created
-		MaxBackups: codeLogsFileMaxBackups,  // number of backups
-		MaxAge:     codeLogsFileMaxAge, //days
+		MaxSize:    codeLogsFileMaxSize,    // megabytes after which new file is created
+		MaxBackups: codeLogsFileMaxBackups, // number of backups
+		MaxAge:     codeLogsFileMaxAge,     //days
 	})
-
 
 	if err != nil {
 		fmt.Printf("Failed to read config file: %v", err)
@@ -108,11 +105,12 @@ func main() {
 	case "mstore":
 		go pollMstore(getdata_interval)
 	}
+
 	liveness_interval, err := cfg.Section("DEVICE_INFO").Key("LIVENESS_SCHEDULER").Int()
 	go liveness(liveness_interval)
 	deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
 	go deleteContent(deletion_interval)
-	
+
 	// setup key manager and load keys
 	storage_url := cfg.Section("APP_AUTHENTICATION").Key("BLOB_STORAGE_KEYS_GET_URL").String()
 	pubkeys_dir := cfg.Section("APP_AUTHENTICATION").Key("PUBLIC_KEY_STORE_PATH").String()
@@ -121,7 +119,7 @@ func main() {
 	km, _ = keymanager.MakeKeyManager(keys_cache_size, pubkeys_dir)
 
 	_, err = os.Stat(pubkeys_dir)
- 
+
 	if os.IsNotExist(err) {
 		log.Println("Making public keys directory")
 		errDir := os.MkdirAll(pubkeys_dir, 0755)
@@ -129,32 +127,32 @@ func main() {
 			logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to make public keys directory: %v", err)})
 			log.Println(fmt.Sprintf("Failed to make public keys directory: %v", err))
 		}
- 
+
 	}
 
 	// get public keys from blob storage
 	resp, err := http.Get(storage_url)
-	if(err != nil) {
+	if err != nil {
 		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to get keys from blob storage: %v", err)})
 		log.Println(fmt.Sprintf("Failed to fetch blob storage url: %v", err))
 	}
 	defer resp.Body.Close()
-	
+
 	body, err := ioutil.ReadAll(resp.Body)
-	if(err != nil) {
+	if err != nil {
 		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
 		log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
 	}
-	
+
 	log.Println(fmt.Sprintf("got body %v from blob storage", string(body)))
 
 	var keys []PublicKey
 	err = json.Unmarshal(body, &keys)
-	if(err != nil) {
+	if err != nil {
 		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
 		log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
 	}
-	
+
 	log.Println(fmt.Sprintf("Got %v keys from blob storage", len(keys)))
 	for _, key := range keys {
 		filePath := filepath.Join(km.PubkeysDir, fmt.Sprintf("%v.pem", key.TimeStamp))
@@ -169,7 +167,6 @@ func main() {
 			log.Println("[AddNewPublicKey] Error", fmt.Sprintf("%s", err))
 		}
 	}
-
 
 	file_times := make([]int64, 0)
 	err = filepath.Walk(pubkeys_dir, func(path string, info os.FileInfo, err error) error {
