@@ -16,7 +16,7 @@ func deleteContent(interval int) {
 		time.Sleep(time.Duration(interval) * time.Second)
 		log.Println("--------Checking for validity dates of the Contents----------")
 		fmt.Println("--------Checking for validity dates of the Contents----------")
-		fmt..Println("Printing buckets before deletion")
+		fmt.Println("Printing buckets before deletion")
 		fs.PrintBuckets()
 		fmt.Println("Printing file sys before deletion")
 		fs.PrintFileSystem()
