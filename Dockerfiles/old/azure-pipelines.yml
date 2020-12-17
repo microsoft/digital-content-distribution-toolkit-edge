@@ -48,16 +48,14 @@ steps:
     command: 'get'
     arguments: '-u github.com/dgrijalva/jwt-go'
     workingDirectory: '$(System.DefaultWorkingDirectory)'
-- task: Go@0
-  inputs:
-    command: 'get'
-    arguments: '-u github.com/google/uuid'
-    workingDirectory: '$(System.DefaultWorkingDirectory)'
-- task: Go@0
-  inputs:
-    command: 'get'
-    arguments: 'github.com/natefinch/lumberjack'
-    workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+- script: |
+    echo ${{ variables.GOARCH }}
+    echo ${{ variables.GOOS }}
+    echo $GOARCH
+    echo $GOOS
+  displayName: "Setting Go build environment variables"
+
 - task: CmdLine@2
   displayName: "Building ARM executable"
   inputs:
@@ -80,14 +78,9 @@ steps:
     script: "docker buildx create --name mybuilder; docker buildx use mybuilder; docker buildx inspect --bootstrap"
 
 - task: CmdLine@2
-  displayName: "Setting up TEMP arm docker file"
-  inputs:
-      script: "./docker_prepare.sh ./Dockerfiles/Dockerfile"
-
-- task: CmdLine@2
   displayName: "Building ARM docker image"
   inputs:
-    script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar -f Dockerfile_tmp .; rm Dockerfile_tmp"
+    script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar -f ./Dockerfiles/Dockerfile ."
 
 - task: CmdLine@2
   displayName: "Loading hub_dev.tar"
@@ -111,19 +104,19 @@ steps:
     arguments: '-o bine'
 
 - task: CmdLine@2
-  displayName: "Setting up TEMP x86 docker file"
-  inputs:
-      script: "./docker_prepare.sh ./Dockerfiles/Dockerfile.x86"
-
-- task: CmdLine@2
   displayName: "Building x86 image"
   inputs:
-    script: "docker build -t $(x86_image_dev) -f ./Dockerfile_tmp .; rm Dockerfile_tmp"
+    script: "docker build -t $(x86_image_dev):$(Build.SourceVersion) -f ./Dockerfiles/Dockerfile.x86 ."
 
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"
   inputs:
     script: "docker push $(x86_image_dev)"
+
+- task: CmdLine@2
+  displayName: "Syncing with Noovo"
+  inputs:
+    script: "./ses-push.sh $(arm_image_dev) $(Build.SourceVersion)"
 
 - task: Docker@2
   displayName: Logout of ACR
