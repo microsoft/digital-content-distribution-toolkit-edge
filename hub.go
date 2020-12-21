@@ -34,8 +34,10 @@ var device_cfg *ini.File
 
 func main() {
 	var err, device_err error
+	fmt.Println("Starting ----------")
 	cfg, err = ini.Load("hub_config.ini")
 	//cfg, err = ini.Load("test_hub_config.ini")
+	fmt.Println("found file ini file")
 	device_cfg, device_err = ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
 
 	codeLogsFile := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_PATH").String()
@@ -110,7 +112,8 @@ func main() {
 	go liveness(liveness_interval)
 	deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
 	go deleteContent(deletion_interval)
-
+	//TODO: remove--- for testing dummy msg
+	//go testContentSyncInfo(120)
 	// setup key manager and load keys
 	storage_url := cfg.Section("APP_AUTHENTICATION").Key("BLOB_STORAGE_KEYS_GET_URL").String()
 	pubkeys_dir := cfg.Section("APP_AUTHENTICATION").Key("PUBLIC_KEY_STORE_PATH").String()
