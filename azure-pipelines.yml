@@ -102,7 +102,7 @@ steps:
 - task: CmdLine@2
   displayName: "Pushing image to docker hub"
   inputs:
-    script: "docker push $(arm_image_dev)"
+    script: "docker push $(arm_image_dev):$(Build.SourceVersion)"
 
 - task: Go@0 
   displayName: "Building x86 executable"  
