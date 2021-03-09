@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -27,57 +26,80 @@ type Message struct {
 	MessageBody    map[string]string
 }
 type TelemetryMessage struct {
-	DeviceIdInData    string
-	TimeStamp         string
-	ContentSyncInfo   ContentSyncInfoMessage
-	ContentDeleteInfo ContentDeleteInfoMessage
-	IntegrityStats    IntegrityStatsMessage
-	HubStorage        float64
-	Liveness          string
-	Error             string
-	Critical          string
-	Warning           string
-	Info              string
-	Debug             string
+	DeviceIdInData                       string                 `json:"DeviceIdInData"`
+	ApplicationName                      string                 `json:"ApplicationName"`
+	ApplicationVersion                   string                 `json:"ApplicationVersion"`
+	TimeStamp                            int64                  `json:"TimeStamp"`
+	AssetDeleteOnDeviceByScheduler       *AssetInfo             `json:"AssetDeleteOnDeviceByScheduler,omitempty"`
+	AssetDeleteOnDeviceByCommand         *AssetInfo             `json:"AssetDeleteOnDeviceByCommand,omitempty"`
+	FailedAssetDeleteOnDeviceByScheduler *AssetInfo             `json:"FailedAssetDeleteOnDeviceByScheduler,omitempty"`
+	FailedAssetDeleteOnDeviceByCommand   *AssetInfo             `json:"FailedAssetDeleteOnDeviceByCommand,omitempty"`
+	AssetDownloadOnDeviceFromSES         *AssetInfo             `json:"AssetDownloadOnDeviceFromSES,omitempty"`
+	AssetDownloadOnDeviceByCommand       *AssetInfo             `json:"AssetDownloadOnDeviceByCommand,omitempty"`
+	FailedAssetDownloadOnMobile          *AssetInfo             `json:"FailedAssetDownloadOnMobile,omitempty"`
+	SucessfulAssetDownloadOnMobile       *AssetInfo             `json:"SucessfulAssetDownloadOnMobile,omitempty"`
+	CorruptedFileStatsFromScheduler      *IntegrityStatsMessage `json:"CorruptedFileStatsFromScheduler,omitempty"`
+
+	HubStorage float64 `json:"HubStorage,omitempty"`
+	Memory     float64 `json:"Memory,omitempty"`
+	Liveness   string  `json:"Liveness,omitempty"`
+	Error      string  `json:"Error,omitempty"`
+	Critical   string  `json:"Critical,omitempty"`
+	Warning    string  `json:"Warning,omitempty"`
+	Info       string  `json:"Info,omitempty"`
+	Debug      string  `json:"Debug,omitempty"`
 }
-type ContentSyncInfoMessage struct {
-	DownloadStatus string
-	AssetSize      float64
-	Channel        string
-	FolderPath     string
-	AssetUpdate    string // for addtoexisting files
-}
-type ContentDeleteInfoMessage struct {
-	DeleteStatus string
-	AssetSize    float64
-	Mode         string
-	FolderPath   string
+type AssetInfo struct {
+	Size             float64 `json:"Size,omitempty"`
+	AssetId          string  `json:"AssetId,omitempty"`
+	RelativeLocation string  `json:"RelativeLocation,omitempty"`
+	IsUpdate         bool    `json:"IsUpdate,omitempty"`
+	StartTime        int64   `json:"StartTime,omitempty"`
+	EndTime          int64   `json:"EndTime,omitempty"`
+	Duration         int     `json:"Duration,omitempty"`
 }
 type IntegrityStatsMessage struct {
-	IntegrityStatus string
-	Filename        string
+	AssetId          string `json:"AssetId,omitempty"`
+	RelativeLocation string `json:"RelativeLocation,omitempty"`
+	Filename         string `json:"Filename,omitempty"`
+	ActualSHA        string `json:"ActualSHA,omitempty"`
+	ExpectedSHA      string `json:"ExpectedSHA,omitempty"`
+}
+type SubValueType struct {
+	StringMessage  string
+	FloatValue     float64
+	AssetInfo      AssetInfo
+	IntegrityStats IntegrityStatsMessage
 }
 
 const (
-	Liveness          EventType = "Liveness"
-	Debug                       = "Debug"
-	Info                        = "Info"
-	Warning                     = "Warning"
-	Error                       = "Error"
-	Critical                    = "Critical"
-	ContentSyncInfo             = "ContentSyncInfo"
-	ContentDeleteInfo           = "ContentDeleteInfo"
-	IntegrityStats              = "IntegrityStats"
-	HubStorage                  = "HubStorage"
+	Liveness                             EventType = "Liveness"
+	Debug                                          = "Debug"
+	Info                                           = "Info"
+	Warning                                        = "Warning"
+	Error                                          = "Error"
+	Critical                                       = "Critical"
+	AssetDeleteOnDeviceByScheduler                 = "AssetDeleteOnDeviceByScheduler"
+	AssetDeleteOnDeviceByCommand                   = "AssetDeleteOnDeviceByCommand"
+	FailedAssetDeleteOnDeviceByScheduler           = "FailedAssetDeleteOnDeviceByScheduler"
+	FailedAssetDeleteOnDeviceByCommand             = "FailedAssetDeleteOnDeviceByCommand"
+	AssetDownloadOnDeviceFromSES                   = "AssetDownloadOnDeviceFromSES"
+	AssetDownloadOnDeviceByCommand                 = "AssetDownloadOnDeviceByCommand"
+	FailedAssetDownloadOnMobile                    = "FailedAssetDownloadOnMobile"
+	SucessfulAssetDownloadOnMobile                 = "SucessfulAssetDownloadOnMobile"
+	CorruptedFileStatsFromScheduler                = "CorruptedFileStatsFromScheduler"
+	HubStorage                                     = "HubStorage"
+	Memory                                         = "Memory"
 )
 const (
-	upstream_address = "HubEdgeProxyModule:5001"
-	applicationName  = "Hub Module"
+	upstream_address   = "HubEdgeProxyModule:5001"
+	applicationName    = "Hub Module"
+	applicationVersion = "v1.0"
 )
 
 func (lt EventType) isValid() error {
 	switch lt {
-	case Liveness, Debug, Info, Warning, Error, Critical, ContentSyncInfo, ContentDeleteInfo, IntegrityStats, HubStorage:
+	case Liveness, Debug, Info, Warning, Error, Critical, AssetDeleteOnDeviceByScheduler, AssetDeleteOnDeviceByCommand, FailedAssetDeleteOnDeviceByScheduler, FailedAssetDeleteOnDeviceByCommand, AssetDownloadOnDeviceFromSES, AssetDownloadOnDeviceByCommand, FailedAssetDownloadOnMobile, SucessfulAssetDownloadOnMobile, CorruptedFileStatsFromScheduler, Memory, HubStorage:
 		return nil
 	}
 	return fmt.Errorf("Invalid log type %v", string(lt))
@@ -124,7 +146,13 @@ func (l *Logger) unlockFile() error {
 
 	return nil
 }
+func (l *Logger) TestLog(eventType string, subType *SubValueType) {
+	if err := EventType(eventType).isValid(); err != nil {
+		fmt.Errorf("[Logger]invalid message type %s", eventType)
+	}
+	l.constructTelemetryMessageAndSend(eventType, *subType)
 
+}
 func (l *Logger) Log(messageType string, messageSubType string, messageBody map[string]string) {
 	if err := EventType(messageType).isValid(); err != nil {
 		fmt.Errorf("[Logger]invalid message type %s", messageType)
@@ -138,13 +166,7 @@ func (l *Logger) Log(messageType string, messageSubType string, messageBody map[
 		log.Println(fmt.Sprintf("[Logger] error in creating message: %v", err))
 	}
 	msgString := string(b)
-	//fmt.Println(msgString)
-	// call grpc method to send the telemetry event
-	if messageType == "Liveness" || messageType == "ContentSyncInfo" {
-		l.constructTelemetryMessageAndSend(messageType, messageBody)
-	}
 
-	//
 	err = l.lockFile()
 	if err != nil {
 		log.Println("[Logger] error in locking file")
@@ -179,6 +201,7 @@ func grpcUpstream(message string) error {
 	fmt.Println("going to send telemetry")
 	r, err := client.SendTelemetry(ctx, &pbTelemetry.TelemetryRequest{ApplicationName: applicationName, TelemetryData: message})
 	if err != nil {
+		log.Println(message)
 		log.Println("could not send telemetry to proxy: %v", err)
 		return err
 	}
@@ -186,24 +209,54 @@ func grpcUpstream(message string) error {
 	return nil
 }
 
-func (l *Logger) constructTelemetryMessageAndSend(mtype string, messageBody map[string]string) {
+func (l *Logger) constructTelemetryMessageAndSend(mtype string, subtype SubValueType) {
 	tm := new(TelemetryMessage)
+	tm.ApplicationName = applicationName
+	tm.ApplicationVersion = applicationVersion
+	tm.DeviceIdInData = l.deviceId
+	tm.TimeStamp = time.Now().Unix()
 	switch EventType(mtype) {
 	case Liveness:
+		tm.Liveness = subtype.StringMessage
 
-		tm.DeviceIdInData = l.deviceId
-		tm.TimeStamp = fmt.Sprintf("%d", time.Now().Unix())
-		tm.Liveness = messageBody["STATUS"]
+	case HubStorage:
+		tm.HubStorage = subtype.FloatValue
+	case Memory:
+		tm.Memory = subtype.FloatValue
+	case AssetDeleteOnDeviceByScheduler:
+		tm.AssetDeleteOnDeviceByScheduler = &subtype.AssetInfo
+	case AssetDeleteOnDeviceByCommand:
+		tm.AssetDeleteOnDeviceByCommand = &subtype.AssetInfo
+	case FailedAssetDeleteOnDeviceByScheduler:
+		tm.FailedAssetDeleteOnDeviceByScheduler = &subtype.AssetInfo
+	case FailedAssetDeleteOnDeviceByCommand:
+		tm.FailedAssetDeleteOnDeviceByCommand = &subtype.AssetInfo
+	case AssetDownloadOnDeviceFromSES:
+		tm.AssetDownloadOnDeviceFromSES = &subtype.AssetInfo
+	case AssetDownloadOnDeviceByCommand:
+		tm.AssetDownloadOnDeviceByCommand = &subtype.AssetInfo
+	case FailedAssetDownloadOnMobile:
+		tm.FailedAssetDownloadOnMobile = &subtype.AssetInfo
+	case SucessfulAssetDownloadOnMobile:
 
-	case ContentSyncInfo:
-		tm.DeviceIdInData = l.deviceId
-		tm.TimeStamp = fmt.Sprintf("%d", time.Now().Unix())
-		tm.ContentSyncInfo.DownloadStatus = messageBody["DownloadStatus"]
-		tm.ContentSyncInfo.FolderPath = messageBody["FolderPath"]
-		tm.ContentSyncInfo.Channel = messageBody["Channel"]
-		temp, _ := strconv.ParseFloat(messageBody["AssetSize"], 64)
-		tm.ContentSyncInfo.AssetSize = temp
-		tm.ContentSyncInfo.AssetUpdate = messageBody["AssetUpdate"]
+		tm.SucessfulAssetDownloadOnMobile = &subtype.AssetInfo
+	case CorruptedFileStatsFromScheduler:
+		tm.CorruptedFileStatsFromScheduler = &subtype.IntegrityStats
+
+		// subMessage := new(ContentSyncInfoMessage)
+		// subMessage.DownloadStatus = messageBody["DownloadStatus"]
+		// subMessage.FolderPath = messageBody["FolderPath"]
+		// subMessage.Channel = messageBody["Channel"]
+		// temp, _ := strconv.ParseFloat(messageBody["AssetSize"], 64)
+		// subMessage.AssetSize = temp
+		// subMessage.AssetUpdate = messageBody["AssetUpdate"]
+		// tm.ContentSyncInfo = subMessage
+		// &tm.ContentSyncInfo.DownloadStatus = messageBody["DownloadStatus"]
+		// &tm.ContentSyncInfo.FolderPath = messageBody["FolderPath"]
+		// &tm.ContentSyncInfo.Channel = messageBody["Channel"]
+		// temp, _ := strconv.ParseFloat(messageBody["AssetSize"], 64)
+		// &tm.ContentSyncInfo.AssetSize = temp
+		// &tm.ContentSyncInfo.AssetUpdate = messageBody["AssetUpdate"]
 	}
 	b, err := json.Marshal(tm)
 	if err != nil {

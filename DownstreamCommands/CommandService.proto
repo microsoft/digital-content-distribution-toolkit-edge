@@ -1,0 +1,23 @@
+﻿syntax = "proto3";
+
+option go_package = "./DownstreamCommands";
+
+package hubedgeproxycommand;
+
+// The greeting service definition.
+service Command {
+  // Receives command from proxy
+  rpc ReceiveCommand (CommandServiceRequest) returns (CommandServiceResponse);
+}
+
+// The request message containing the user's name.
+message CommandServiceRequest {
+	string CommandName = 1;
+	string Payload = 2;
+}
+
+// The response message containing the greetings.
+message CommandServiceResponse {
+  int32 Code = 1;
+  string Message = 2;
+}

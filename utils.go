@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	syscall "golang.org/x/sys/unix"
 )
@@ -130,9 +129,9 @@ func storeDeadline(path, deadline string) error {
 	return nil
 }
 
-func testContentSyncInfo(interval int) {
-	for true {
-		logger.Log("ContentSyncInfo", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": "a/b/c", "AssetSize": fmt.Sprintf("%.2f", 213.56), "Channel": "SES", "AssetUpdate": "No"})
-		time.Sleep(time.Duration(interval) * time.Second)
-	}
-}
+// func testContentSyncInfo(interval int) {
+// 	for true {
+// 		logger.Log("ContentSyncInfo", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": "a/b/c", "AssetSize": fmt.Sprintf("%.2f", 213.56), "Channel": "SES", "AssetUpdate": "No"})
+// 		time.Sleep(time.Duration(interval) * time.Second)
+// 	}
+// }

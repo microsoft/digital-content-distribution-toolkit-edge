@@ -227,7 +227,7 @@ func getAvailableFolders() []AvailableFolder {
 					folderMetadata.Path = osFsPath
 					folderMetadata.FolderUrl = "http://{HUB_IP}:5000/static/" + osFsPath
 					if !isSatellite {
-						folderMetadata.FolderUrl += "/bulkFiles"
+						folderMetadata.FolderUrl += "/bulkfiles"
 					}
 					fmt.Println("Folder size is: ", folderSize)
 					secondsDuration, err := getDurationInSeconds(folderMetadata.Duration)

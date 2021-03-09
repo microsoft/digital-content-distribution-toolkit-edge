@@ -274,7 +274,7 @@ func newServer() *relayCommandServer {
 }
 
 func handle_method_calls(port int, wg sync.WaitGroup) {
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

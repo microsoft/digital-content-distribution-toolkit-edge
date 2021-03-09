@@ -751,7 +751,7 @@ func (fs *FileSystem) GetLeavesList(actual_path string) ([]string, error) {
 
 func (fs *FileSystem) PrintBuckets() {
 	fs.nodesDB.View(func(tx *bolt.Tx) error {
-		fmt.Println("--------------------")
+		fmt.Println("---------Tree-----------")
 		b := tx.Bucket([]byte("Tree"))
 
 		c := b.Cursor()
@@ -759,7 +759,7 @@ func (fs *FileSystem) PrintBuckets() {
 			fmt.Printf("key=%s, value=%s\n", k, v)
 		}
 
-		fmt.Println()
+		fmt.Println("----------- FolderName--------------")
 
 		b = tx.Bucket([]byte("FolderNameMapping"))
 

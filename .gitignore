@@ -14,3 +14,5 @@ test_hub_config.ini
 logs/
 test_bine
 public_keys/
+Dockerfile.test
+testCommandClient/

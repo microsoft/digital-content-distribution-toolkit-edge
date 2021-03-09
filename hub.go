@@ -51,7 +51,7 @@ func main() {
 		MaxBackups: codeLogsFileMaxBackups, // number of backups
 		MaxAge:     codeLogsFileMaxAge,     //days
 	})
-
+	fmt.Println("Logs written to %v: ", codeLogsFile)
 	if err != nil {
 		fmt.Printf("Failed to read config file: %v", err)
 		os.Exit(1)
@@ -88,16 +88,24 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	//-------------- dummy entry into filesys.db for testing -------------------------
+	// fs.CreateFolder([]string{"MSR"})
+	// abstractname, err := fs.CreateFolder([]string{"MSR", "bigBuckBunny"})
+	// if err != nil {
+	// 	fmt.Println("Error in creating dummy entry", err)
+	// }
+	// fmt.Println("Entry made node name:", abstractname)
 
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
-
+	fs.PrintBuckets()
 	// launch a goroutine to handle method calls
 	wg.Add(1)
-	go handle_method_calls(downstream_grpc_port, wg)
+	//go handle_method_calls(downstream_grpc_port, wg)
+	go handleCommands(downstream_grpc_port, wg)
 
 	// start a concurrent background service which checks if the files on the device are tampered with
-	integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Int()
-	go checkIntegrity(integrityCheckInterval)
+	//integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Int()
+	//go checkIntegrity(integrityCheckInterval)
 
 	satApiCmd := cfg.Section("DEVICE_INFO").Key("SAT_API_SWITCH").String()
 	getdata_interval, err := cfg.Section("DEVICE_INFO").Key("MSTORE_SCHEDULER").Int()
@@ -107,13 +115,14 @@ func main() {
 	case "mstore":
 		go pollMstore(getdata_interval)
 	}
-
 	liveness_interval, err := cfg.Section("DEVICE_INFO").Key("LIVENESS_SCHEDULER").Int()
-	go liveness(liveness_interval)
+	//go liveness(liveness_interval)
 	deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
 	go deleteContent(deletion_interval)
-	//TODO: remove--- for testing dummy msg
-	//go testContentSyncInfo(120)
+	//TODO: remove--- for testing mock telemetry msg upstream
+	go mock_liveness(liveness_interval)
+	go mock_hubstorageandmemory(120)
+	//go mock_telelmetry(180)
 	// setup key manager and load keys
 	storage_url := cfg.Section("APP_AUTHENTICATION").Key("BLOB_STORAGE_KEYS_GET_URL").String()
 	pubkeys_dir := cfg.Section("APP_AUTHENTICATION").Key("PUBLIC_KEY_STORE_PATH").String()
@@ -202,6 +211,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	//go mock_liveness(liveness_interval)
+	//go mock_hubstorageandmemory(120)
 	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")

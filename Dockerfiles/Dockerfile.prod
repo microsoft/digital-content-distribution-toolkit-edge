@@ -27,6 +27,6 @@ COPY bine_arm ./
 COPY certs/* ./
 COPY *.ini ./
 COPY start.sh ./
-EXPOSE 5000
+EXPOSE 5000, 5002
 
 CMD ["./start.sh"]
