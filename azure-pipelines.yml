@@ -67,7 +67,7 @@ steps:
   displayName: Login to ACR
   inputs:
     command: login
-    containerRegistry: $(bineDockerRegistry)
+    containerRegistry: $(acr-service-connection)
 
 - task: CmdLine@2
   displayName: "Setting up qemu for buildx"
@@ -100,7 +100,7 @@ steps:
     script: "docker tag hub_dev $(arm_image_dev):$(Build.SourceVersion)"
 
 - task: CmdLine@2
-  displayName: "Pushing image to docker hub"
+  displayName: "Pushing image to ACR"
   inputs:
     script: "docker push $(arm_image_dev):$(Build.SourceVersion)"
 
@@ -121,7 +121,7 @@ steps:
     script: "docker build -t $(x86_image_dev) -f ./Dockerfile_tmp .; rm Dockerfile_tmp"
 
 - task: CmdLine@2
-  displayName: "Pushing image to docker hub"
+  displayName: "Pushing image to ACR"
   inputs:
     script: "docker push $(x86_image_dev)"
 
@@ -129,4 +129,4 @@ steps:
   displayName: Logout of ACR
   inputs:
     command: logout
-    containerRegistry: $(bineDockerRegistry)
+    containerRegistry: $(acr-service-connection)
