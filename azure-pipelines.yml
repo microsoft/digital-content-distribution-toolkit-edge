@@ -1,10 +1,9 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+variables:
+  AMDRunNumber: '0.0.1-amd64-$(Build.BuildNumber)'
+  ARMRunNumber: '0.0.1-arm64v8-$(Build.BuildNumber)'
 
 trigger:
-- dev
+- t-nag/bine-hub-pipeline
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -87,22 +86,22 @@ steps:
 - task: CmdLine@2
   displayName: "Building ARM docker image"
   inputs:
-    script: "docker buildx build -t hub_dev --output type=docker,dest=hub_dev.tar -f Dockerfile_tmp .; rm Dockerfile_tmp"
+    script: "docker buildx build -t hub --output type=docker,dest=hub.tar -f Dockerfile_tmp .; rm Dockerfile_tmp"
 
 - task: CmdLine@2
-  displayName: "Loading hub_dev.tar"
+  displayName: "Loading hub.tar"
   inputs:
-    script: "docker load -i hub_dev.tar"
+    script: "docker load -i hub.tar"
 
 - task: CmdLine@2
   displayName: "Tagging docker image"
   inputs:
-    script: "docker tag hub_dev $(arm_image_dev):$(Build.SourceVersion)"
+    script: "docker tag hub $(arm_image):$(ARMRunNumber)"
 
 - task: CmdLine@2
   displayName: "Pushing image to ACR"
   inputs:
-    script: "docker push $(arm_image_dev):$(Build.SourceVersion)"
+    script: "docker push $(arm_image):$(ARMRunNumber)"
 
 - task: Go@0 
   displayName: "Building x86 executable"  
@@ -118,12 +117,12 @@ steps:
 - task: CmdLine@2
   displayName: "Building x86 image"
   inputs:
-    script: "docker build -t $(x86_image_dev) -f ./Dockerfile_tmp .; rm Dockerfile_tmp"
+    script: "docker build -t $(x86_image):$(AMDRunNumber) -f ./Dockerfile_tmp .; rm Dockerfile_tmp"
 
 - task: CmdLine@2
   displayName: "Pushing image to ACR"
   inputs:
-    script: "docker push $(x86_image_dev)"
+    script: "docker push $(x86_image):$(AMDRunNumber)"
 
 - task: Docker@2
   displayName: Logout of ACR
