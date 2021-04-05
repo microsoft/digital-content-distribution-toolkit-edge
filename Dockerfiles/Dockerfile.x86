@@ -7,11 +7,6 @@ WORKDIR /bine/
 COPY bine ./
 COPY *.ini ./
 COPY alive.sh ./
-<<<<<<< HEAD
-COPY start_hub.sh ./
-EXPOSE 5000, 5002
-=======
 EXPOSE 5000
->>>>>>> upstream/dev
 
 CMD ["./alive.sh"]

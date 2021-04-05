@@ -21,7 +21,7 @@ type EventType string
 type Message struct {
 	DeviceId string
 	// MessageType string
-	MessageSubType string
+	MessagesubType string
 	TimeStamp      string
 	MessageBody    map[string]string
 }
@@ -29,7 +29,7 @@ type TelemetryMessage struct {
 	DeviceIdInData                       string                 `json:"DeviceIdInData"`
 	ApplicationName                      string                 `json:"ApplicationName"`
 	ApplicationVersion                   string                 `json:"ApplicationVersion"`
-	TimeStamp                            int64                  `json:"TimeStamp"`
+	Timestamp                            int64                  `json:"TimeStamp"`
 	AssetDeleteOnDeviceByScheduler       *AssetInfo             `json:"AssetDeleteOnDeviceByScheduler,omitempty"`
 	AssetDeleteOnDeviceByCommand         *AssetInfo             `json:"AssetDeleteOnDeviceByCommand,omitempty"`
 	FailedAssetDeleteOnDeviceByScheduler *AssetInfo             `json:"FailedAssetDeleteOnDeviceByScheduler,omitempty"`
@@ -65,7 +65,7 @@ type IntegrityStatsMessage struct {
 	ActualSHA        string `json:"ActualSHA,omitempty"`
 	ExpectedSHA      string `json:"ExpectedSHA,omitempty"`
 }
-type SubValueType struct {
+type MessageSubType struct {
 	StringMessage  string
 	FloatValue     float64
 	AssetInfo      AssetInfo
@@ -91,11 +91,12 @@ const (
 	HubStorage                                     = "HubStorage"
 	Memory                                         = "Memory"
 )
-const (
-	upstream_address   = "HubEdgeProxyModule:5001"
-	applicationName    = "Hub Module"
-	applicationVersion = "v1.0"
-)
+
+// const (
+// 	upstream_address   = "HubEdgeProxyModule:5001"
+// 	applicationName    = "Hub Module"
+// 	applicationVersion = "v1.0"
+// )
 
 func (lt EventType) isValid() error {
 	switch lt {
@@ -106,19 +107,23 @@ func (lt EventType) isValid() error {
 }
 
 type Logger struct {
-	deviceId string
-	file     *os.File
-	writer   *bufio.Writer
+	deviceId           string
+	file               *os.File
+	writer             *bufio.Writer
+	applicationName    string
+	applicationVersion string
+	upstreamAddress    string
 }
 
-func MakeLogger(deviceId string, logFilePath string, bufferSize int) *Logger {
+func MakeLogger(deviceId string, logFilePath string, bufferSize int, applicationName string, applicationVersion string, upstreamAddress string) *Logger {
 	file, err := os.OpenFile(logFilePath, syscall.O_CREAT|syscall.O_WRONLY|syscall.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalf("[Logger]error in opening file: %s", logFilePath)
+		//log.Printf("ERROR:", err.Error())
+		log.Fatalf("[Logger]error in opening file:", logFilePath)
 	}
 
 	writer := bufio.NewWriterSize(file, bufferSize)
-	l := Logger{deviceId, file, writer}
+	l := Logger{deviceId, file, writer, applicationName, applicationVersion, upstreamAddress}
 
 	return &l
 }
@@ -146,19 +151,14 @@ func (l *Logger) unlockFile() error {
 
 	return nil
 }
-func (l *Logger) TestLog(eventType string, subType *SubValueType) {
-	if err := EventType(eventType).isValid(); err != nil {
-		fmt.Errorf("[Logger]invalid message type %s", eventType)
-	}
-	l.constructTelemetryMessageAndSend(eventType, *subType)
 
-}
-func (l *Logger) Log(messageType string, messageSubType string, messageBody map[string]string) {
+/********************* To be removed **************************/
+func (l *Logger) Log_old(messageType string, messagesubType string, messageBody map[string]string) {
 	if err := EventType(messageType).isValid(); err != nil {
 		fmt.Errorf("[Logger]invalid message type %s", messageType)
 	}
 
-	msg := Message{l.deviceId, messageSubType, fmt.Sprintf("%d", time.Now().Unix()), messageBody}
+	msg := Message{l.deviceId, messagesubType, fmt.Sprintf("%d", time.Now().Unix()), messageBody}
 	messsageDict := make(map[string]Message)
 	messsageDict[messageType] = msg
 	b, err := json.Marshal(messsageDict)
@@ -184,10 +184,10 @@ func (l *Logger) Log(messageType string, messageSubType string, messageBody map[
 	}
 }
 
-func grpcUpstream(message string) error {
+func (l *Logger) sendGrpcUpstream(message string) error {
 	fmt.Println("Initiating connection")
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(upstream_address, grpc.WithInsecure())
+	conn, err := grpc.Dial(l.upstreamAddress, grpc.WithInsecure())
 	if err != nil {
 		log.Println("did not connect: %v", err)
 		return err
@@ -199,7 +199,7 @@ func grpcUpstream(message string) error {
 	defer cancel()
 	//ctx := context.Background()
 	fmt.Println("going to send telemetry")
-	r, err := client.SendTelemetry(ctx, &pbTelemetry.TelemetryRequest{ApplicationName: applicationName, TelemetryData: message})
+	r, err := client.SendTelemetry(ctx, &pbTelemetry.TelemetryRequest{ApplicationName: l.applicationName, TelemetryData: message})
 	if err != nil {
 		log.Println(message)
 		log.Println("could not send telemetry to proxy: %v", err)
@@ -209,39 +209,42 @@ func grpcUpstream(message string) error {
 	return nil
 }
 
-func (l *Logger) constructTelemetryMessageAndSend(mtype string, subtype SubValueType) {
+func (l *Logger) Log(eventType string, subType *MessageSubType) {
+	if err := EventType(eventType).isValid(); err != nil {
+		fmt.Errorf("[Logger]invalid message type %s", eventType)
+	}
 	tm := new(TelemetryMessage)
-	tm.ApplicationName = applicationName
-	tm.ApplicationVersion = applicationVersion
+	tm.ApplicationName = l.applicationName
+	tm.ApplicationVersion = l.applicationVersion
 	tm.DeviceIdInData = l.deviceId
-	tm.TimeStamp = time.Now().Unix()
-	switch EventType(mtype) {
+	tm.Timestamp = time.Now().Unix()
+	switch EventType(eventType) {
 	case Liveness:
-		tm.Liveness = subtype.StringMessage
+		tm.Liveness = subType.StringMessage
 
 	case HubStorage:
-		tm.HubStorage = subtype.FloatValue
+		tm.HubStorage = subType.FloatValue
 	case Memory:
-		tm.Memory = subtype.FloatValue
+		tm.Memory = subType.FloatValue
 	case AssetDeleteOnDeviceByScheduler:
-		tm.AssetDeleteOnDeviceByScheduler = &subtype.AssetInfo
+		tm.AssetDeleteOnDeviceByScheduler = &subType.AssetInfo
 	case AssetDeleteOnDeviceByCommand:
-		tm.AssetDeleteOnDeviceByCommand = &subtype.AssetInfo
+		tm.AssetDeleteOnDeviceByCommand = &subType.AssetInfo
 	case FailedAssetDeleteOnDeviceByScheduler:
-		tm.FailedAssetDeleteOnDeviceByScheduler = &subtype.AssetInfo
+		tm.FailedAssetDeleteOnDeviceByScheduler = &subType.AssetInfo
 	case FailedAssetDeleteOnDeviceByCommand:
-		tm.FailedAssetDeleteOnDeviceByCommand = &subtype.AssetInfo
+		tm.FailedAssetDeleteOnDeviceByCommand = &subType.AssetInfo
 	case AssetDownloadOnDeviceFromSES:
-		tm.AssetDownloadOnDeviceFromSES = &subtype.AssetInfo
+		tm.AssetDownloadOnDeviceFromSES = &subType.AssetInfo
 	case AssetDownloadOnDeviceByCommand:
-		tm.AssetDownloadOnDeviceByCommand = &subtype.AssetInfo
+		tm.AssetDownloadOnDeviceByCommand = &subType.AssetInfo
 	case FailedAssetDownloadOnMobile:
-		tm.FailedAssetDownloadOnMobile = &subtype.AssetInfo
+		tm.FailedAssetDownloadOnMobile = &subType.AssetInfo
 	case SucessfulAssetDownloadOnMobile:
 
-		tm.SucessfulAssetDownloadOnMobile = &subtype.AssetInfo
+		tm.SucessfulAssetDownloadOnMobile = &subType.AssetInfo
 	case CorruptedFileStatsFromScheduler:
-		tm.CorruptedFileStatsFromScheduler = &subtype.IntegrityStats
+		tm.CorruptedFileStatsFromScheduler = &subType.IntegrityStats
 
 		// subMessage := new(ContentSyncInfoMessage)
 		// subMessage.DownloadStatus = messageBody["DownloadStatus"]
@@ -265,7 +268,7 @@ func (l *Logger) constructTelemetryMessageAndSend(mtype string, subtype SubValue
 	msgString := string(b)
 	fmt.Println("New Message UPSTREAM:")
 	fmt.Println(msgString)
-	err = grpcUpstream(msgString)
+	err = l.sendGrpcUpstream(msgString)
 	if err != nil {
 		log.Println("[LoggerGRPC] error in sending upstream: %v", err)
 	}

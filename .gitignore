@@ -16,3 +16,4 @@ test_bine
 public_keys/
 Dockerfile.test
 testCommandClient/
+*.zip

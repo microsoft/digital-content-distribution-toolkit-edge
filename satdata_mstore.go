@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	l "./logger"
 )
 
 type VodList struct {
@@ -70,7 +72,10 @@ func pollMstore(interval int) {
 		log.Println("==================Polling MStore API ==============")
 		if err := checkForVODViaMstore(); err != nil {
 			log.Println("[SatdataMstore][pollMstore] Error", fmt.Sprintf("%s", err))
-			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
+			//logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
+			sm := new(l.MessageSubType)
+			sm.StringMessage = "SatdataMstore: " + err.Error()
+			logger.Log("Error", sm)
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
@@ -96,7 +101,9 @@ func checkForVODViaMstore() error {
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
 			log.Println("[SatdataMstore][checkForVODViaMstore] Error ", fmt.Sprintf("%s", err))
-			logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
+			//logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
+			sm := l.MessageSubType{StringMessage: "SatdataMstore: " + err.Error()}
+			logger.Log("Error", &sm)
 			continue
 		}
 	}
@@ -135,7 +142,8 @@ func getMetadataAPI(contentId string) error {
 	}
 
 	if _heirarchy, err := getMstoreFiles(vod); err != nil {
-		logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": _heirarchy, "Channel": "SES"})
+		//TODO:
+		logger.Log_old("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": _heirarchy, "Channel": "SES"})
 		return err
 	}
 	return nil
@@ -182,14 +190,16 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	path, _ := fs.GetActualPathForAbstractedPath(_heirarchy)
 	if path != "" {
 		log.Println(_heirarchy + " already exist.")
-		logger.Log("Info", "SatdataMstore", map[string]string{"Message": _heirarchy + " already exist."})
+		sm := new(l.MessageSubType)
+		sm.StringMessage = "SatdataMstore: " + _heirarchy + " already exist."
+		logger.Log("Info", sm)
+		//logger.Log("Info", "SatdataMstore", map[string]string{"Message": _heirarchy + " already exist."})
 		//Delete cid from mstore---  if to be removed later
 		if deleteFlag {
 			if err := deleteAPI(cid); err != nil {
-				logger.Log("Error", "SatdataMstore", map[string]string{"CID": cid, "Message": fmt.Sprintf("Error in MstoreDeleteAPI: %s", err.Error())})
 				log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 			}
-			logger.Log("Info", "SatdataMstore", map[string]string{"CID": cid, "Message": "Deleted from Mstore"})
+			//logger.Log("Info", "SatdataMstore", map[string]string{"CID": cid, "Message": "Deleted from Mstore"})
 			log.Println("[SatdataMstore][getMstoreFiles] Info ", fmt.Sprintf("Already Exist. Deleted from Mstore Db: %s", _heirarchy))
 		}
 		return _heirarchy, nil
@@ -265,15 +275,22 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	//trigger DELETE API--- if to be removed later
 	if deleteFlag {
 		if err := deleteAPI(cid); err != nil {
-			logger.Log("Error", "SatdataMstore", map[string]string{"CID": cid, "Message": fmt.Sprintf("Error in MstoreDeleteAPI: %s", err.Error())})
 			log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
 		}
-		logger.Log("Info", "SatdataMstore", map[string]string{"CID": cid, "Message": "Deleted from Mstore"})
 		log.Println("[SatdataMstore][getMstoreFiles] Info ", fmt.Sprintf("Downloaded to HUB. Deleted from Mstore Db: %s", _heirarchy))
 	}
 	path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-	logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "SES"})
-	logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
+	sm2 := l.AssetInfo{AssetId: vod.Metadata.UserDefined.MediaId, Size: getDirSizeinMB(path), RelativeLocation: _heirarchy}
+	sm := l.MessageSubType{AssetInfo: sm2}
+	// sm.AssetInfo.AssetId = vod.Metadata.UserDefined.MediaId
+	// sm.AssetInfo.Size = getDirSizeinMB(path)
+	// sm.AssetInfo.RelativeLocation = _heirarchy
+	logger.Log("AssetDownloadOnDeviceFromSES", &sm)
+	//logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "SES"})
+	// logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
+	sm = l.MessageSubType{FloatValue: getDiskInfo()}
+	//sm.FloatValue = getDiskInfo()
+	logger.Log("HubStorage", &sm)
 	log.Println(fmt.Sprintf("[Satdata_mstore][getMstoreFiles] Heirarchy: %s synced via SES", _heirarchy))
 	log.Println(fmt.Sprintf("[Satdata_mstore][getMstoreFiles] AssetSize: %f MB", getDirSizeinMB(path)))
 	log.Println(fmt.Sprintf("[Satdata_mstore][getMstoreFiles] Disk space available on the Hub: %s", getDiskInfo()))

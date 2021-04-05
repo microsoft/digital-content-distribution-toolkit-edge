@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"time"
+
+	l "./logger"
 )
 
 func checkIntegrity(interval int) {
@@ -59,7 +61,7 @@ func folderToCheck(folderName string) (int, int) {
 	//check if path exist in the zzzz folder
 	if _, err := os.Stat(actualPath); os.IsNotExist(err) {
 		log.Println("[Integrity_Liveness][checkheirarchy] ", fmt.Sprintf("Directory MISSING in the home folder for folderName : (%s) and actual path: (%s)", abstractedFolderName, actualPath))
-		logger.Log("Error", "Integrity_Liveness", map[string]string{"Message": "Directory MISSING in the HOME folder", "FolderName": abstractedFolderName, "Actual Path": actualPath})
+		//logger.Log("Error", "Integrity_Liveness", map[string]string{"Message": "Directory MISSING in the HOME folder", "FolderName": abstractedFolderName, "Actual Path": actualPath})
 		return c, t
 	}
 	log.Println("[Integrity_Liveness][checkheirarchy] ", fmt.Sprintf("Checking folder Path (%s) for Heirarchy (%s): ", actualPath, abstractedFolderName))
@@ -68,7 +70,7 @@ func folderToCheck(folderName string) (int, int) {
 		//check if the satellite path exist
 		if _, err := os.Stat(satellitePath); os.IsNotExist(err) {
 			log.Println("[Integrity_Liveness][checkheirarchy] ", fmt.Sprintf("Directory MISSING in the mstore folder for folderName : (%s) and actual path: (%s)", abstractedFolderName, satellitePath))
-			logger.Log("Error", "Integrity_Liveness", map[string]string{"Message": "Directory MISSING in the MSTORE folder", "FolderName": abstractedFolderName, "Actual Path": satellitePath})
+			//logger.Log("Error", "Integrity_Liveness", map[string]string{"Message": "Directory MISSING in the MSTORE folder", "FolderName": abstractedFolderName, "Actual Path": satellitePath})
 			return c, t
 		}
 		log.Println("[Integrity_Liveness][checkheirarchy] Found to be a Satellite content...Satellite folder path: ", satellitePath)
@@ -116,7 +118,11 @@ func checkfiles(heirarchy string, folderpath string, hashsummap map[string]strin
 			log.Println("[Integrity_Liveness][checkfiles]", fmt.Sprintf("Filename (%s), Status: CORRUPTED", filepath.Join(folderpath, file.Name())))
 			log.Println("[Integrity_Liveness][checkfiles]", fmt.Sprintf("File (%s) corrupted for folder (%s) at directory location (%s) : %s", file.Name(), heirarchy, folderpath))
 			//TODO: get abstracted path for actual path
-			logger.Log("Telemetry", "IntegrityStats", map[string]string{"FileName": filepath.Join(folderpath, file.Name()), "Folder": heirarchy, "Directory Location": folderpath, "IntegrityStatus": "Corrupted. Hashum did not match"})
+			//logger.Log("Telemetry", "IntegrityStats", map[string]string{"FileName": filepath.Join(folderpath, file.Name()), "Folder": heirarchy, "Directory Location": folderpath, "IntegrityStatus": "Corrupted. Hashum did not match"})
+
+			//TODO: AssetId???
+			sm := l.MessageSubType{IntegrityStats: l.IntegrityStatsMessage{RelativeLocation: heirarchy, Filename: file.Name()}}
+			logger.Log("CorruptedFileStatsFromScheduler", &sm)
 			c++
 			continue
 		}
@@ -127,7 +133,7 @@ func checkfiles(heirarchy string, folderpath string, hashsummap map[string]strin
 		for k := range hashsummap {
 			if _, err := os.Stat(filepath.Join(folderpath, k)); os.IsNotExist(err) {
 				log.Println("[Integrity_Liveness][checkfiles] ", fmt.Sprintf("Filename (%s) MISSING in the folder for folder path : (%s) whereas the entry exist in hashsum.txt", k, folderpath))
-				logger.Log("Error", "Integrity_Liveness", map[string]string{"FileName": k, "Folder": folderpath, "Message": "File MISSING in the folder whereas entry exist in the hashsum.txt file"})
+				//logger.Log("Error", "Integrity_Liveness", map[string]string{"FileName": k, "Folder": folderpath, "Message": "File MISSING in the folder whereas entry exist in the hashsum.txt file"})
 			}
 		}
 	}
@@ -164,7 +170,9 @@ func getTotalFiles(folderpath string) int {
 }
 func liveness(interval int) {
 	for true {
-		logger.Log("Liveness", "Liveness", map[string]string{"STATUS": "ALIVE"})
+		sm := new(l.MessageSubType)
+		sm.StringMessage = "ALIVE"
+		logger.Log("Liveness", sm)
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }

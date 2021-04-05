@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	l "./logger"
 	"github.com/gin-gonic/gin"
 )
 
@@ -122,7 +123,9 @@ func vanillaJSON(input interface{}) (string, error) {
 	if err == nil {
 		return string(buffer.Bytes()), nil
 	} else {
-		logger.Log("Error", "RouteHandler", map[string]string{"Function": "vanillaJSON", "Message": fmt.Sprintf("error while encoding %s", err.Error())})
+		sm := l.MessageSubType{StringMessage: "RouteHandler: " + "vanillaJSON: "+ fmt.Sprintf("error while encoding %s", err.Error())}
+		logger.Log("Error", &sm)
+		//logger.Log("Error", "RouteHandler", map[string]string{"Function": "vanillaJSON", "Message": fmt.Sprintf("error while encoding %s", err.Error())})
 	}
 	return "", err
 }
@@ -163,11 +166,15 @@ func serveFile(context *gin.Context) {
 	fmt.Println("Actual path: ", actualPath)
 	if err != nil {
 		fmt.Println(err)
-		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Could not get actual path for abstract path " + path})
+		sm := l.MessageSubType{StringMessage: "RouteHandler: " + "Could not get actual path for abstract path " + path}
+		logger.Log("Error", &sm)
+		//logger.Log("Error", "RouteHandler", map[string]string{"Message": "Could not get actual path for abstract path " + path})
 		errorResponse(context, "Invalid path")
 		return
 	}
-	logger.Log("Info", "RouteHandler", map[string]string{"Message": "Redirecting: " + path + " to actual: " + actualPath + "/" + fileName})
+	sm := l.MessageSubType{StringMessage: "RouteHandler: " + "Redirecting: " + path + " to actual: " + actualPath + "/" + fileName}
+	logger.Log("Info", &sm)
+	//logger.Log("Info", "RouteHandler", map[string]string{"Message": "Redirecting: " + path + " to actual: " + actualPath + "/" + fileName})
 	fmt.Println("Redirecting: " + path + " to actual: " + actualPath + "/" + fileName)
 	// redirect to this path
 	if strings.HasPrefix(actualPath, "/") {

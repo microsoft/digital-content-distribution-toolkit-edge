@@ -96,7 +96,7 @@ func getMetdataFileParser(actualPath string) []string {
 	parentDirectory := actualPath + "/metadatafiles"
 	files, err := ioutil.ReadDir(parentDirectory)
 	if err != nil {
-		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in " + actualPath + " " + err.Error()})
+		logger.Log_old("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in " + actualPath + " " + err.Error()})
 		return result
 	}
 	for _, file := range files {
@@ -128,7 +128,7 @@ func getFolderSizeParser(actualPath string) int64 {
 	files, err := ioutil.ReadDir(actualPath + "/bulkfiles")
 	fmt.Println("Actual path for folder size parse: ", actualPath)
 	if err != nil {
-		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in " + actualPath + " " + err.Error()})
+		logger.Log_old("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in " + actualPath + " " + err.Error()})
 		return 0
 	}
 	var size int64 = 0
@@ -241,10 +241,10 @@ func getAvailableFolders() []AvailableFolder {
 					availableFolder := AvailableFolder{ID: folderId, Metadata: folderMetadata}
 					result = append(result, availableFolder)
 				} else {
-					logger.Log("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error())})
+					logger.Log_old("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error())})
 				}
 			} else {
-				logger.Log("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata directory %s for abstract path %s threw error %s", metadataJSONFilePath, leaf, err.Error())})
+				logger.Log_old("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata directory %s for abstract path %s threw error %s", metadataJSONFilePath, leaf, err.Error())})
 			}
 		} else {
 			fmt.Println("Error: ", err.Error())
