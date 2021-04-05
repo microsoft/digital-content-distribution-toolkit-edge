@@ -96,33 +96,38 @@ steps:
 - task: CmdLine@2
   displayName: "Tagging docker image"
   inputs:
-    script: "docker tag hub $(arm_image):$(ARMRunNumber)"
+    script: "docker tag hub $(arm_image):$(ARMRunNumber); docker tag $(arm_image):$(ARMRunNumber) $(arm_image):latest"
 
 - task: CmdLine@2
   displayName: "Pushing image to ACR"
   inputs:
-    script: "docker push $(arm_image):$(ARMRunNumber)"
+    script: "docker push --all-tags $(arm_image)"
 
 - task: Go@0 
-  displayName: "Building x86 executable"  
+  displayName: "Building amd executable"  
   inputs:
     command: 'build'
     arguments: '-o bine'
 
 - task: CmdLine@2
-  displayName: "Setting up TEMP x86 docker file"
+  displayName: "Setting up TEMP amd docker file"
   inputs:
       script: "./docker_prepare.sh ./Dockerfiles/Dockerfile.x86"
 
 - task: CmdLine@2
-  displayName: "Building x86 image"
+  displayName: "Building amd image"
   inputs:
-    script: "docker build -t $(x86_image):$(AMDRunNumber) -f ./Dockerfile_tmp .; rm Dockerfile_tmp"
+    script: "docker build -t $(amd_image):$(AMDRunNumber) -f ./Dockerfile_tmp .; rm Dockerfile_tmp"
+
+- task: CmdLine@2
+  displayName: "Tagging amd image"
+  inputs:
+    script: "docker tag $(amd_image):$(AMDRunNumber) $(amd_image):latest"
 
 - task: CmdLine@2
   displayName: "Pushing image to ACR"
   inputs:
-    script: "docker push $(x86_image):$(AMDRunNumber)"
+    script: "docker push --all-tags $(amd_image)"
 
 - task: Docker@2
   displayName: Logout of ACR
