@@ -7,6 +7,8 @@ WORKDIR /bine/
 COPY bine_arm ./
 COPY *.ini ./
 COPY start.sh ./
+RUN chmod +x ./start.sh
+
 EXPOSE 5000
 
 CMD ["./start.sh"]
