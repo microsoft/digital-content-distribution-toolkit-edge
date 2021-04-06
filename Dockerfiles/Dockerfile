@@ -9,6 +9,6 @@ COPY *.ini ./
 COPY alive.sh ./
 RUN chmod +x ./alive.sh
 
-EXPOSE 5000, 5002
+EXPOSE 5000 5002
 
 CMD ["./alive.sh"]
