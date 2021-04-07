@@ -72,11 +72,26 @@ func (fs *FileSystem) InitFileSystem() error {
 		return err
 	}
 
+	/* Flat indexing of the contents-
+	   AssetsPathMapping
+	   SatelliteIdtoAssetIdMapping
+	*/
+	err = fs.CreateBucket("AssetPathMapping")
+	if err != nil {
+		return err
+	}
+	err = fs.CreateBucket("SatelliteIdtoAssetIdMapping")
+	if err != nil {
+		return err
+	}
 	err = fs.CreateHome()
 	if err != nil {
 		return err
 	}
-
+	err = fs.CreateHomeFolder()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -96,6 +111,13 @@ func (fs *FileSystem) CreateBucket(bucket_name string) error {
 	return err
 }
 
+func (fs *FileSystem) CreateHomeFolder() error {
+	err := os.MkdirAll(filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode)), os.ModePerm)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func (fs *FileSystem) CreateHome() error {
 	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("Tree"))
@@ -122,10 +144,6 @@ func (fs *FileSystem) CreateHome() error {
 		return err
 	}
 
-	err = os.MkdirAll(filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode)), os.ModePerm)
-	if err != nil {
-		return err
-	}
 
 	return err
 }
@@ -555,7 +573,60 @@ func (fs *FileSystem) GetSatelliteFolderPath(node string) (string, error) {
 	})
 	return string(path), err
 }
-
+func (fs *FileSystem) GetAssetFolderPathFromDB(id string) (string, error) {
+	var path []byte
+	err := fs.nodesDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("AssetPathMapping"))
+		path = b.Get([]byte(id))
+		if path == nil {
+			return fmt.Errorf("folder path for %s does not exist", id)
+		}
+		return nil
+	})
+	return string(path), err
+}
+func (fs *FileSystem) CreateSatelliteIndexing(cid, assetId, pathToAsset string) error{
+	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("SatelliteIdtoAssetIdMapping"))
+		fmt.Println("Creating entry for Satellite Asset- CID : ",cid, " AssetID: ", assetId)
+		if err := b.Put([]byte(cid), []byte(assetId)); err != nil {
+			return fmt.Errorf("[Filesystem][CreateSatelliteIndexing] %s", err)
+		}
+		b = tx.Bucket([]byte("AssetPathMapping"))
+		fmt.Println("Mapping Satellite Asset- AssetID: ", assetId, " to folderpath :", pathToAsset)
+		if err := b.Put([]byte(assetId), []byte(pathToAsset)); err != nil {
+			return fmt.Errorf("[Filesystem][CreateSatelliteIndexing] %s", err)
+		}
+		return nil
+	})
+	return err
+}
+func (fs *FileSystem) DownloadAndCreateIndexing(assetId string, dfunc downloadFunc, downloadParams [][] string) error {
+	node := RandStringBytes(fs.homeNode)
+	path := filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node))
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	err = dfunc(path, downloadParams)
+	if err != nil {
+		ferr := os.RemoveAll(path)
+		if ferr != nil{
+			return ferr
+		}
+		return err
+	}
+	// Index in the bucket
+	err = fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("AssetPathMapping"))
+		fmt.Println("Mapping Satellite Asset- AssetID: ", assetId, " to folderpath :", path)
+		if err := b.Put([]byte(assetId), []byte(path)); err != nil {
+			return fmt.Errorf("[Filesystem][DownloadAndCreateIndexing] %s", err)
+		}
+		return nil
+	})
+	return nil
+}
 func (fs *FileSystem) CreateDownloadNewFolder(hierarchy []string, dfunc downloadFunc, downloadParams [][]string, isSatellite bool, satelliteFolderPath string) error {
 	// check if folder creation is a valid operation
 	folder_name := []byte(hierarchy[len(hierarchy)-1])
@@ -776,6 +847,27 @@ func (fs *FileSystem) PrintBuckets() {
 			fmt.Printf("key=%s, value=%s\n", k, v)
 		}
 		fmt.Println("--------------------")
+
+		fmt.Println("----------- AssetID - FolderPath Mapping--------------")
+
+		b = tx.Bucket([]byte("AssetPathMapping"))
+
+		c = b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			fmt.Printf("key=%s, value=%s\n", k, v)
+		}
+
+		fmt.Println()
+		fmt.Println("----------- SatID - AssetID Mapping--------------")
+
+		b = tx.Bucket([]byte("SatelliteIdtoAssetIdMapping"))
+
+		c = b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			fmt.Printf("key=%s, value=%s\n", k, v)
+		}
+
+		fmt.Println()
 
 		return nil
 	})

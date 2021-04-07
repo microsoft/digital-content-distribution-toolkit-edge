@@ -27,12 +27,29 @@ func setupRoutes(ginEngine *gin.Engine) {
 	ginEngine.GET("/metadata/", serveSingleMetadata)
 	ginEngine.GET("/list/files/", serveMetadata)
 	ginEngine.GET("/list/leaves/", serveLeaves)
+	ginEngine.GET("/folderpath/", serveFolderPath)
 	ginEngine.GET("/download/files", serveFile)
 	fs.PrintFileSystem()
 }
 
 func errorResponse(context *gin.Context, response ...interface{}) {
 	context.String(400, "", response)
+}
+
+func serveFolderPath(context *gin.Context) {
+	queryParams := context.Request.URL.Query()
+	assetId := queryParams.Get("assetId")
+	fmt.Println("Getting folderpath for AssetID: ", assetId)
+	if path, err := getAssetFolderPath(assetId); err == nil {
+		if val, err := vanillaJSON(path); err == nil {
+			fmt.Println("val:", val)
+			context.Header("hubId", device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String())
+			context.String(200, string(val))
+			return
+		}
+	}
+	errorResponse(context, "Folderpath for the AssetID not found")
+
 }
 
 func serveSingleMetadata(context *gin.Context) {
@@ -132,7 +149,6 @@ func vanillaJSON(input interface{}) (string, error) {
 
 func serveLeaves(context *gin.Context) {
 	if val, err := vanillaJSON(getAvailableFolders()); err == nil {
-		//fmt.Println("ServeLeaves :: ", val)
 		context.Header("hubId", device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String())
 		context.String(200, string(val))
 		return
