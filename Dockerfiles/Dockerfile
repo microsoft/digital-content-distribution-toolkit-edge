@@ -10,5 +10,6 @@ COPY alive.sh ./
 RUN chmod +x ./alive.sh
 
 EXPOSE 5000 5002
+VOLUME /media/sda1
 
 CMD ["./alive.sh"]
