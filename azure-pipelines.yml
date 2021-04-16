@@ -3,7 +3,7 @@ variables:
   ARMRunNumber: '0.0.1-arm64v8-$(Build.BuildNumber)'
 
 trigger:
-- t-nag/bine-hub-pipeline
+- dev
 
 pool:
   vmImage: 'ubuntu-latest'
