@@ -56,8 +56,28 @@ func MakeFileSystem(homeDirLocation string, boltdb_location string) (*FileSystem
 
 	return &fs, nil
 }
-
 func (fs *FileSystem) InitFileSystem() error {
+
+	/* Flat indexing of the contents-
+	   AssetsPathMapping
+	   SatelliteIdtoAssetIdMapping
+	*/
+	err := fs.CreateBucket("AssetPathMapping")
+	if err != nil {
+		return err
+	}
+	err = fs.CreateBucket("SatelliteIdtoAssetIdMapping")
+	if err != nil {
+		return err
+	}
+	err = fs.CreateHomeFolder()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (fs *FileSystem) Old_InitFileSystem() error {
 	err := fs.CreateBucket("Tree")
 	if err != nil {
 		return err
@@ -72,18 +92,6 @@ func (fs *FileSystem) InitFileSystem() error {
 		return err
 	}
 
-	/* Flat indexing of the contents-
-	   AssetsPathMapping
-	   SatelliteIdtoAssetIdMapping
-	*/
-	err = fs.CreateBucket("AssetPathMapping")
-	if err != nil {
-		return err
-	}
-	err = fs.CreateBucket("SatelliteIdtoAssetIdMapping")
-	if err != nil {
-		return err
-	}
 	err = fs.CreateHome()
 	if err != nil {
 		return err
@@ -820,7 +828,7 @@ func (fs *FileSystem) GetLeavesList(actual_path string) ([]string, error) {
 	return ret, nil
 }
 
-func (fs *FileSystem) PrintBuckets() {
+func (fs *FileSystem) Old_PrintBuckets() {
 	fs.nodesDB.View(func(tx *bolt.Tx) error {
 		fmt.Println("---------Tree-----------")
 		b := tx.Bucket([]byte("Tree"))
@@ -848,11 +856,21 @@ func (fs *FileSystem) PrintBuckets() {
 		}
 		fmt.Println("--------------------")
 
+		fmt.Println()
+
+		return nil
+	})
+}
+func (fs *FileSystem) PrintBuckets() {
+	fs.nodesDB.View(func(tx *bolt.Tx) error {
+		
+		fmt.Println("--------------------")
+
 		fmt.Println("----------- AssetID - FolderPath Mapping--------------")
 
-		b = tx.Bucket([]byte("AssetPathMapping"))
+		b := tx.Bucket([]byte("AssetPathMapping"))
 
-		c = b.Cursor()
+		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			fmt.Printf("key=%s, value=%s\n", k, v)
 		}

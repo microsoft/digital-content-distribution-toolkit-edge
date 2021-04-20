@@ -29,7 +29,7 @@ func setupRoutes(ginEngine *gin.Engine) {
 	ginEngine.GET("/list/leaves/", serveLeaves)
 	ginEngine.GET("/folderpath/", serveFolderPath)
 	ginEngine.GET("/download/files", serveFile)
-	fs.PrintFileSystem()
+	//fs.PrintFileSystem()
 }
 
 func errorResponse(context *gin.Context, response ...interface{}) {

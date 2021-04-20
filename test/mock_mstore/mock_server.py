@@ -38,9 +38,10 @@ metadata = {
     "duration": "PT00H17M01S",
     "series": "false",
     "userDefined": {
-      "title": "MStore_tests"
+      "title": "MStore_tests",
+      "contentid": "COCKTAIL"
     },
-    "movieID": "22mar21_1043_16MB",
+    "movieID": "BINE_22mar21_1043_16MB",
     "price": "0.00",
     "validityStartDate": "2021-03-22T09:07:56+00:00",
     "validityEndDate": "2021-03-31T18:24:56+00:00",

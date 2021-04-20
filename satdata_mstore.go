@@ -28,6 +28,30 @@ type VodList struct {
 type VodInfo struct {
 	Status   string `json:"status"`
 	Metadata struct {
+		UserDefined           struct {
+			Title     string `json:"title"`
+			Contentid string `json:"contentid"`
+		} `json:"userDefined"`
+		MovieId           string    `json:"movieID"`
+		ValidityStartDate time.Time `json:"validityStartDate"`
+		ValidityEndDate   time.Time `json:"validityEndDate"`
+		CID               string    `json:"CID"`
+		VideoFilename     string    `json:"video filename"`
+		TrailerFilename   string    `json:"trailer filename"`
+		CoverFilename     string    `json:"cover filename"`
+		URLForDataFiles   string    `json:"urlForDataFiles"`
+		DataFiles         struct {
+			File []struct {
+				Filename string `json:"filename"`
+				Filesize int    `json:"filesize"`
+			} `json:"file"`
+		} `json:"dataFiles"`
+		ThumbnailFilename string `json:"thumbnail filename"`
+	} `json:"metadata"`
+}
+type OldVodInfo struct {
+	Status   string `json:"status"`
+	Metadata struct {
 		UserDefined struct {
 			MediaId       string `json:"mediaId"`
 			MediaHouse    string `json:"mediaHouse"`
@@ -66,13 +90,11 @@ type VodInfo struct {
 		ThumbnailFilename string `json:"thumbnail filename"`
 	} `json:"metadata"`
 }
-
 func pollMstore(interval int) {
 	for true {
-		log.Println("==================Polling MStore API ==============")
+		fmt.Println("==================Polling MStore API ==============")
 		if err := checkForVODViaMstore(); err != nil {
 			log.Println("[SatdataMstore][pollMstore] Error", fmt.Sprintf("%s", err))
-			//logger.Log("Error", "SatdataMstore", map[string]string{"Message": err.Error()})
 			sm := new(l.MessageSubType)
 			sm.StringMessage = "SatdataMstore: " + err.Error()
 			logger.Log("Error", sm)
@@ -95,9 +117,9 @@ func checkForVODViaMstore() error {
 	if jsonErr != nil {
 		return jsonErr
 	}
-	log.Println("[Satdata_mstore][checkForVODViaMstore] NO. OF CONTENTS ON THE SAT: ", len(vodlist.ListContents))
+	fmt.Println("[Satdata_mstore][checkForVODViaMstore] NO. OF CONTENTS ON THE SAT: ", len(vodlist.ListContents))
 	for i, id := range vodlist.ListContents {
-		log.Println("=======(", i, ") Processing for CID:=====", id.ContentID)
+		fmt.Println("=======(", i, ") Processing for CID:=====", id.ContentID)
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
 			log.Println("[SatdataMstore][checkForVODViaMstore] Error ", fmt.Sprintf("%s", err))
@@ -108,12 +130,10 @@ func checkForVODViaMstore() error {
 		}
 	}
 	// Printing the final file sys after processing all the SAT contents
-	log.Println("=========================")
-	log.Println("Printing final buckets after processing all the contents on the SAT....")
+	fmt.Println("=========================")
+	fmt.Println("Printing final buckets after processing all the contents on the SAT....")
 	fs.PrintBuckets()
-	log.Println("Printing final file sys")
-	fs.PrintFileSystem()
-	log.Println("==========================")
+	fmt.Println("==========================")
 	return nil
 }
 
@@ -148,7 +168,41 @@ func getMetadataAPI(contentId string) error {
 	}
 	return nil
 }
+func getMstoreFiles(vod VodInfo) (string, error) {
+	//TODO: rebroadcast of the same contentID only after the first one is deleted ? Assumption ?? 
+	cid := vod.Metadata.CID
+	contentid := vod.Metadata.UserDefined.Contentid
+	path, _ := fs.GetAssetFolderPathFromDB(contentid)
+	if path != "" {
+		fmt.Println("Mapping already exist for the AssetID: ", contentid)
+		log.Println(fmt.Sprintf("skipping AssetId: %s as the mapping with the same id already exist", contentid))
+		sm := new(l.MessageSubType)
+		sm.StringMessage = "SatdataMstore: Mapping for " + contentid + " already exist."
+		logger.Log("Info", sm)
+		return contentid, nil
+	}
+	pathToAsset := vod.Metadata.URLForDataFiles
+	err := fs.CreateSatelliteIndexing(cid, contentid, pathToAsset)
+	if err != nil {
+		log.Println("[SatdataMstore][getMstoreFiles] ", fmt.Sprintf("AssetId: %s cannot be indexed", contentid, " Error: ", err))
+		return contentid, err
+	}
+	fmt.Println("Printing buckets")
+	fs.PrintBuckets()
+	fmt.Println("====================")
+	log.Println(fmt.Sprintf("[SatdataMstore][getMstoreFiles] AssetID: %s synced via SES", contentid))
+	log.Println(fmt.Sprintf("[SatdataMstore][getMstoreFiles] AssetSize: %2f MB", getDirSizeinMB(pathToAsset)))
+	log.Println(fmt.Sprintf("[SatdataMstore][getMstoreFiles] Disk space available on the Hub: %2f", getDiskInfo()))
+	//send telemetry
+	_sm := l.AssetInfo{AssetId: vod.Metadata.UserDefined.Contentid, Size: getDirSizeinMB(pathToAsset)}
+	sm := l.MessageSubType{AssetInfo: _sm}
+	logger.Log("AssetDownloadOnDeviceFromSES", &sm)
+	sm = l.MessageSubType{FloatValue: getDiskInfo()}
+	logger.Log("HubStorage", &sm)
+	
+	return contentid, nil
 
+}
 func populateFileInfos(folder string, folderMetadataFilesMap map[string][]FileInfo, folderBulkFilesMap map[string][]FileInfo, filepathMap map[string]string, deadline time.Time) [][]string {
 	metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
 	fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)
@@ -174,10 +228,9 @@ func populateFileInfos(folder string, folderMetadataFilesMap map[string][]FileIn
 	return fileInfos
 }
 
-func getMstoreFiles(vod VodInfo) (string, error) {
+func getMstoreFiles_Old(vod OldVodInfo) (string, error) {
 
 	cid := vod.Metadata.CID
-
 	deadline := vod.Metadata.ValidityEndDate
 	var _heirarchy string
 	if vod.Metadata.UserDefined.AncestorIds != "" {
@@ -193,8 +246,6 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		sm := new(l.MessageSubType)
 		sm.StringMessage = "SatdataMstore: " + _heirarchy + " already exist."
 		logger.Log("Info", sm)
-		//logger.Log("Info", "SatdataMstore", map[string]string{"Message": _heirarchy + " already exist."})
-		//Delete cid from mstore---  if to be removed later
 		if deleteFlag {
 			if err := deleteAPI(cid); err != nil {
 				log.Println("[SatdataMstore] Error", fmt.Sprintf("%s", err))
@@ -231,7 +282,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		log.Println("Printing buckets")
 		fs.PrintBuckets()
 		log.Println("Printing file sys")
-		fs.PrintFileSystem()
+		//fs.PrintFileSystem()
 		log.Println("====================")
 		log.Println("Creating subpath of the heirarchy: ", subpath)
 
@@ -269,8 +320,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	log.Println("Printing the heirarchy created...")
 	log.Println("Printing buckets")
 	fs.PrintBuckets()
-	log.Println("Printing file sys")
-	fs.PrintFileSystem()
+
 	log.Println("====================")
 	//trigger DELETE API--- if to be removed later
 	if deleteFlag {
@@ -408,8 +458,6 @@ func deleteAPI(cid string) error {
 func testMstore() error {
 	fmt.Println("Printing buckets")
 	fs.PrintBuckets()
-	fmt.Println("Printing file sys")
-	fs.PrintFileSystem()
 	fmt.Println("TEST file")
 	file, err := os.Open("test/mstore_test.json")
 	if err != nil {
@@ -436,7 +484,5 @@ func testMstore() error {
 	}
 	fmt.Println("Printing buckets")
 	fs.PrintBuckets()
-	fmt.Println("Printing file sys")
-	fs.PrintFileSystem()
 	return nil
 }

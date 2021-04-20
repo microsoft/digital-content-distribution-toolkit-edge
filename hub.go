@@ -35,8 +35,8 @@ var device_cfg *ini.File
 func main() {
 	var err, device_err error
 	fmt.Println("Starting ----------")
-	cfg, err = ini.Load("hub_config.ini")
-	//cfg, err = ini.Load("test_hub_config.ini")
+	//cfg, err = ini.Load("hub_config.ini")
+	cfg, err = ini.Load("test_hub_config.ini")
 	fmt.Println("loaded hub_config ini file")
 	device_cfg, device_err = ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
 
