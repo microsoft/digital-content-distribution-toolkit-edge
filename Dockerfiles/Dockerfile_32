@@ -1,0 +1,11 @@
+FROM arm32v7/ubuntu:latest
+
+RUN apt-get update
+RUN apt-get install wget -y
+
+EXPOSE 5000 5002
+
+WORKDIR /bine/
+COPY hub_config.ini ./
+COPY bine_arm ./
+CMD ["./bine_arm"]
