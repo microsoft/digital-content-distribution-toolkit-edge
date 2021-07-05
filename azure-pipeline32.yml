@@ -81,7 +81,7 @@ steps:
 - task: CmdLine@2
   displayName: "Setting up TEMP arm docker file"
   inputs:
-      script: "./docker_prepare.sh ./Dockerfiles/Dockerfile"
+      script: "./docker_prepare.sh ./Dockerfiles/Dockerfile_32"
 
 - task: CmdLine@2
   displayName: "Building ARM docker image"
