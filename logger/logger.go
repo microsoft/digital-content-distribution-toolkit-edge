@@ -27,18 +27,19 @@ type Message struct {
 	MessageBody    map[string]string
 }
 type TelemetryMessage struct {
-	DeviceIdInData    string
-	TimeStamp         string
-	ContentSyncInfo   ContentSyncInfoMessage
-	ContentDeleteInfo ContentDeleteInfoMessage
-	IntegrityStats    IntegrityStatsMessage
-	HubStorage        float64
-	Liveness          string
-	Error             string
-	Critical          string
-	Warning           string
-	Info              string
-	Debug             string
+	DeviceIdInData                       string                 `json:"DeviceIdInData"`
+	TimeStamp                            int64                  `json:"TimeStamp"`
+	ContentSyncInfo   ContentSyncInfoMessage 	`json:"ContentSyncInfo,omitempty"`
+	ContentDeleteInfo ContentDeleteInfoMessage  `json:"ContentDeleteInfo,omitempty"`
+	IntegrityStats    IntegrityStatsMessage     `json:"IntegrityStats,omitempty"`
+	HubStorage float64 `json:"HubStorage,omitempty"`
+	Memory     float64 `json:"Memory,omitempty"`
+	Liveness   string  `json:"Liveness,omitempty"`
+	Error      string  `json:"Error,omitempty"`
+	Critical   string  `json:"Critical,omitempty"`
+	Warning    string  `json:"Warning,omitempty"`
+	Info       string  `json:"Info,omitempty"`
+	Debug      string  `json:"Debug,omitempty"`
 }
 type ContentSyncInfoMessage struct {
 	DownloadStatus string
