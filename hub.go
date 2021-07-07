@@ -139,7 +139,9 @@ func main() {
 		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to get keys from blob storage: %v", err)})
 		log.Println(fmt.Sprintf("Failed to fetch blob storage url: %v", err))
 	}
-	defer resp.Body.Close()
+	// This condition added to bypass the error thrown if the storage url did not exist.
+	if resp != nil {
+		defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -202,6 +204,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	}
+	
 	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")
