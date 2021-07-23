@@ -1,6 +1,6 @@
 variables:
-  AMDRunNumber: '0.0.1-amd32-$(Build.BuildNumber)'
-  ARMRunNumber: '0.0.1-arm32v7-$(Build.BuildNumber)'
+  AMDRunNumber: 'amd32-$(Build.BuildNumber)'
+  ARMRunNumber: 'arm32v7-$(Build.BuildNumber)'
 
 trigger:
 - dev
