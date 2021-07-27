@@ -35,9 +35,9 @@ var device_cfg *ini.File
 func main() {
 	var err, device_err error
 	fmt.Println("Starting ----------")
-	cfg, err = ini.Load("hub_config.ini")
-	//cfg, err = ini.Load("test_hub_config.ini")
-	fmt.Println("found file ini file")
+	//cfg, err = ini.Load("hub_config.ini")
+	cfg, err = ini.Load("test_hub_config.ini")
+	fmt.Println("loaded hub_config ini file")
 	device_cfg, device_err = ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
 
 	codeLogsFile := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_PATH").String()
@@ -51,7 +51,7 @@ func main() {
 		MaxBackups: codeLogsFileMaxBackups, // number of backups
 		MaxAge:     codeLogsFileMaxAge,     //days
 	})
-
+	fmt.Println("Logs written to %v: ", codeLogsFile)
 	if err != nil {
 		fmt.Printf("Failed to read config file: %v", err)
 		os.Exit(1)
@@ -63,10 +63,13 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	logFile := cfg.Section("LOGGER").Key("LOG_FILE_PATH").String()
+	logFile := cfg.Section("LOGGER").Key("TEMP_LOG_FILE_PATH").String()
 	bufferSize, err := cfg.Section("LOGGER").Key("MEM_BUFFER_SIZE").Int()
 	deviceId := device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String()
-	logger = cl.MakeLogger(deviceId, logFile, bufferSize)
+	applicationName := cfg.Section("APP_INFO").Key("APPLICATION_NAME").String()
+	applicationVersion := cfg.Section("APP_INFO").Key("APPLICATION_VERSION").String()
+	upstreamAddress := cfg.Section("GRPC").Key("UPSTREAM_ADDRESS").String()
+	logger = cl.MakeLogger(deviceId, logFile, bufferSize, applicationName, applicationVersion, upstreamAddress)
 
 	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
 
@@ -74,7 +77,7 @@ func main() {
 	boltdb_location := cfg.Section("FILE_SYSTEM").Key("BOLTDB_LOCATION").String()
 	fs, err = filesys.MakeFileSystem(home_dir_location, boltdb_location)
 	if err != nil {
-		logger.Log("Error", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
+		logger.Log_old("Error", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
 		log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
 		os.Exit(1)
 	}
@@ -83,21 +86,22 @@ func main() {
 	if initflag {
 		err = fs.InitFileSystem()
 		if err != nil {
-			logger.Log("Critical", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
+			logger.Log_old("Critical", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
 			log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
 			os.Exit(1)
 		}
 	}
 
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
-
+	fs.PrintBuckets()
 	// launch a goroutine to handle method calls
 	wg.Add(1)
-	go handle_method_calls(downstream_grpc_port, wg)
+	//go handle_method_calls(downstream_grpc_port, wg)
+	go handleCommands(downstream_grpc_port, wg)
 
 	// start a concurrent background service which checks if the files on the device are tampered with
-	integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Int()
-	go checkIntegrity(integrityCheckInterval)
+	//integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Int()
+	//go checkIntegrity(integrityCheckInterval)
 
 	satApiCmd := cfg.Section("DEVICE_INFO").Key("SAT_API_SWITCH").String()
 	getdata_interval, err := cfg.Section("DEVICE_INFO").Key("MSTORE_SCHEDULER").Int()
@@ -107,13 +111,14 @@ func main() {
 	case "mstore":
 		go pollMstore(getdata_interval)
 	}
-
 	liveness_interval, err := cfg.Section("DEVICE_INFO").Key("LIVENESS_SCHEDULER").Int()
 	go liveness(liveness_interval)
 	deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
 	go deleteContent(deletion_interval)
-	//TODO: remove--- for testing dummy msg
-	//go testContentSyncInfo(120)
+	//TODO: remove--- for testing mock telemetry msg upstream
+	//go mock_liveness(liveness_interval)
+	//go mock_hubstorageandmemory(120)
+	//go mock_telelmetry(180)
 	// setup key manager and load keys
 	storage_url := cfg.Section("APP_AUTHENTICATION").Key("BLOB_STORAGE_KEYS_GET_URL").String()
 	pubkeys_dir := cfg.Section("APP_AUTHENTICATION").Key("PUBLIC_KEY_STORE_PATH").String()
@@ -127,7 +132,7 @@ func main() {
 		log.Println("Making public keys directory")
 		errDir := os.MkdirAll(pubkeys_dir, 0755)
 		if errDir != nil {
-			logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to make public keys directory: %v", err)})
+			logger.Log_old("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to make public keys directory: %v", err)})
 			log.Println(fmt.Sprintf("Failed to make public keys directory: %v", err))
 		}
 
@@ -136,7 +141,7 @@ func main() {
 	// get public keys from blob storage
 	resp, err := http.Get(storage_url)
 	if err != nil {
-		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to get keys from blob storage: %v", err)})
+		logger.Log_old("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to get keys from blob storage: %v", err)})
 		log.Println(fmt.Sprintf("Failed to fetch blob storage url: %v", err))
 	}
 	// This condition added to bypass the error thrown if the storage url did not exist.
@@ -145,7 +150,7 @@ func main() {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
+		logger.Log_old("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
 		log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
 	}
 
@@ -154,7 +159,7 @@ func main() {
 	var keys []PublicKey
 	err = json.Unmarshal(body, &keys)
 	if err != nil {
-		logger.Log("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
+		logger.Log_old("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
 		log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
 	}
 
@@ -199,13 +204,15 @@ func main() {
 	log.Println(fmt.Sprintf("Read a total of %v public keys", len(km.GetKeyList())))
 
 	if len(km.GetKeyList()) == 0 {
-		logger.Log("Critical", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
+		logger.Log_old("Critical", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
 		log.Println(fmt.Sprintf("Failed to setup keymanager: %v", err))
 		os.Exit(1)
 	}
 
 	}
 	
+	//go mock_liveness(liveness_interval)
+	//go mock_hubstorageandmemory(120)
 	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")

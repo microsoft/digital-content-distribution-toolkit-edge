@@ -96,7 +96,7 @@ func getMetdataFileParser(actualPath string) []string {
 	parentDirectory := actualPath + "/metadatafiles"
 	files, err := ioutil.ReadDir(parentDirectory)
 	if err != nil {
-		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in " + actualPath + " " + err.Error()})
+		logger.Log_old("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in " + actualPath + " " + err.Error()})
 		return result
 	}
 	for _, file := range files {
@@ -128,7 +128,7 @@ func getFolderSizeParser(actualPath string) int64 {
 	files, err := ioutil.ReadDir(actualPath + "/bulkfiles")
 	fmt.Println("Actual path for folder size parse: ", actualPath)
 	if err != nil {
-		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in " + actualPath + " " + err.Error()})
+		logger.Log_old("Error", "RouteHandler", map[string]string{"Message": "Error while finding files in " + actualPath + " " + err.Error()})
 		return 0
 	}
 	var size int64 = 0
@@ -227,7 +227,7 @@ func getAvailableFolders() []AvailableFolder {
 					folderMetadata.Path = osFsPath
 					folderMetadata.FolderUrl = "http://{HUB_IP}:5000/static/" + osFsPath
 					if !isSatellite {
-						folderMetadata.FolderUrl += "/bulkFiles"
+						folderMetadata.FolderUrl += "/bulkfiles"
 					}
 					fmt.Println("Folder size is: ", folderSize)
 					secondsDuration, err := getDurationInSeconds(folderMetadata.Duration)
@@ -241,10 +241,10 @@ func getAvailableFolders() []AvailableFolder {
 					availableFolder := AvailableFolder{ID: folderId, Metadata: folderMetadata}
 					result = append(result, availableFolder)
 				} else {
-					logger.Log("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error())})
+					logger.Log_old("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata json file %s for abstract path %s is invalid with error %s", metadataJSONFilePath, leaf, err.Error())})
 				}
 			} else {
-				logger.Log("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata directory %s for abstract path %s threw error %s", metadataJSONFilePath, leaf, err.Error())})
+				logger.Log_old("Error", "RouteHander", map[string]string{"Function": "GetAvailableFolders", "Message": fmt.Sprintf("metadata directory %s for abstract path %s threw error %s", metadataJSONFilePath, leaf, err.Error())})
 			}
 		} else {
 			fmt.Println("Error: ", err.Error())
@@ -252,9 +252,23 @@ func getAvailableFolders() []AvailableFolder {
 	}
 	return result
 }
-
+func getAssetFolderPath(assetId string) (FolderPathInfo, error) {
+	path, err := fs.GetAssetFolderPathFromDB(assetId)
+	response := FolderPathInfo{}
+	if err == nil {
+		response.Id = assetId
+		response.Folderpath = path
+	} else {
+		fmt.Println("[getAssetFolderPath] error: ", err.Error())		
+	}
+	return response, err
+}
 //FileToCheck Struct with file path and it's hashsum (sha256)
 type FileToCheck struct {
 	path   string
 	sha256 string
+}
+type FolderPathInfo struct {
+	Id        string `json:"id"`
+	Folderpath string `json:"folderpath"`
 }

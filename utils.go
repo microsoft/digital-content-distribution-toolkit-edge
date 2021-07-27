@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	syscall "golang.org/x/sys/unix"
 )
@@ -47,10 +46,11 @@ func DiskUsage(path string) (disk DiskStatus) {
 	return
 }
 
-func getDiskInfo() string {
+func getDiskInfo() float64 {
+	//TODO: disk directory path confirm
 	disk := DiskUsage("./")
-	result := fmt.Sprintf("%.2f", float64(disk.Avail)/float64(MB)) + "/" + fmt.Sprintf("%.2f", float64(disk.Total)/float64(MB))
-	return result
+	fmt.Println(fmt.Sprintf("%.2f", float64(disk.Avail)/float64(MB)) + "/" + fmt.Sprintf("%.2f", float64(disk.Total)/float64(MB)))
+	return float64(disk.Avail) / float64(MB)
 }
 
 func (pw *ProgressWriter) Write(b []byte) (int, error) {
@@ -128,11 +128,4 @@ func storeDeadline(path, deadline string) error {
 		}
 	}
 	return nil
-}
-
-func testContentSyncInfo(interval int) {
-	for true {
-		logger.Log("ContentSyncInfo", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": "a/b/c", "AssetSize": fmt.Sprintf("%.2f", 213.56), "Channel": "SES", "AssetUpdate": "No"})
-		time.Sleep(time.Duration(interval) * time.Second)
-	}
 }

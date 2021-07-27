@@ -5,13 +5,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
+	l "./logger"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,17 +22,34 @@ const lengthOfInt64Bytes int = 8
 // Setup Routes and their handles which the hub exposes
 // Route 1: "/list/files/:parent" returns the children and their metadata of :parent
 func setupRoutes(ginEngine *gin.Engine) {
-	ginEngine.Use(AuthRequiredMiddleware)
+	//ginEngine.Use(AuthRequiredMiddleware)
 	ginEngine.Static("/static", "/")
 	ginEngine.GET("/metadata/", serveSingleMetadata)
 	ginEngine.GET("/list/files/", serveMetadata)
 	ginEngine.GET("/list/leaves/", serveLeaves)
+	ginEngine.GET("/folderpath/", serveFolderPath)
 	ginEngine.GET("/download/files", serveFile)
-	fs.PrintFileSystem()
+	//fs.PrintFileSystem()
 }
 
 func errorResponse(context *gin.Context, response ...interface{}) {
 	context.String(400, "", response)
+}
+
+func serveFolderPath(context *gin.Context) {
+	queryParams := context.Request.URL.Query()
+	assetId := queryParams.Get("assetId")
+	fmt.Println("Getting folderpath for AssetID: ", assetId)
+	if path, err := getAssetFolderPath(assetId); err == nil {
+		if val, err := vanillaJSON(path); err == nil {
+			fmt.Println("val:", val)
+			context.Header("hubId", device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String())
+			context.String(200, string(val))
+			return
+		}
+	}
+	errorResponse(context, "Folderpath for the AssetID not found")
+
 }
 
 func serveSingleMetadata(context *gin.Context) {
@@ -71,8 +88,8 @@ func serveMetadata(context *gin.Context) {
 	// get List of children
 	// need to get this and metadata file list from Database
 	children := getChildren(mediaHouse, parent)
-	log.Println("Info", "Length of children for "+parent+" is ")
-	log.Println("Length is", len(children))
+	fmt.Println("Info", "Length of children for "+parent+" is ")
+	fmt.Println("Length is", len(children))
 	// return number of children
 	if writeInt32(context, len(children)) < 0 {
 		fmt.Println("Could not write to response stream")
@@ -123,13 +140,16 @@ func vanillaJSON(input interface{}) (string, error) {
 	if err == nil {
 		return string(buffer.Bytes()), nil
 	} else {
-		logger.Log("Error", "RouteHandler", map[string]string{"Function": "vanillaJSON", "Message": fmt.Sprintf("error while encoding %s", err.Error())})
+		sm := l.MessageSubType{StringMessage: "RouteHandler: " + "vanillaJSON: "+ fmt.Sprintf("error while encoding %s", err.Error())}
+		logger.Log("Error", &sm)
+		//logger.Log("Error", "RouteHandler", map[string]string{"Function": "vanillaJSON", "Message": fmt.Sprintf("error while encoding %s", err.Error())})
 	}
 	return "", err
 }
 
 func serveLeaves(context *gin.Context) {
 	if val, err := vanillaJSON(getAvailableFolders()); err == nil {
+		context.Header("hubId", device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String())
 		context.String(200, string(val))
 		return
 	}
@@ -162,17 +182,22 @@ func serveFile(context *gin.Context) {
 	fmt.Println("Actual path: ", actualPath)
 	if err != nil {
 		fmt.Println(err)
-		logger.Log("Error", "RouteHandler", map[string]string{"Message": "Could not get actual path for abstract path " + path})
+		sm := l.MessageSubType{StringMessage: "RouteHandler: " + "Could not get actual path for abstract path " + path}
+		logger.Log("Error", &sm)
+		//logger.Log("Error", "RouteHandler", map[string]string{"Message": "Could not get actual path for abstract path " + path})
 		errorResponse(context, "Invalid path")
 		return
 	}
-	logger.Log("Info", "RouteHandler", map[string]string{"Message": "Redirecting: " + path + " to actual: " + actualPath + "/" + fileName})
+	sm := l.MessageSubType{StringMessage: "RouteHandler: " + "Redirecting: " + path + " to actual: " + actualPath + "/" + fileName}
+	logger.Log("Info", &sm)
+	//logger.Log("Info", "RouteHandler", map[string]string{"Message": "Redirecting: " + path + " to actual: " + actualPath + "/" + fileName})
 	fmt.Println("Redirecting: " + path + " to actual: " + actualPath + "/" + fileName)
 	// redirect to this path
 	if strings.HasPrefix(actualPath, "/") {
 		actualPath = actualPath[1:]
 	}
 	context.Redirect(http.StatusTemporaryRedirect, "/static/"+actualPath+"/"+fileName)
+	fmt.Println("served the file...........")
 }
 
 func writeMetadataFiles(context *gin.Context, metadataFiles []string, mediaHouse string, id string) int {

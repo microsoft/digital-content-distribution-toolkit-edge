@@ -85,7 +85,7 @@ func pollNoovo(interval int) {
 		log.Println("==================Polling NOOVO API for the content==============")
 		if err := callNoovoAPI(); err != nil {
 			log.Println("[Satdata_noovo][pollNoovo] Error", fmt.Sprintf("%s", err))
-			logger.Log("Error", "SatdataNoovo", map[string]string{"Message": err.Error()})
+			//logger.Log("Error", "SatdataNoovo", map[string]string{"Message": err.Error()})
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
@@ -122,13 +122,13 @@ func callNoovoAPI() error {
 			}
 			if err := downloadContent(vod, _heirarchy); err != nil {
 				log.Println("[Satdata_noovo][callNoovoAPI] Error", fmt.Sprintf("%s", err))
-				logger.Log("Error", "SatdataNoovo", map[string]string{"Message": err.Error()})
-				logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": _heirarchy, "Channel": "SES"})
+				//logger.Log("Error", "SatdataNoovo", map[string]string{"Message": err.Error()})
+				//logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "FAIL", "FolderPath": _heirarchy, "Channel": "SES"})
 				continue
 			}
 			path, _ = fs.GetActualPathForAbstractedPath(_heirarchy)
-			logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "SES"})
-			logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
+			//logger.Log("Telemetry", "ContentSyncInfo", map[string]string{"DownloadStatus": "SUCCESS", "FolderPath": _heirarchy, "AssetSize(MB)": fmt.Sprintf("%.2f", getDirSizeinMB(path)), "Channel": "SES"})
+			//logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 			log.Println("[Satdata_noovo][callNoovoAPI] Info ", fmt.Sprintf("Downloaded on the HUB: %s", _heirarchy))
 		}
 	}
