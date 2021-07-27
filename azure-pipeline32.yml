@@ -1,0 +1,136 @@
+variables:
+  AMDRunNumber: 'amd32-$(Build.BuildNumber)'
+  ARMRunNumber: 'arm32v7-$(Build.BuildNumber)'
+
+trigger:
+- dev
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: GoTool@0
+  inputs:
+    version: '1.14.2'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: '-u github.com/golang/protobuf/proto'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: '-u github.com/golang/protobuf/protoc-gen-go'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: '-u google.golang.org/grpc'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: 'github.com/boltdb/bolt/...'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: '-u github.com/gin-gonic/gin'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: 'gopkg.in/ini.v1'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: '-u github.com/dgrijalva/jwt-go'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: '-u github.com/google/uuid'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: 'github.com/natefinch/lumberjack'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+- task: CmdLine@2
+  displayName: "Building ARM executable"
+  inputs:
+    script: "env GOARCH=arm GOOS=linux go build -o bine_arm"
+
+- task: Docker@2
+  displayName: Login to ACR
+  inputs:
+    command: login
+    containerRegistry: $(acr-service-connection)
+
+- task: CmdLine@2
+  displayName: "Setting up qemu for buildx"
+  inputs:
+    script: "docker run --rm --privileged docker/binfmt:820fdd95a9972a5308930a2bdfb8573dd4447ad3; cat /proc/sys/fs/binfmt_misc/qemu-aarch64"  
+
+- task: CmdLine@2
+  displayName: "Setting up ARM docker builder"
+  inputs:
+    script: "docker buildx create --name mybuilder; docker buildx use mybuilder; docker buildx inspect --bootstrap"
+
+- task: CmdLine@2
+  displayName: "Setting up TEMP arm docker file"
+  inputs:
+      script: "./docker_prepare.sh ./Dockerfiles/Dockerfile_32"
+
+- task: CmdLine@2
+  displayName: "Building ARM docker image"
+  inputs:
+    script: "docker buildx build -t hub --output type=docker,dest=hub.tar -f Dockerfile_tmp .; rm Dockerfile_tmp"
+
+- task: CmdLine@2
+  displayName: "Loading hub.tar"
+  inputs:
+    script: "docker load -i hub.tar"
+
+- task: CmdLine@2
+  displayName: "Tagging docker image"
+  inputs:
+    script: "docker tag hub $(arm_image):$(ARMRunNumber); docker tag $(arm_image):$(ARMRunNumber) $(arm_image):latest"
+
+- task: CmdLine@2
+  displayName: "Pushing image to ACR"
+  inputs:
+    script: "docker push --all-tags $(arm_image)"
+
+- task: Go@0 
+  displayName: "Building amd executable"  
+  inputs:
+    command: 'build'
+    arguments: '-o bine'
+
+- task: CmdLine@2
+  displayName: "Setting up TEMP amd docker file"
+  inputs:
+      script: "./docker_prepare.sh ./Dockerfiles/Dockerfile.x86"
+
+- task: CmdLine@2
+  displayName: "Building amd image"
+  inputs:
+    script: "docker build -t $(amd_image):$(AMDRunNumber) -f ./Dockerfile_tmp .; rm Dockerfile_tmp"
+
+- task: CmdLine@2
+  displayName: "Tagging amd image"
+  inputs:
+    script: "docker tag $(amd_image):$(AMDRunNumber) $(amd_image):latest"
+
+- task: CmdLine@2
+  displayName: "Pushing image to ACR"
+  inputs:
+    script: "docker push --all-tags $(amd_image)"
+
+- task: Docker@2
+  displayName: Logout of ACR
+  inputs:
+    command: logout
+    containerRegistry: $(acr-service-connection)

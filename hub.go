@@ -144,6 +144,7 @@ func main() {
 		logger.Log_old("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to get keys from blob storage: %v", err)})
 		log.Println(fmt.Sprintf("Failed to fetch blob storage url: %v", err))
 	}
+	// This condition added to bypass the error thrown if the storage url did not exist.
 	if resp != nil {
 		defer resp.Body.Close()
 
