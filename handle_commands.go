@@ -6,7 +6,7 @@ import (
 	"log"
 	"net"
 	"sync"
-
+	"time"
 	pb "./DownstreamCommands"
 	"google.golang.org/grpc"
 )
@@ -21,11 +21,36 @@ func newCommandServer() *server {
 }
 
 func (s *server) ReceiveCommand(ctx context.Context, commandParams *pb.CommandServiceRequest) (*pb.CommandServiceResponse, error) {
-	fmt.Println("Received from client- Command: ", commandParams.GetCommandName())
-	fmt.Println("Received from client- Payload:", commandParams.GetPayload())
-	return &pb.CommandServiceResponse{Code: 1, Message: "Recieved payload for " + commandParams.GetCommandName()}, nil
+	command := commandParams.GetCommandName()
+	payload := commandParams.GetPayload()
+	fmt.Println("Received from client- Command: ", command)
+	fmt.Println("Received from client- Payload:", payload)
+	switch(command) {
+	case "Download":
+		go handleDownload(payload)
+	case "Delete":
+		go handleDelete(payload)
+	case "SetFilters":
+		go handleSetFilters(payload)
+	default:
+		fmt.Println("Command not supported")
+	}
+	fmt.Println("Returning back the response to the proxy.....")
+	return &pb.CommandServiceResponse{Code: 1, Message: "Recieved payload for " + command}, nil
 }
 
+func handleSetFilters(payload string) {
+	time.Sleep(60 * time.Second)
+	fmt.Println("in another thread after sleep")
+}
+
+func handleDelete(payload string) {
+
+}
+
+func handleDownload(payload string){
+
+}
 func handleCommands(port int, wg sync.WaitGroup) {
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {

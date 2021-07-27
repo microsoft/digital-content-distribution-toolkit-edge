@@ -35,8 +35,8 @@ var device_cfg *ini.File
 func main() {
 	var err, device_err error
 	fmt.Println("Starting ----------")
-	cfg, err = ini.Load("hub_config.ini")
-	//cfg, err = ini.Load("test_hub_config.ini")
+	//cfg, err = ini.Load("hub_config.ini")
+	cfg, err = ini.Load("test_hub_config.ini")
 	fmt.Println("loaded hub_config ini file")
 	device_cfg, device_err = ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
 
@@ -144,7 +144,8 @@ func main() {
 		logger.Log_old("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to get keys from blob storage: %v", err)})
 		log.Println(fmt.Sprintf("Failed to fetch blob storage url: %v", err))
 	}
-	defer resp.Body.Close()
+	if resp != nil {
+		defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -207,6 +208,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	}
+	
 	//go mock_liveness(liveness_interval)
 	//go mock_hubstorageandmemory(120)
 	// set up the web server and routes

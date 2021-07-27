@@ -199,7 +199,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	logger.Log("AssetDownloadOnDeviceFromSES", &sm)
 	sm = l.MessageSubType{FloatValue: getDiskInfo()}
 	logger.Log("HubStorage", &sm)
-	
+	//TODO: call to CMS API
 	return contentid, nil
 
 }
