@@ -193,12 +193,12 @@ func (l *Logger) constructTelemetryMessageAndSend(mtype string, messageBody map[
 	case Liveness:
 
 		tm.DeviceIdInData = l.deviceId
-		tm.TimeStamp = fmt.Sprintf("%d", time.Now().Unix())
+		tm.TimeStamp = time.Now().Unix()
 		tm.Liveness = messageBody["STATUS"]
 
 	case ContentSyncInfo:
 		tm.DeviceIdInData = l.deviceId
-		tm.TimeStamp = fmt.Sprintf("%d", time.Now().Unix())
+		tm.TimeStamp = time.Now().Unix()
 		tm.ContentSyncInfo.DownloadStatus = messageBody["DownloadStatus"]
 		tm.ContentSyncInfo.FolderPath = messageBody["FolderPath"]
 		tm.ContentSyncInfo.Channel = messageBody["Channel"]
