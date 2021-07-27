@@ -27,7 +27,6 @@ type Message struct {
 }
 type TelemetryMessage struct {
 	DeviceIdInData                       string                 `json:"DeviceIdInData"`
-<<<<<<< HEAD
 	ApplicationName                      string                 `json:"ApplicationName"`
 	ApplicationVersion                   string                 `json:"ApplicationVersion"`
 	Timestamp                            int64                  `json:"TimeStamp"`
@@ -41,12 +40,6 @@ type TelemetryMessage struct {
 	SucessfulAssetDownloadOnMobile       *AssetInfo             `json:"SucessfulAssetDownloadOnMobile,omitempty"`
 	CorruptedFileStatsFromScheduler      *IntegrityStatsMessage `json:"CorruptedFileStatsFromScheduler,omitempty"`
 
-=======
-	TimeStamp                            int64                  `json:"TimeStamp"`
-	ContentSyncInfo   ContentSyncInfoMessage 	`json:"ContentSyncInfo,omitempty"`
-	ContentDeleteInfo ContentDeleteInfoMessage  `json:"ContentDeleteInfo,omitempty"`
-	IntegrityStats    IntegrityStatsMessage     `json:"IntegrityStats,omitempty"`
->>>>>>> upstream/dev
 	HubStorage float64 `json:"HubStorage,omitempty"`
 	Memory     float64 `json:"Memory,omitempty"`
 	Liveness   string  `json:"Liveness,omitempty"`
@@ -55,16 +48,6 @@ type TelemetryMessage struct {
 	Warning    string  `json:"Warning,omitempty"`
 	Info       string  `json:"Info,omitempty"`
 	Debug      string  `json:"Debug,omitempty"`
-<<<<<<< HEAD
-=======
-}
-type ContentSyncInfoMessage struct {
-	DownloadStatus string
-	AssetSize      float64
-	Channel        string
-	FolderPath     string
-	AssetUpdate    string // for addtoexisting files
->>>>>>> upstream/dev
 }
 type AssetInfo struct {
 	Size             float64 `json:"Size,omitempty"`
@@ -263,7 +246,6 @@ func (l *Logger) Log(eventType string, subType *MessageSubType) {
 	case CorruptedFileStatsFromScheduler:
 		tm.CorruptedFileStatsFromScheduler = &subType.IntegrityStats
 
-<<<<<<< HEAD
 		// subMessage := new(ContentSyncInfoMessage)
 		// subMessage.DownloadStatus = messageBody["DownloadStatus"]
 		// subMessage.FolderPath = messageBody["FolderPath"]
@@ -278,21 +260,6 @@ func (l *Logger) Log(eventType string, subType *MessageSubType) {
 		// temp, _ := strconv.ParseFloat(messageBody["AssetSize"], 64)
 		// &tm.ContentSyncInfo.AssetSize = temp
 		// &tm.ContentSyncInfo.AssetUpdate = messageBody["AssetUpdate"]
-=======
-		tm.DeviceIdInData = l.deviceId
-		tm.TimeStamp = time.Now().Unix()
-		tm.Liveness = messageBody["STATUS"]
-
-	case ContentSyncInfo:
-		tm.DeviceIdInData = l.deviceId
-		tm.TimeStamp = time.Now().Unix()
-		tm.ContentSyncInfo.DownloadStatus = messageBody["DownloadStatus"]
-		tm.ContentSyncInfo.FolderPath = messageBody["FolderPath"]
-		tm.ContentSyncInfo.Channel = messageBody["Channel"]
-		temp, _ := strconv.ParseFloat(messageBody["AssetSize"], 64)
-		tm.ContentSyncInfo.AssetSize = temp
-		tm.ContentSyncInfo.AssetUpdate = messageBody["AssetUpdate"]
->>>>>>> upstream/dev
 	}
 	b, err := json.Marshal(tm)
 	if err != nil {
