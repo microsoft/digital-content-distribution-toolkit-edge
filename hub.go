@@ -119,7 +119,7 @@ func main() {
 	go deleteContent(deletion_interval)
 	//TODO: remove--- for testing mock telemetry msg upstream
 	//go mock_liveness(liveness_interval)
-	//go mock_hubstorageandmemory(120)
+	go mock_hubstorageandmemory(1800)
 	//go mock_telelmetry(180)
 	// setup key manager and load keys
 	storage_url := cfg.Section("APP_AUTHENTICATION").Key("BLOB_STORAGE_KEYS_GET_URL").String()
