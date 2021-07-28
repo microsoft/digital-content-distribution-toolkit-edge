@@ -78,6 +78,7 @@ func main() {
 	fs, err = filesys.MakeFileSystem(home_dir_location, boltdb_location)
 	if err != nil {
 		logger.Log_old("Error", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
+		fmt.Println("Failed to setup filesys: %v", err)
 		log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
 		os.Exit(1)
 	}
@@ -87,6 +88,7 @@ func main() {
 		err = fs.InitFileSystem()
 		if err != nil {
 			logger.Log_old("Critical", "Filesys", map[string]string{"Message": fmt.Sprintf("Failed to setup filesys: %v", err)})
+			fmt.Println("Failed to setup filesys: %v", err)
 			log.Println(fmt.Sprintf("Failed to setup filesys: %v", err))
 			os.Exit(1)
 		}
