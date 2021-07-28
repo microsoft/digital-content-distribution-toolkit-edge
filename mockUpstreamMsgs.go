@@ -1,11 +1,11 @@
 package main
 
-// import (
-// 	"math/rand"
-// 	"time"
+import (
+	"math/rand"
+	"time"
 
-// 	l "./logger"
-// )
+	l "./logger"
+)
 
 // func mock_liveness(interval int) {
 // 	for true {
@@ -60,13 +60,13 @@ package main
 // 		time.Sleep(time.Duration(interval) * time.Second)
 // 	}
 // }
-// func mock_hubstorageandmemory(interval int) {
-// 	for true {
-// 		sm := new(l.SubValueType)
-// 		sm.FloatValue = 20 + rand.Float64()*(500-20)
-// 		logger.TestLog("HubStorage", sm)
-// 		sm.FloatValue = 40 + rand.Float64()*(100-40)
-// 		logger.TestLog("Memory", sm)
-// 		time.Sleep(time.Duration(interval) * time.Second)
-// 	}
-// }
+func mock_hubstorageandmemory(interval int) {
+	for true {
+		sm := new(l.MessageSubType)
+		sm.FloatValue = 20 + rand.Float64()*(500-20)
+		logger.Log("HubStorage", sm)
+		//sm.FloatValue = 40 + rand.Float64()*(100-40)
+		//logger.TestLog("Memory", sm)
+		time.Sleep(time.Duration(interval) * time.Second)
+	}
+}

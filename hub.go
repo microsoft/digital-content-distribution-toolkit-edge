@@ -35,8 +35,8 @@ var device_cfg *ini.File
 func main() {
 	var err, device_err error
 	fmt.Println("Starting ----------")
-	//cfg, err = ini.Load("hub_config.ini")
-	cfg, err = ini.Load("test_hub_config.ini")
+	cfg, err = ini.Load("hub_config.ini")
+	//cfg, err = ini.Load("test_hub_config.ini")
 	fmt.Println("loaded hub_config ini file")
 	device_cfg, device_err = ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
 
@@ -117,7 +117,7 @@ func main() {
 	go deleteContent(deletion_interval)
 	//TODO: remove--- for testing mock telemetry msg upstream
 	//go mock_liveness(liveness_interval)
-	//go mock_hubstorageandmemory(120)
+	go mock_hubstorageandmemory(1800)
 	//go mock_telelmetry(180)
 	// setup key manager and load keys
 	storage_url := cfg.Section("APP_AUTHENTICATION").Key("BLOB_STORAGE_KEYS_GET_URL").String()
