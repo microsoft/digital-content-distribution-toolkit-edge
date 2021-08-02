@@ -245,6 +245,16 @@ func (l *Logger) Log(eventType string, subType *MessageSubType) {
 		tm.SucessfulAssetDownloadOnMobile = &subType.AssetInfo
 	case CorruptedFileStatsFromScheduler:
 		tm.CorruptedFileStatsFromScheduler = &subType.IntegrityStats
+	case Error:
+		tm.Error = subType.StringMessage
+	case Critical:
+		tm.Critical = subType.StringMessage
+	case Info:
+		tm.Info = subType.StringMessage
+	case Debug:
+		tm.Debug = subType.StringMessage
+	case Warning:
+		tm.Warning = subType.StringMessage
 
 		// subMessage := new(ContentSyncInfoMessage)
 		// subMessage.DownloadStatus = messageBody["DownloadStatus"]
