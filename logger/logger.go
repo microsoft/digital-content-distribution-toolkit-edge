@@ -166,7 +166,7 @@ func (l *Logger) Log_old(messageType string, messagesubType string, messageBody 
 		log.Println(fmt.Sprintf("[Logger] error in creating message: %v", err))
 	}
 	msgString := string(b)
-
+	//fmt.Println("msg in old logs::", msgString)
 	err = l.lockFile()
 	if err != nil {
 		log.Println("[Logger] error in locking file")

@@ -41,6 +41,8 @@ func serveFolderPath(context *gin.Context) {
 	assetId := queryParams.Get("assetId")
 	fmt.Println("Getting folderpath for AssetID: ", assetId)
 	if path, err := getAssetFolderPath(assetId); err == nil {
+		//TODO: to be removed later. Just for testing now
+		path.Folderpath = "static"+path.Folderpath
 		if val, err := vanillaJSON(path); err == nil {
 			fmt.Println("val:", val)
 			context.Header("hubId", device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String())

@@ -103,7 +103,7 @@ func pollMstore(interval int) {
 	}
 }
 func checkForVODViaMstore() error {
-	res, err := http.Get("http://localhost:8134/listcontents")
+	res, err := http.Get("http://host.docker.internal:8134/listcontents")
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func checkForVODViaMstore() error {
 }
 
 func getMetadataAPI(contentId string) error {
-	query := "http://localhost:8134/getmetadata/" + contentId
+	query := "http://host.docker.internal:8134/getmetadata/" + contentId
 	res, err := http.Get(query)
 	if err != nil {
 		return err
@@ -181,7 +181,7 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		logger.Log("Info", sm)
 		return contentid, nil
 	}
-	pathToAsset := vod.Metadata.URLForDataFiles
+	pathToAsset := vod.Metadata.VideoFilename
 	err := fs.CreateSatelliteIndexing(cid, contentid, pathToAsset)
 	if err != nil {
 		log.Println("[SatdataMstore][getMstoreFiles] ", fmt.Sprintf("AssetId: %s cannot be indexed", contentid, " Error: ", err))
