@@ -156,8 +156,8 @@ func getMetadataAPI(contentId string) error {
 	if vod.Status == "15" {
 		return fmt.Errorf("getMetadataAPI: No metadata available for CID %s ", contentId)
 	}
-	if !strings.HasPrefix(vod.Metadata.MovieId, "BINE_") {
-		log.Println("[SatdataMstore][checkForVODViaMstore] Not a BINE Content")
+	if len(vod.Metadata.UserDefined.Contentid) == 0 {
+		log.Println("[SatdataMstore][checkForVODViaMstore] Invalid Content Metadata")
 		return nil
 	}
 
