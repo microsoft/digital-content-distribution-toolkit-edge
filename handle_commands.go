@@ -7,7 +7,7 @@ import (
 	"net"
 	"sync"
 	"time"
-	pb "./DownstreamCommands"
+	pb "binehub/DownstreamCommands"
 	"google.golang.org/grpc"
 )
 

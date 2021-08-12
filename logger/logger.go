@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	pbTelemetry "../goUpstreamTelemetry"
+	pbTelemetry "binehub/goUpstreamTelemetry"
 	"google.golang.org/grpc"
 )
 
