@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	l "./logger"
+	l "binehub/logger"
 	"github.com/gin-gonic/gin"
 )
 

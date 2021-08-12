@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	l "./logger"
+	l "binehub/logger"
 )
 
 type VodList struct {

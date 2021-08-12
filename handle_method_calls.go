@@ -19,7 +19,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	pb "./pbcommands"
+	pb "binehub/pbcommands"
 )
 
 type relayCommandServer struct {

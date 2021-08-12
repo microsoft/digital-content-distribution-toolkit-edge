@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"time"
 
-	l "./logger"
+	l "binehub/logger"
 )
 
 func checkIntegrity(interval int) {

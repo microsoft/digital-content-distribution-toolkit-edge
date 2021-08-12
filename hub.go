@@ -16,9 +16,9 @@ import (
 	"github.com/natefinch/lumberjack"
 	ini "gopkg.in/ini.v1"
 
-	filesys "./filesys"
-	keymanager "./keymanager"
-	cl "./logger"
+	filesys "binehub/filesys"
+	keymanager "binehub/keymanager"
+	cl "binehub/logger"
 )
 
 type PublicKey struct {

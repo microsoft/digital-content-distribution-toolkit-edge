@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	l "./logger"
+	l "binehub/logger"
 )
 
 func deleteContent(interval int) {

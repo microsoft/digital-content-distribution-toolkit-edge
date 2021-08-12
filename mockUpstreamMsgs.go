@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	l "./logger"
+	l "binehub/logger"
 )
 
 // func mock_liveness(interval int) {
