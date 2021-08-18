@@ -1,6 +1,15 @@
 variables:
   AMDRunNumber: 'amd64-$(Build.BuildNumber)'
   ARMRunNumber: 'arm32v7-$(Build.BuildNumber)'
+  acr-service-connection: 'acrbineiot${{ parameters.env }}-connection'
+  hub_image: acrbineiot${{ parameters.env }}.azurecr.io/$(repo_name)
+
+parameters:
+
+  - name: env
+    displayName: Environment
+    type: string
+    default: dev
 
 trigger:
 - dev
@@ -96,12 +105,12 @@ steps:
 - task: CmdLine@2
   displayName: "Tagging docker image"
   inputs:
-    script: "docker tag hub $(arm_image):$(ARMRunNumber); docker tag $(arm_image):$(ARMRunNumber) $(arm_image):latest"
+    script: "docker tag hub $(hub_image):$(ARMRunNumber); docker tag $(hub_image):$(ARMRunNumber) $(hub_image):latest"
 
 - task: CmdLine@2
   displayName: "Pushing image to ACR"
   inputs:
-    script: "docker push --all-tags $(arm_image)"
+    script: "docker push --all-tags $(hub_image)"
 
 - task: Go@0 
   displayName: "Building amd executable"  
@@ -117,17 +126,17 @@ steps:
 - task: CmdLine@2
   displayName: "Building amd image"
   inputs:
-    script: "docker build -t $(amd_image):$(AMDRunNumber) -f ./Dockerfile_tmp .; rm Dockerfile_tmp"
+    script: "docker build -t $(hub_image):$(AMDRunNumber) -f ./Dockerfile_tmp .; rm Dockerfile_tmp"
 
 - task: CmdLine@2
   displayName: "Tagging amd image"
   inputs:
-    script: "docker tag $(amd_image):$(AMDRunNumber) $(amd_image):latest"
+    script: "docker tag $(hub_image):$(AMDRunNumber) $(hub_image):latest"
 
 - task: CmdLine@2
   displayName: "Pushing image to ACR"
   inputs:
-    script: "docker push --all-tags $(amd_image)"
+    script: "docker push --all-tags $(hub_image)"
 
 - task: Docker@2
   displayName: Logout of ACR
