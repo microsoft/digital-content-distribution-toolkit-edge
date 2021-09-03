@@ -34,7 +34,7 @@ var device_cfg *ini.File
 
 func main() {
 	var err, device_err error
-	fmt.Println("Starting ----------")
+	fmt.Println("Starting ---------")
 	cfg, err = ini.Load("hub_config.ini")
 	//cfg, err = ini.Load("test_hub_config.ini")
 	fmt.Println("loaded hub_config ini file")
@@ -50,7 +50,7 @@ func main() {
 		MaxBackups: codeLogsFileMaxBackups, // number of backups
 		MaxAge:     codeLogsFileMaxAge,     //days
 	})
-	fmt.Println("Logs written to %v: ", codeLogsFile)
+	fmt.Printf("Logs written to %v\n: ", codeLogsFile)
 	if err != nil {
 		fmt.Printf("Failed to read config file: %v", err)
 		os.Exit(1)
