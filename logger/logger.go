@@ -13,6 +13,7 @@ import (
 	"time"
 
 	pbTelemetry "binehub/goUpstreamTelemetry"
+
 	"google.golang.org/grpc"
 )
 
@@ -40,14 +41,15 @@ type TelemetryMessage struct {
 	SucessfulAssetDownloadOnMobile       *AssetInfo             `json:"SucessfulAssetDownloadOnMobile,omitempty"`
 	CorruptedFileStatsFromScheduler      *IntegrityStatsMessage `json:"CorruptedFileStatsFromScheduler,omitempty"`
 
-	HubStorage float64 `json:"HubStorage,omitempty"`
-	Memory     float64 `json:"Memory,omitempty"`
-	Liveness   string  `json:"Liveness,omitempty"`
-	Error      string  `json:"Error,omitempty"`
-	Critical   string  `json:"Critical,omitempty"`
-	Warning    string  `json:"Warning,omitempty"`
-	Info       string  `json:"Info,omitempty"`
-	Debug      string  `json:"Debug,omitempty"`
+	HubStorage             float64 `json:"HubStorage,omitempty"`
+	Memory                 float64 `json:"Memory,omitempty"`
+	Liveness               string  `json:"Liveness,omitempty"`
+	InvalidCommandOnDevice string  `json:"InvalidCommandOnDevice,omitempty"`
+	Error                  string  `json:"Error,omitempty"`
+	Critical               string  `json:"Critical,omitempty"`
+	Warning                string  `json:"Warning,omitempty"`
+	Info                   string  `json:"Info,omitempty"`
+	Debug                  string  `json:"Debug,omitempty"`
 }
 type AssetInfo struct {
 	Size             float64 `json:"Size,omitempty"`
@@ -88,6 +90,7 @@ const (
 	FailedAssetDownloadOnMobile                    = "FailedAssetDownloadOnMobile"
 	SucessfulAssetDownloadOnMobile                 = "SucessfulAssetDownloadOnMobile"
 	CorruptedFileStatsFromScheduler                = "CorruptedFileStatsFromScheduler"
+	InvalidCommandOnDevice                         = "InvalidCommandOnDevice"
 	HubStorage                                     = "HubStorage"
 	Memory                                         = "Memory"
 )
@@ -221,7 +224,8 @@ func (l *Logger) Log(eventType string, subType *MessageSubType) {
 	switch EventType(eventType) {
 	case Liveness:
 		tm.Liveness = subType.StringMessage
-
+	case InvalidCommandOnDevice:
+		tm.InvalidCommandOnDevice = subType.StringMessage
 	case HubStorage:
 		tm.HubStorage = subType.FloatValue
 	case Memory:

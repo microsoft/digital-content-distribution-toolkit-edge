@@ -34,12 +34,11 @@ var device_cfg *ini.File
 
 func main() {
 	var err, device_err error
-	fmt.Println("Starting ----------")
+	fmt.Println("Starting ---------")
 	cfg, err = ini.Load("hub_config.ini")
 	//cfg, err = ini.Load("test_hub_config.ini")
 	fmt.Println("loaded hub_config ini file")
 	device_cfg, device_err = ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
-
 	codeLogsFile := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_PATH").String()
 	codeLogsFileMaxSize, err := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_MAX_SIZE").Int()
 	codeLogsFileMaxBackups, err := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_MAX_BACKUPS").Int()
@@ -51,7 +50,7 @@ func main() {
 		MaxBackups: codeLogsFileMaxBackups, // number of backups
 		MaxAge:     codeLogsFileMaxAge,     //days
 	})
-	fmt.Println("Logs written to %v: ", codeLogsFile)
+	fmt.Printf("Logs written to %v\n: ", codeLogsFile)
 	if err != nil {
 		fmt.Printf("Failed to read config file: %v", err)
 		os.Exit(1)
@@ -66,6 +65,8 @@ func main() {
 	logFile := cfg.Section("LOGGER").Key("TEMP_LOG_FILE_PATH").String()
 	bufferSize, err := cfg.Section("LOGGER").Key("MEM_BUFFER_SIZE").Int()
 	deviceId := device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String()
+	serviceId := cfg.Section("MSTORE_SERVICE").Key("serviceId").String()
+	filters := cfg.Section("DEVICE_INFO").Key("FILTERS").String()
 	applicationName := cfg.Section("APP_INFO").Key("APPLICATION_NAME").String()
 	applicationVersion := cfg.Section("APP_INFO").Key("APPLICATION_VERSION").String()
 	upstreamAddress := cfg.Section("GRPC").Key("UPSTREAM_ADDRESS").String()
@@ -93,7 +94,12 @@ func main() {
 			os.Exit(1)
 		}
 	}
-
+	fmt.Println("Setting up the filters on the startup of the hub module:", filters)
+	if err = callSetkeywords(serviceId, filters); err != nil {
+		fmt.Printf("Could not set persisted filters:%v\n", err)
+		log.Println(fmt.Sprintf("Could not set persisted filters:%v\n", err))
+	}
+	fmt.Println("filters set successfully on the device!")
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
 	//fs.CreateSatelliteIndexing("6760","b25f2953-760f-4351-a547-2f237db59634", "/mnt/hdd_1/mstore/QCAST.ipts/storage/6760_ab5f2953-760f-4351-a547-2f237db59634/ab5f2953-760f-4351-a547-2f237db59634.mpd" )
 	fs.PrintBuckets()
@@ -151,69 +157,69 @@ func main() {
 	if resp != nil {
 		defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		logger.Log_old("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
-		log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
-	}
-
-	log.Println(fmt.Sprintf("got body %v from blob storage", string(body)))
-
-	var keys []PublicKey
-	err = json.Unmarshal(body, &keys)
-	if err != nil {
-		logger.Log_old("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
-		log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
-	}
-
-	log.Println(fmt.Sprintf("Got %v keys from blob storage", len(keys)))
-	for _, key := range keys {
-		filePath := filepath.Join(km.PubkeysDir, fmt.Sprintf("%v.pem", key.TimeStamp))
-		f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, 0644)
+		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Println("[AddNewPublicKey] Error", fmt.Sprintf("%s", err))
+			logger.Log_old("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
+			log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
 		}
-		defer f.Close()
 
-		_, err = f.WriteString(key.PublicKey)
+		log.Println(fmt.Sprintf("got body %v from blob storage", string(body)))
+
+		var keys []PublicKey
+		err = json.Unmarshal(body, &keys)
 		if err != nil {
-			log.Println("[AddNewPublicKey] Error", fmt.Sprintf("%s", err))
+			logger.Log_old("Error", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to decode blob storage keys json: %v", err)})
+			log.Println(fmt.Sprintf("Failed to decode blob storage response: %v", err))
 		}
-	}
 
-	file_times := make([]int64, 0)
-	err = filepath.Walk(pubkeys_dir, func(path string, info os.FileInfo, err error) error {
-		ext := filepath.Ext(path)
-		if ext == ".pem" {
-			file_full_name := filepath.Base(path)
-			file_name := file_full_name[:len(file_full_name)-len(ext)]
-			file_time, err := strconv.ParseInt(file_name, 10, 64)
+		log.Println(fmt.Sprintf("Got %v keys from blob storage", len(keys)))
+		for _, key := range keys {
+			filePath := filepath.Join(km.PubkeysDir, fmt.Sprintf("%v.pem", key.TimeStamp))
+			f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fmt.Sprintf("Key file with name %v is not in correct format", file_full_name))
-			} else {
-				file_times = append(file_times, file_time)
+				log.Println("[AddNewPublicKey] Error", fmt.Sprintf("%s", err))
+			}
+			defer f.Close()
+
+			_, err = f.WriteString(key.PublicKey)
+			if err != nil {
+				log.Println("[AddNewPublicKey] Error", fmt.Sprintf("%s", err))
 			}
 		}
-		return nil
-	})
 
-	sort.Slice(file_times, func(i, j int) bool { return file_times[i] < file_times[j] })
-	for _, file_time := range file_times {
-		err = km.AddKey(fmt.Sprintf("%v.pem", file_time))
-		if err != nil {
-			log.Println(fmt.Sprintf("Failed to add key: %v", err))
+		file_times := make([]int64, 0)
+		err = filepath.Walk(pubkeys_dir, func(path string, info os.FileInfo, err error) error {
+			ext := filepath.Ext(path)
+			if ext == ".pem" {
+				file_full_name := filepath.Base(path)
+				file_name := file_full_name[:len(file_full_name)-len(ext)]
+				file_time, err := strconv.ParseInt(file_name, 10, 64)
+				if err != nil {
+					log.Println(fmt.Sprintf("Key file with name %v is not in correct format", file_full_name))
+				} else {
+					file_times = append(file_times, file_time)
+				}
+			}
+			return nil
+		})
+
+		sort.Slice(file_times, func(i, j int) bool { return file_times[i] < file_times[j] })
+		for _, file_time := range file_times {
+			err = km.AddKey(fmt.Sprintf("%v.pem", file_time))
+			if err != nil {
+				log.Println(fmt.Sprintf("Failed to add key: %v", err))
+			}
 		}
-	}
-	log.Println(fmt.Sprintf("Read a total of %v public keys", len(km.GetKeyList())))
+		log.Println(fmt.Sprintf("Read a total of %v public keys", len(km.GetKeyList())))
 
-	if len(km.GetKeyList()) == 0 {
-		logger.Log_old("Critical", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
-		log.Println(fmt.Sprintf("Failed to setup keymanager: %v", err))
-		os.Exit(1)
-	}
+		if len(km.GetKeyList()) == 0 {
+			logger.Log_old("Critical", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
+			log.Println(fmt.Sprintf("Failed to setup keymanager: %v", err))
+			os.Exit(1)
+		}
 
 	}
-	
+
 	//go mock_liveness(liveness_interval)
 	//go mock_hubstorageandmemory(120)
 	// set up the web server and routes
