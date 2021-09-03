@@ -106,7 +106,7 @@ func handleFilterUpdate(payload string) {
 
 }
 func callSetkeywords(serviceId, keywords string) error {
-	setFilterCall := "http://host.docker.internal:8134/setkeyword/" + serviceId + keywords
+	setFilterCall := "http://host.docker.internal:8134/setkeywords/" + serviceId + keywords
 	res, err := http.Get(setFilterCall)
 	if err != nil {
 		log.Println("[FilterUpdate] Error: ", fmt.Sprintf("%s", err))
