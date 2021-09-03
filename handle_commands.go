@@ -112,6 +112,7 @@ func callSetkeywords(serviceId, keywords string) error {
 		log.Println("[FilterUpdate] Error: ", fmt.Sprintf("%s", err))
 		sm := l.MessageSubType{StringMessage: "FilterUpdate: " + err.Error()}
 		logger.Log("Error", &sm)
+		return err
 	}
 	defer res.Body.Close()
 	response, err := ioutil.ReadAll(res.Body)
