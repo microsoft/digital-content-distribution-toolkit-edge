@@ -125,7 +125,7 @@ func callSetkeywords(serviceId, keywords string) error {
 	str := string(response)
 	r := regexp.MustCompile(`(?s)<body>(.*)</body>`)
 	result := r.FindString(str)
-	status := strings.Fields(strings.Trim(result[1], "\n"))
+	status := strings.Fields(strings.Trim(result, "\n"))
 	if status[2] == "FAILED" {
 		err := errors.New(fmt.Sprintf("setkeywords API of mstore service failed. Response: %s", status))
 		log.Println("[FilterUpdate] Error: ", fmt.Sprintf("%s", err))
