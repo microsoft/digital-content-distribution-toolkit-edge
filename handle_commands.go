@@ -106,7 +106,9 @@ func handleFilterUpdate(payload string) {
 
 }
 func callSetkeywords(serviceId, keywords string) error {
-	setFilterCall := "http://host.docker.internal:8134/setkeyword/" + serviceId + keywords
+	setFilterCall := "http://host.docker.internal:8134/setkeywords/" + serviceId + keywords
+	//setFilterCall := "http://localhost:8134/setkeywords/" + serviceId + keywords
+	fmt.Println(setFilterCall)
 	res, err := http.Get(setFilterCall)
 	if err != nil {
 		log.Println("[FilterUpdate] Error: ", fmt.Sprintf("%s", err))
@@ -124,8 +126,8 @@ func callSetkeywords(serviceId, keywords string) error {
 	}
 	str := string(response)
 	r := regexp.MustCompile(`(?s)<body>(.*)</body>`)
-	result := r.FindStringSubmatch(str)
-	status := strings.Fields(strings.Trim(result[1], "\n"))
+	result := r.FindString(str)
+	status := strings.Fields(strings.Trim(result, "\n"))
 	if status[2] == "FAILED" {
 		err := errors.New(fmt.Sprintf("setkeywords API of mstore service failed. Response: %s", status))
 		log.Println("[FilterUpdate] Error: ", fmt.Sprintf("%s", err))

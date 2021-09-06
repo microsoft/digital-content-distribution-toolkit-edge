@@ -100,8 +100,10 @@ func main() {
 	if err = callSetkeywords(serviceId, filters); err != nil {
 		fmt.Printf("Could not set persisted filters:%v\n", err)
 		log.Println(fmt.Sprintf("Could not set persisted filters:%v\n", err))
+	} else {
+		fmt.Println("filters set successfully on the device!")
 	}
-	fmt.Println("filters set successfully on the device!")
+
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
 	//fs.CreateSatelliteIndexing("6760","b25f2953-760f-4351-a547-2f237db59634", "/mnt/hdd_1/mstore/QCAST.ipts/storage/6760_ab5f2953-760f-4351-a547-2f237db59634/ab5f2953-760f-4351-a547-2f237db59634.mpd" )
 	fs.PrintBuckets()

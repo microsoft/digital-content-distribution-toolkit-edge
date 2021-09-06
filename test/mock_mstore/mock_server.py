@@ -5,6 +5,8 @@ import cgi
 import json
 import threading
 from urllib import parse
+from aiohttp import web
+
 
 PORT = 8134
 contentID = {"6639"}
@@ -66,18 +68,20 @@ metadata = {
     "thumbnail filename": "/media/sda1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/22mar21_1043_img1.jpg"
   }
 }
+
 class HTTPRequestHandler(BaseHTTPRequestHandler):
     def set_headers(self):
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
     def do_GET(self):
-        self.set_headers()
         if re.search('/listcontents', self.path):
+            self.set_headers()
             resp = json.dumps(listcontents)
             self.wfile.write(resp.encode('utf8'))
             return
         if re.search('/getmetadata/[0-9]+', self.path):
+            self.set_headers()
             cid = self.path.split('/')[-1]
             if cid in contentID: 
                 resp = json.dumps(metadata)
@@ -87,11 +91,21 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
                 resp = json.dumps({"Resp": "Invalid request"})
                 self.wfile.write(resp.encode('utf8'))
                 return
+        if re.search('/setkeywords', self.path):
+            f = open('resp.html', "r")
+            text = f.read()
+            #print(text)
+            self.send_response(200)
+            self.send_header('Content-Type','text/html')
+            self.end_headers()
+            self.wfile.write(text.encode('utf8'))
+            return 
+            
         else:
             resp = json.dumps({"Resp": "Invalid request"})
             self.wfile.write(resp.encode('utf8'))
             return
-
+    
 
 
 def main():
