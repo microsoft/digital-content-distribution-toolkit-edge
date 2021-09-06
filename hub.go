@@ -95,8 +95,8 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	filters = "/" + strings.Trim(filters, "/")
 	fmt.Println("Setting up the filters on the startup of the hub module:", filters)
+	filters = "/" + strings.Trim(filters, "/")
 	if err = callSetkeywords(serviceId, filters); err != nil {
 		fmt.Printf("Could not set persisted filters:%v\n", err)
 		log.Println(fmt.Sprintf("Could not set persisted filters:%v\n", err))

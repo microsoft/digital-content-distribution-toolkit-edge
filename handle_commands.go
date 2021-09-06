@@ -111,7 +111,7 @@ func callSetkeywords(serviceId, keywords string) error {
 	fmt.Println(setFilterCall)
 	res, err := http.Get(setFilterCall)
 	if err != nil {
-		log.Println("[FilterUpdate] Error: ", fmt.Sprintf("%s", err))
+		log.Println("[FilterUpdate] Error in api call: ", fmt.Sprintf("%s", err))
 		sm := l.MessageSubType{StringMessage: "FilterUpdate: " + err.Error()}
 		logger.Log("Error", &sm)
 		return err
@@ -119,12 +119,13 @@ func callSetkeywords(serviceId, keywords string) error {
 	defer res.Body.Close()
 	response, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Println("[FilterUpdate] Error: ", fmt.Sprintf("%s", err))
+		log.Println("[FilterUpdate] Error in reading response: ", fmt.Sprintf("%s", err))
 		sm := l.MessageSubType{StringMessage: "FilterUpdate: " + err.Error()}
 		logger.Log("Error", &sm)
 		return err
 	}
 	str := string(response)
+	fmt.Println(str)
 	r := regexp.MustCompile(`(?s)<body>(.*)</body>`)
 	result := r.FindString(str)
 	status := strings.Fields(strings.Trim(result, "\n"))
