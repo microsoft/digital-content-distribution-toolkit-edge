@@ -12,11 +12,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/natefinch/lumberjack"
 	ini "gopkg.in/ini.v1"
 
+	cpi "binehub/cloudapihandler"
 	filesys "binehub/filesys"
 	keymanager "binehub/keymanager"
 	cl "binehub/logger"
@@ -72,6 +74,8 @@ func main() {
 	applicationVersion := cfg.Section("APP_INFO").Key("APPLICATION_VERSION").String()
 	upstreamAddress := cfg.Section("GRPC").Key("UPSTREAM_ADDRESS").String()
 	logger = cl.MakeLogger(deviceId, logFile, bufferSize, applicationName, applicationVersion, upstreamAddress)
+
+	baseUrl := cfg.Section("CLOUD_URLS").Key("DEV").String()
 
 	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
 
@@ -226,6 +230,35 @@ func main() {
 
 	//go mock_liveness(liveness_interval)
 	//go mock_hubstorageandmemory(120)
+
+	var provisionData cpi.ApiData
+	provisionData.Id = deviceId
+	provisionData.ApiType = cpi.Provisioned
+	provisionData.OperationTime = time.Now().UTC()
+	provisionData.RetryCount = 0
+
+	provisionDataByteArr, err := json.Marshal(provisionData)
+
+	if err != nil {
+		fmt.Printf("Failed to get byte array of provisioned data: %v", err)
+		log.Println(fmt.Sprintf("Failed to get byte array of provisioned data: %v", err))
+	} else {
+		fmt.Printf("Setting provisioned status  %v", provisionData)
+		log.Println(fmt.Sprintf("Setting provisioned status  %v", provisionData))
+		fs.AddProvisionedStatus(deviceId, provisionDataByteArr)
+	}
+
+	handle_interval, err := cfg.Section("BLENDNET").Key("HANDLE_INTERVAL").Int()
+
+	if err != nil {
+		fmt.Printf("unable to get handle interval from ini file: %v", err)
+		log.Println(fmt.Sprintf("unable to get handle interval from ini file: %v", err))
+		handle_interval = 10
+	}
+
+	go cpi.InitAPIHandler(*fs, baseUrl, deviceId)
+	go cpi.HandleApiRequests(handle_interval)
+
 	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")

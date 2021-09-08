@@ -28,7 +28,7 @@ type VodList struct {
 type VodInfo struct {
 	Status   string `json:"status"`
 	Metadata struct {
-		UserDefined           struct {
+		UserDefined struct {
 			Title     string `json:"title"`
 			Contentid string `json:"contentid"`
 		} `json:"userDefined"`
@@ -90,6 +90,7 @@ type OldVodInfo struct {
 		ThumbnailFilename string `json:"thumbnail filename"`
 	} `json:"metadata"`
 }
+
 func pollMstore(interval int) {
 	for true {
 		fmt.Println("==================Polling MStore API ==============")
@@ -169,7 +170,7 @@ func getMetadataAPI(contentId string) error {
 	return nil
 }
 func getMstoreFiles(vod VodInfo) (string, error) {
-	//TODO: rebroadcast of the same contentID only after the first one is deleted ? Assumption ?? 
+	//TODO: rebroadcast of the same contentID only after the first one is deleted ? Assumption ??
 	cid := vod.Metadata.CID
 	contentid := vod.Metadata.UserDefined.Contentid
 	path, _ := fs.GetAssetFolderPathFromDB(contentid)

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,6 +57,7 @@ func MakeFileSystem(homeDirLocation string, boltdb_location string) (*FileSystem
 
 	return &fs, nil
 }
+
 func (fs *FileSystem) InitFileSystem() error {
 
 	/* Flat indexing of the contents-
@@ -70,6 +72,12 @@ func (fs *FileSystem) InitFileSystem() error {
 	if err != nil {
 		return err
 	}
+
+	err = fs.CreateBucket("PendingAPIRequestMapping")
+	if err != nil {
+		return err
+	}
+
 	err = fs.CreateHomeFolder()
 	if err != nil {
 		return err
@@ -151,7 +159,6 @@ func (fs *FileSystem) CreateHome() error {
 	if err != nil {
 		return err
 	}
-
 
 	return err
 }
@@ -595,10 +602,10 @@ func (fs *FileSystem) GetAssetFolderPathFromDB(id string) (string, error) {
 	containerpathString := strings.ReplaceAll(string(path), "/mnt/hdd_1/mstore/QCAST.ipts", "/mstore")
 	return containerpathString, err
 }
-func (fs *FileSystem) CreateSatelliteIndexing(cid, assetId, pathToAsset string) error{
+func (fs *FileSystem) CreateSatelliteIndexing(cid, assetId, pathToAsset string) error {
 	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("SatelliteIdtoAssetIdMapping"))
-		fmt.Println("Creating entry for Satellite Asset- CID : ",cid, " AssetID: ", assetId)
+		fmt.Println("Creating entry for Satellite Asset- CID : ", cid, " AssetID: ", assetId)
 		if err := b.Put([]byte(cid), []byte(assetId)); err != nil {
 			return fmt.Errorf("[Filesystem][CreateSatelliteIndexing] %s", err)
 		}
@@ -611,7 +618,7 @@ func (fs *FileSystem) CreateSatelliteIndexing(cid, assetId, pathToAsset string) 
 	})
 	return err
 }
-func (fs *FileSystem) DownloadAndCreateIndexing(assetId string, dfunc downloadFunc, downloadParams [][] string) error {
+func (fs *FileSystem) DownloadAndCreateIndexing(assetId string, dfunc downloadFunc, downloadParams [][]string) error {
 	node := RandStringBytes(fs.homeNode)
 	path := filepath.Join(fs.homeDirLocation, nodeToString(fs.homeNode), nodeToString(node))
 	err := os.MkdirAll(path, os.ModePerm)
@@ -621,7 +628,7 @@ func (fs *FileSystem) DownloadAndCreateIndexing(assetId string, dfunc downloadFu
 	err = dfunc(path, downloadParams)
 	if err != nil {
 		ferr := os.RemoveAll(path)
-		if ferr != nil{
+		if ferr != nil {
 			return ferr
 		}
 		return err
@@ -865,7 +872,7 @@ func (fs *FileSystem) Old_PrintBuckets() {
 }
 func (fs *FileSystem) PrintBuckets() {
 	fs.nodesDB.View(func(tx *bolt.Tx) error {
-		
+
 		fmt.Println("--------------------")
 
 		fmt.Println("----------- AssetID - FolderPath Mapping--------------")
@@ -891,4 +898,71 @@ func (fs *FileSystem) PrintBuckets() {
 
 		return nil
 	})
+}
+
+func (fs *FileSystem) GetPendingApiRequests() [][]byte {
+
+	var result [][]byte
+	fs.nodesDB.View(func(tx *bolt.Tx) error {
+		pendingAPIRequestBucket := tx.Bucket([]byte("PendingAPIRequestMapping"))
+
+		if pendingAPIRequestBucket == nil {
+			return nil
+		}
+
+		cursor := pendingAPIRequestBucket.Cursor()
+
+		fmt.Println("===========Iterating over pending api request bucket ==============")
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			fmt.Printf("key=%s, value=%s\n", k, v)
+			// target := new(cloudapi.ApiData)
+			// json.Unmarshal(v, target)
+			// result = append(result, *target)
+			result = append(result, v)
+
+		}
+		fmt.Println("====================================")
+		return nil
+	})
+	return result
+}
+
+func (fs *FileSystem) AddProvisionedStatus(deviceId string, data []byte) error {
+	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("PendingAPIRequestMapping"))
+		err := b.Put([]byte(deviceId), data)
+		if err != nil {
+			return fmt.Errorf("[AddProvisionedStatus] %s", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fs *FileSystem) DeletePendingAPIRequestEntries(data []string) error {
+	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("PendingAPIRequestMapping"))
+
+		for _, value := range data {
+			if err := b.Delete([]byte(value)); err != nil {
+				return fmt.Errorf("[PendingAPIRequestMapping][DeleteRequest] %s", err)
+			} else {
+				fmt.Printf("[DeletePendingAPIRequestEntries] Deleted entry %v", value)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		log.Printf("[PendingAPIRequestMapping][DeleteRequest] Error in transaction %s", err)
+		return err
+	}
+
+	return nil
 }
