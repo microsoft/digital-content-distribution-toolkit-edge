@@ -112,7 +112,7 @@ func main() {
 	//fs.CreateSatelliteIndexing("6760","b25f2953-760f-4351-a547-2f237db59634", "/mnt/hdd_1/mstore/QCAST.ipts/storage/6760_ab5f2953-760f-4351-a547-2f237db59634/ab5f2953-760f-4351-a547-2f237db59634.mpd" )
 	fs.PrintBuckets()
 	// launch a goroutine to handle method calls
-	wg.Add(1)
+	wg.Add(6)
 	//go handle_method_calls(downstream_grpc_port, wg)
 	go handleCommands(downstream_grpc_port, wg)
 
@@ -228,9 +228,6 @@ func main() {
 
 	}
 
-	//go mock_liveness(liveness_interval)
-	//go mock_hubstorageandmemory(120)
-
 	var provisionData cpi.ApiData
 	provisionData.Id = deviceId
 	provisionData.ApiType = cpi.Provisioned
@@ -256,7 +253,7 @@ func main() {
 		handle_interval = 10
 	}
 
-	go cpi.InitAPIHandler(*fs, baseUrl, deviceId)
+	cpi.InitAPIHandler(*fs, baseUrl, deviceId)
 	go cpi.HandleApiRequests(handle_interval)
 
 	// set up the web server and routes
