@@ -66,6 +66,12 @@ steps:
     command: 'get'
     arguments: 'github.com/natefinch/lumberjack'
     workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+- task: CmdLine@2
+  displayName: "Update environment variable in config file"
+  inputs:
+    script: "sed -i '/^\\[ENVIRONMENT]/,/^\\[/{s/^MODE[[:space:]]*=.*/MODE = ${{ parameters.env }}/}' hub_config.ini"
+
 - task: CmdLine@2
   displayName: "Building ARM executable"
   inputs:
