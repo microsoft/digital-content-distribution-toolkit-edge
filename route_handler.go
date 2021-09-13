@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	l "binehub/logger"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -42,7 +43,9 @@ func serveFolderPath(context *gin.Context) {
 	fmt.Println("Getting folderpath for AssetID: ", assetId)
 	if path, err := getAssetFolderPath(assetId); err == nil {
 		//TODO: to be removed later. Just for testing now
-		path.Folderpath = "static"+path.Folderpath
+		//path.Folderpath = "static"+path.Folderpath
+		trimmedPath := strings.TrimPrefix(path.Folderpath, "/mnt/hdd_1/mstore/QCAST.ipts/storage/")
+		path.Folderpath = "localhost/contents/" + trimmedPath
 		if val, err := vanillaJSON(path); err == nil {
 			fmt.Println("val:", val)
 			context.Header("hubId", device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String())
@@ -142,7 +145,7 @@ func vanillaJSON(input interface{}) (string, error) {
 	if err == nil {
 		return string(buffer.Bytes()), nil
 	} else {
-		sm := l.MessageSubType{StringMessage: "RouteHandler: " + "vanillaJSON: "+ fmt.Sprintf("error while encoding %s", err.Error())}
+		sm := l.MessageSubType{StringMessage: "RouteHandler: " + "vanillaJSON: " + fmt.Sprintf("error while encoding %s", err.Error())}
 		logger.Log("Error", &sm)
 		//logger.Log("Error", "RouteHandler", map[string]string{"Function": "vanillaJSON", "Message": fmt.Sprintf("error while encoding %s", err.Error())})
 	}
