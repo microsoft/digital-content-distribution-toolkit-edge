@@ -2,6 +2,7 @@ package main
 
 import (
 	pb "binehub/DownstreamCommands"
+	cpi "binehub/cloudapihandler"
 	l "binehub/logger"
 	"context"
 	"encoding/json"
@@ -103,7 +104,20 @@ func handleFilterUpdate(payload string) {
 		fmt.Println(failedReason)
 	}
 	// TODO: insert entry into the bucket
-
+	var additionalInfo []cpi.Property
+	additionalInfo = append(additionalInfo, cpi.Property{Key: "commandId", Value: commandIdInPayload})
+	if failedReason == "" {
+		additionalInfo = append(additionalInfo, cpi.Property{Key: "isFailed", Value: "true"})
+		additionalInfo = append(additionalInfo, cpi.Property{Key: "failureReason", Value: failedReason})
+	} else {
+		additionalInfo = append(additionalInfo, cpi.Property{Key: "isFailed", Value: "false"})
+	}
+	var commandStatusData cpi.ApiData
+	commandStatusData.OperationTime = time.Now().UTC()
+	commandStatusData.Id = deviceId
+	commandStatusData.RetryCount = 0
+	commandStatusData.ApiType = cpi.FilterUpdated
+	commandStatusData.Properties = additionalInfo
 }
 func callSetkeywords(serviceId, keywords string) error {
 	setFilterCall := "http://host.docker.internal:8134/setkeywords/" + serviceId + keywords
