@@ -599,8 +599,8 @@ func (fs *FileSystem) GetAssetFolderPathFromDB(id string) (string, error) {
 		return nil
 	})
 	//containerStorage := cfg.Section("DEVICE_INFO").Key("MSTORE_CONTAINER_STORAGE").String()
-	containerpathString := strings.ReplaceAll(string(path), "/mnt/hdd_1/mstore/QCAST.ipts", "/mstore")
-	return containerpathString, err
+	//containerpathString := strings.ReplaceAll(string(path), "/mnt/hdd_1/mstore/QCAST.ipts", "/mstore")
+	return string(path), err
 }
 func (fs *FileSystem) CreateSatelliteIndexing(cid, assetId, pathToAsset string) error {
 	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
