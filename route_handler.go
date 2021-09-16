@@ -45,7 +45,7 @@ func serveFolderPath(context *gin.Context) {
 		//TODO: to be removed later. Just for testing now
 		//path.Folderpath = "static"+path.Folderpath
 		trimmedPath := strings.TrimPrefix(path.Folderpath, "/mnt/hdd_1/mstore/QCAST.ipts/storage/")
-		path.Folderpath = "contents/" + trimmedPath
+		path.Folderpath = "storage/" + trimmedPath
 		if val, err := vanillaJSON(path); err == nil {
 			fmt.Println("val:", val)
 			context.Header("hubId", device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String())
