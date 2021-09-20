@@ -944,6 +944,46 @@ func (fs *FileSystem) AddProvisionedStatus(deviceId string, data []byte) error {
 	return nil
 }
 
+func (fs *FileSystem) AddContents(contentIds []string, data [][]byte) error {
+	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("PendingAPIRequestMapping"))
+
+		for i := 0; i < len(contentIds); i++ {
+			err := b.Put([]byte(contentIds[i]), data[i])
+			if err != nil {
+				log.Printf("[AddContents] Error in insertion of item %v with error %s", contentIds[i], err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fs *FileSystem) AddContent(contentId string, data []byte) error {
+	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("PendingAPIRequestMapping"))
+
+		err := b.Put([]byte(contentId), data)
+		if err != nil {
+			log.Printf("[AddContents] Error in insertion of item %v with error %s", contentId, err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (fs *FileSystem) DeletePendingAPIRequestEntries(data []string) error {
 	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("PendingAPIRequestMapping"))
