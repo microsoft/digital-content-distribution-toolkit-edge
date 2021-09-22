@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	capi "binehub/cloudapihandler"
 	l "binehub/logger"
 )
 
@@ -200,10 +201,29 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	logger.Log("AssetDownloadOnDeviceFromSES", &sm)
 	sm = l.MessageSubType{FloatValue: getDiskInfo()}
 	logger.Log("HubStorage", &sm)
-	//TODO: call to CMS API
-	return contentid, nil
 
+	//call to CMS API
+	var apidata = new(capi.ApiData)
+	apidata.Id = contentid
+	apidata.ApiType = capi.Downloaded
+	apidata.OperationTime = time.Now().UTC()
+	apidata.RetryCount = 0
+
+	data, err := json.Marshal(apidata)
+
+	if err != nil {
+		log.Printf("Error in marshalling api data for downloaded content with id %v and error %s ", contentid, err)
+	} else {
+		err = fs.AddContent(contentid, data)
+
+		if err != nil {
+			log.Printf("Error while storing downloaded content in pending requests db %s ", err)
+		}
+	}
+
+	return contentid, nil
 }
+
 func populateFileInfos(folder string, folderMetadataFilesMap map[string][]FileInfo, folderBulkFilesMap map[string][]FileInfo, filepathMap map[string]string, deadline time.Time) [][]string {
 	metafilesLen, bulkfilesLen := len(folderMetadataFilesMap[folder]), len(folderBulkFilesMap[folder])
 	fileInfos := make([][]string, metafilesLen+bulkfilesLen+1)

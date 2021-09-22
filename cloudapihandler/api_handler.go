@@ -2,15 +2,12 @@ package cloudapihandler
 
 import (
 	"binehub/filesys"
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"time"
+
+	l "binehub/logger"
 )
 
 type Type int
@@ -48,13 +45,13 @@ type UpdateRequest struct {
 type ApiDatas []ApiData
 
 var fs *filesys.FileSystem
-var baseUrl string
 var deviceId string
+var logger *l.Logger
 
-func InitAPIHandler(filesystem filesys.FileSystem, burl string, devId string) {
+func InitAPIHandler(filesystem filesys.FileSystem, devId string, log *l.Logger) {
 	fs = &filesystem
-	baseUrl = burl
 	deviceId = devId
+	logger = log
 }
 
 func HandleApiRequests(interval int) {
@@ -119,13 +116,6 @@ func ProcessRequests(segragatedMap map[Type][]ApiData) {
 
 func handleBatchDownloadRequest(apidata []ApiData) {
 
-	//base url
-	//post req body with content ids
-	//call api
-	//proces response and add back failed ones in db
-
-	url := baseUrl + "api/v1/DeviceContent/downloaded"
-
 	var contentData []ContentData
 
 	for _, data := range apidata {
@@ -144,42 +134,85 @@ func handleBatchDownloadRequest(apidata []ApiData) {
 	body, err := json.Marshal(updateRequest)
 
 	if err != nil {
-		log.Printf("[handleBatchDownloadRequest] Error in marshalling of request body %v", err)
+		log.Printf("[handleBatchDownloadRequest] Error in marshalling request. Failed to send grpc  %s ", err)
 		return
 	}
 
-	requestBody := bytes.NewBuffer(body)
+	sm := new(l.MessageSubType)
+	telemetryCommand := new(l.TelemetryCommand)
+	telemetryCommand.CommandName = l.ContentDownloaded
+	telemetryCommand.CommandData = string(body)
+	sm.TelemetryCommand = *telemetryCommand
 
-	resp, err := http.Post(url, "application/json", requestBody)
-
-	if err != nil {
-		log.Printf("[handleBatchDownloadRequest] error in post request %v", err)
-		return
-	}
-
-	defer resp.Body.Close()
-	//Read the response body
-	respbody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	sb := string(respbody)
-	log.Println(sb)
-
-	err = fs.DeletePendingAPIRequestEntries(ApiDatas(apidata).GetIds())
+	err = logger.Log(l.TelemetryCommandMessage, sm)
 
 	if err != nil {
-		log.Printf("[handleBatchDownloadRequest] Error in deleting db entries %s", err)
-	}
+		// re add entire batch with incremented retry count
+		ApiDatas(apidata).IncrementRetryCount()
 
-	//parse response
-	// if there are failures, re add to bolt
+		err = fs.AddContents(ApiDatas(apidata).GetIds(), ApiDatas(apidata).GetDataArray())
+
+		if err != nil {
+			log.Printf("[handleBatchDownloadRequest] Error in re-adding batch to db %s", err)
+		}
+
+	} else {
+		err = fs.DeletePendingAPIRequestEntries(ApiDatas(apidata).GetIds())
+
+		if err != nil {
+			log.Printf("[handleBatchDownloadRequest] Error in deleting db entries %s", err)
+		}
+	}
 }
 
-func handleBatchDeletedRequest(apiData []ApiData) {
+func handleBatchDeletedRequest(apidata []ApiData) {
+	var contentData []ContentData
 
+	for _, data := range apidata {
+
+		content := new(ContentData)
+		content.ContentId = data.Id
+		content.OperationTime = data.OperationTime
+
+		contentData = append(contentData, *content)
+	}
+
+	updateRequest := new(UpdateRequest)
+	updateRequest.DeviceId = deviceId
+	updateRequest.Contents = contentData
+
+	body, err := json.Marshal(updateRequest)
+
+	if err != nil {
+		log.Printf("[handleBatchDeletedRequest] Error in marshalling request. Failed to send grpc  %s ", err)
+		return
+	}
+
+	sm := new(l.MessageSubType)
+	telemetryCommand := new(l.TelemetryCommand)
+	telemetryCommand.CommandName = l.ContentDeleted
+	telemetryCommand.CommandData = string(body)
+	sm.TelemetryCommand = *telemetryCommand
+
+	err = logger.Log(l.TelemetryCommandMessage, sm)
+
+	if err != nil {
+		// re add entire batch with incremented retry count
+		ApiDatas(apidata).IncrementRetryCount()
+
+		err = fs.AddContents(ApiDatas(apidata).GetIds(), ApiDatas(apidata).GetDataArray())
+
+		if err != nil {
+			log.Printf("[handleBatchDeletedRequest] Error in re-adding batch to db %s", err)
+		}
+
+	} else {
+		err = fs.DeletePendingAPIRequestEntries(ApiDatas(apidata).GetIds())
+
+		if err != nil {
+			log.Printf("[handleBatchDeletedRequest] Error in deleting db entries %s", err)
+		}
+	}
 }
 
 func handleFilterUpdatedRequest(apiData []ApiData) {
@@ -191,16 +224,22 @@ func handledProvisionedRequest(apiData []ApiData) {
 		log.Printf("Found more than one entry for provision request %v", len(apiData))
 	}
 
-	url := baseUrl + "api/v1/Device/provision/"
-
-	fmt.Println("Url " + url)
+	var deleteIds []string
 
 	for _, data := range apiData {
-		devUrl := url + data.Id
-		err := putRequest(devUrl, nil)
+
+		sm := new(l.MessageSubType)
+		telemetryCommand := new(l.TelemetryCommand)
+		telemetryCommand.CommandName = l.ProvisionDevice
+		telemetryCommand.CommandData = string(data.Id)
+		sm.TelemetryCommand = *telemetryCommand
+
+		err := logger.Log(l.TelemetryCommandMessage, sm)
 
 		if err != nil {
 			log.Printf("Re queuing the request as it failed %v ", data.Id)
+
+			data.RetryCount++ //increment retry count before re adding
 			byteData, err := json.Marshal(data)
 
 			if err == nil {
@@ -208,41 +247,18 @@ func handledProvisionedRequest(apiData []ApiData) {
 			} else {
 				log.Printf("Failed to requeue provision request %v", err)
 			}
+		} else {
+			deleteIds = append(deleteIds, data.Id) //delete entries from db for success ones
 		}
 	}
 
-	err := fs.DeletePendingAPIRequestEntries(ApiDatas(apiData).GetIds())
+	// ensure to delete only completed items
+	err := fs.DeletePendingAPIRequestEntries(deleteIds)
 
 	if err != nil {
 		log.Printf("[handledProvisionedRequest] Error in deleting db entries %s", err)
 	}
 
-}
-
-func putRequest(url string, data io.Reader) error {
-	fmt.Println("calling put request ")
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPut, url, data)
-	var bearer = "Bearer " // + accesstoken todo: Get accesstoken from kaizala
-	req.Header.Add("Authorization", bearer)
-
-	if err != nil {
-		log.Printf("Error in put request NewRequest %s", err)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("Error in put request Client.Do %s", err)
-	}
-
-	defer resp.Body.Close()
-	respCode := resp.StatusCode
-
-	if respCode != http.StatusNoContent {
-		log.Printf("Put request did not succeed : %v ", respCode)
-		return errors.New("failed_request")
-	}
-
-	return nil
 }
 
 func (apidatas ApiDatas) GetIds() []string {
@@ -252,4 +268,28 @@ func (apidatas ApiDatas) GetIds() []string {
 		ids = append(ids, data.Id)
 	}
 	return ids
+}
+
+func (apidatas ApiDatas) GetDataArray() [][]byte {
+	var dataArr [][]byte
+
+	for _, data := range apidatas {
+		bytedata, err := json.Marshal(data)
+
+		if err != nil {
+			log.Printf("Error in marshalling of apidata %s", err)
+			continue
+		}
+
+		dataArr = append(dataArr, bytedata)
+	}
+
+	return dataArr
+}
+
+func (apidatas ApiDatas) IncrementRetryCount() {
+
+	for _, data := range apidatas {
+		data.RetryCount++
+	}
 }

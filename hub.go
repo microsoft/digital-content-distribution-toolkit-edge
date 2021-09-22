@@ -75,8 +75,6 @@ func main() {
 	upstreamAddress := cfg.Section("GRPC").Key("UPSTREAM_ADDRESS").String()
 	logger = cl.MakeLogger(deviceId, logFile, bufferSize, applicationName, applicationVersion, upstreamAddress)
 
-	baseUrl := cfg.Section("CLOUD_URLS").Key("DEV").String()
-
 	downstream_grpc_port, err := cfg.Section("GRPC").Key("DOWNSTREAM_PORT").Int()
 
 	home_dir_location := cfg.Section("FILE_SYSTEM").Key("HOME_DIR_LOCATION").String()
@@ -228,6 +226,9 @@ func main() {
 
 	}
 
+	//go mock_liveness(liveness_interval)
+	//go mock_hubstorageandmemory(120)
+
 	var provisionData cpi.ApiData
 	provisionData.Id = deviceId
 	provisionData.ApiType = cpi.Provisioned
@@ -253,7 +254,7 @@ func main() {
 		handle_interval = 10
 	}
 
-	cpi.InitAPIHandler(*fs, baseUrl, deviceId)
+	cpi.InitAPIHandler(*fs, deviceId, logger)
 	go cpi.HandleApiRequests(handle_interval)
 
 	// set up the web server and routes
