@@ -139,10 +139,10 @@ func handleBatchDownloadRequest(apidata []ApiData) {
 	}
 
 	sm := new(l.MessageSubType)
-	telemetryCommand := new(l.TelemetryCommand)
+	telemetryCommand := new(l.TelemetryCommandData)
 	telemetryCommand.CommandName = l.ContentDownloaded
 	telemetryCommand.CommandData = string(body)
-	sm.TelemetryCommand = *telemetryCommand
+	sm.TelemetryCommandData = *telemetryCommand
 
 	err = logger.Log(l.TelemetryCommandMessage, sm)
 
@@ -189,10 +189,10 @@ func handleBatchDeletedRequest(apidata []ApiData) {
 	}
 
 	sm := new(l.MessageSubType)
-	telemetryCommand := new(l.TelemetryCommand)
+	telemetryCommand := new(l.TelemetryCommandData)
 	telemetryCommand.CommandName = l.ContentDeleted
 	telemetryCommand.CommandData = string(body)
-	sm.TelemetryCommand = *telemetryCommand
+	sm.TelemetryCommandData = *telemetryCommand
 
 	err = logger.Log(l.TelemetryCommandMessage, sm)
 
@@ -229,10 +229,10 @@ func handledProvisionedRequest(apiData []ApiData) {
 	for _, data := range apiData {
 
 		sm := new(l.MessageSubType)
-		telemetryCommand := new(l.TelemetryCommand)
+		telemetryCommand := new(l.TelemetryCommandData)
 		telemetryCommand.CommandName = l.ProvisionDevice
 		telemetryCommand.CommandData = string(data.Id)
-		sm.TelemetryCommand = *telemetryCommand
+		sm.TelemetryCommandData = *telemetryCommand
 
 		err := logger.Log(l.TelemetryCommandMessage, sm)
 

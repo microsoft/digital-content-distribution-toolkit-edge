@@ -122,6 +122,7 @@ func checkForVODViaMstore() error {
 	fmt.Println("[Satdata_mstore][checkForVODViaMstore] NO. OF CONTENTS ON THE SAT: ", len(vodlist.ListContents))
 	for i, id := range vodlist.ListContents {
 		fmt.Println("=======(", i, ") Processing for CID:=====", id.ContentID)
+		//if
 		err := getMetadataAPI(id.ContentID)
 		if err != nil {
 			log.Println("[SatdataMstore][checkForVODViaMstore] Error ", fmt.Sprintf("%s", err))
