@@ -40,11 +40,11 @@ type TelemetryMessage struct {
 	FailedAssetDownloadOnMobile          *AssetInfo             `json:"failedAssetDownloadOnMobile,omitempty"`
 	SucessfulAssetDownloadOnMobile       *AssetInfo             `json:"sucessfulAssetDownloadOnMobile,omitempty"`
 	CorruptedFileStatsFromScheduler      *IntegrityStatsMessage `json:"corruptedFileStatsFromScheduler,omitempty"`
-	TelemetryCommandMessage              *TelemetryCommand      `json:"telemetryCommand,omitempty"`
+	TelemetryCommandMessage              *TelemetryCommandData  `json:"telemetryCommandData,omitempty"`
 
 	HubStorage             float64 `json:"hubStorage,omitempty"`
 	Memory                 float64 `json:"memory,omitempty"`
-	Liveness               string  `json:"iveness,omitempty"`
+	Liveness               string  `json:"liveness,omitempty"`
 	InvalidCommandOnDevice string  `json:"invalidCommandOnDevice,omitempty"`
 	Error                  string  `json:"error,omitempty"`
 	Critical               string  `json:"critical,omitempty"`
@@ -69,11 +69,11 @@ type IntegrityStatsMessage struct {
 	ExpectedSHA      string `json:"expectedSHA,omitempty"`
 }
 type MessageSubType struct {
-	StringMessage    string
-	FloatValue       float64
-	AssetInfo        AssetInfo
-	IntegrityStats   IntegrityStatsMessage
-	TelemetryCommand TelemetryCommand
+	StringMessage        string
+	FloatValue           float64
+	AssetInfo            AssetInfo
+	IntegrityStats       IntegrityStatsMessage
+	TelemetryCommandData TelemetryCommandData
 }
 
 type TelemetryCommandName int
@@ -85,7 +85,7 @@ const (
 	ProvisionDevice
 )
 
-type TelemetryCommand struct {
+type TelemetryCommandData struct {
 	CommandName TelemetryCommandName `json:"telemetryCommandName,omitempty"`
 	CommandData string               `json:"commandData,omitempty"`
 }
@@ -268,7 +268,7 @@ func (l *Logger) Log(eventType string, subType *MessageSubType) error {
 	case CorruptedFileStatsFromScheduler:
 		tm.CorruptedFileStatsFromScheduler = &subType.IntegrityStats
 	case TelemetryCommandMessage:
-		tm.TelemetryCommandMessage = &subType.TelemetryCommand
+		tm.TelemetryCommandMessage = &subType.TelemetryCommandData
 	case Error:
 		tm.Error = subType.StringMessage
 	case Critical:
