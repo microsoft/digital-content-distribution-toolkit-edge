@@ -912,16 +912,14 @@ func (fs *FileSystem) GetPendingApiRequests() [][]byte {
 
 		cursor := pendingAPIRequestBucket.Cursor()
 
-		fmt.Println("===========Iterating over pending api request bucket ==============")
+		log.Println("===========Iterating over pending api request bucket ==============")
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
-			fmt.Printf("key=%s, value=%s\n", k, v)
-			// target := new(cloudapi.ApiData)
-			// json.Unmarshal(v, target)
-			// result = append(result, *target)
+			log.Printf("key=%s, value=%s\n", k, v)
+
 			result = append(result, v)
 
 		}
-		fmt.Println("====================================")
+		log.Println("====================================")
 		return nil
 	})
 	return result
@@ -989,10 +987,12 @@ func (fs *FileSystem) DeletePendingAPIRequestEntries(data []string) error {
 		b := tx.Bucket([]byte("PendingAPIRequestMapping"))
 
 		for _, value := range data {
+
+			log.Printf("Deleting db entry with key %v", value)
 			if err := b.Delete([]byte(value)); err != nil {
 				return fmt.Errorf("[PendingAPIRequestMapping][DeleteRequest] %s", err)
 			} else {
-				fmt.Printf("[DeletePendingAPIRequestEntries] Deleted entry %v", value)
+				log.Printf("[DeletePendingAPIRequestEntries] Deleted entry %v", value)
 			}
 		}
 

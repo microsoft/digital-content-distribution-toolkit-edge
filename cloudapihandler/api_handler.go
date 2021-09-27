@@ -42,6 +42,10 @@ type UpdateRequest struct {
 	Contents []ContentData `json:"contents"`
 }
 
+type ProvisionDeviceRequest struct {
+	DeviceId string `json:"deviceId"`
+}
+
 type ApiDatas []ApiData
 
 var fs *filesys.FileSystem
@@ -72,9 +76,11 @@ func HandleApiRequests(interval int) {
 			apiData = append(apiData, *apidata)
 		}
 
-		var segragatedData = GetSegregatedItems(apiData)
+		var segregatedData = GetSegregatedItems(apiData)
 
-		ProcessRequests(segragatedData)
+		ProcessRequests(segregatedData)
+
+		apiData = nil // making it nil so that in next batch old entries do not exist
 
 		log.Printf("Done processing batch. Sleeping for %v minutes", interval)
 		time.Sleep(time.Duration(interval) * time.Minute)
@@ -99,16 +105,16 @@ func ProcessRequests(segragatedMap map[Type][]ApiData) {
 	for key := range segragatedMap {
 		switch key {
 		case Downloaded:
-			fmt.Println("Handle batch download request")
+			log.Println("Handle batch download request")
 			handleBatchDownloadRequest(segragatedMap[key])
 		case Deleted:
-			fmt.Println("Handle batch delete request")
+			log.Println("Handle batch delete request")
 			handleBatchDeletedRequest(segragatedMap[key])
 		case FilterUpdated:
-			fmt.Println("Handle filter update request")
+			log.Println("Handle filter update request")
 			handleFilterUpdatedRequest(segragatedMap[key])
 		case Provisioned:
-			fmt.Println("Handle provisioned request")
+			log.Println("Handle provisioned request")
 			handledProvisionedRequest(segragatedMap[key])
 		}
 	}
@@ -231,18 +237,28 @@ func handledProvisionedRequest(apiData []ApiData) {
 		sm := new(l.MessageSubType)
 		telemetryCommand := new(l.TelemetryCommandData)
 		telemetryCommand.CommandName = l.ProvisionDevice
-		telemetryCommand.CommandData = string(data.Id)
+
+		provDevReq := new(ProvisionDeviceRequest)
+		provDevReq.DeviceId = data.Id
+		provReqBytes, err := json.Marshal(provDevReq)
+
+		if err != nil {
+			log.Printf("Error in serializing Provision device request %s", err)
+			continue
+		}
+
+		telemetryCommand.CommandData = string(provReqBytes)
 		sm.TelemetryCommandData = *telemetryCommand
 
-		err := logger.Log(l.TelemetryCommandMessage, sm)
+		err = logger.Log(l.TelemetryCommandMessage, sm)
 
 		if err != nil {
 			log.Printf("Re queuing the request as it failed %v ", data.Id)
-
 			data.RetryCount++ //increment retry count before re adding
 			byteData, err := json.Marshal(data)
 
 			if err == nil {
+				log.Printf("Adding provisioned request to db key- %v and value- %v", data.Id, data)
 				fs.AddProvisionedStatus(data.Id, byteData)
 			} else {
 				log.Printf("Failed to requeue provision request %v", err)
@@ -252,6 +268,7 @@ func handledProvisionedRequest(apiData []ApiData) {
 		}
 	}
 
+	log.Printf("[handledProvisionedRequest] Deleting successful api calls from db %v", deleteIds)
 	// ensure to delete only completed items
 	err := fs.DeletePendingAPIRequestEntries(deleteIds)
 
