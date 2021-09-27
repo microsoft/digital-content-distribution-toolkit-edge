@@ -30,7 +30,7 @@ type TelemetryMessage struct {
 	DeviceIdInData                       string                 `json:"deviceIdInData"`
 	ApplicationName                      string                 `json:"applicationName"`
 	ApplicationVersion                   string                 `json:"applicationVersion"`
-	Timestamp                            int64                  `json:"timeStamp"`
+	Timestamp                            int64                  `json:"timestamp"`
 	AssetDeleteOnDeviceByScheduler       *AssetInfo             `json:"assetDeleteOnDeviceByScheduler,omitempty"`
 	AssetDeleteOnDeviceByCommand         *AssetInfo             `json:"assetDeleteOnDeviceByCommand,omitempty"`
 	FailedAssetDeleteOnDeviceByScheduler *AssetInfo             `json:"failedAssetDeleteOnDeviceByScheduler,omitempty"`
