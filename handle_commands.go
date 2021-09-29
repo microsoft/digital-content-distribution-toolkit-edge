@@ -118,6 +118,16 @@ func handleFilterUpdate(payload string) {
 	commandStatusData.RetryCount = 0
 	commandStatusData.ApiType = cpi.FilterUpdated
 	commandStatusData.Properties = additionalInfo
+	commandStatusDataByteArr, err := json.Marshal(commandStatusData)
+
+	if err != nil {
+		fmt.Printf("Failed to get byte array of command status data: %v", err)
+		log.Println(fmt.Sprintf("Failed to get byte array of command status data: %v", err))
+	} else {
+		fmt.Printf("Setting provisioned status  %v", commandStatusData)
+		log.Println(fmt.Sprintf("Setting provisioned status  %v", commandStatusData))
+		fs.AddCommandStatus(commandIdInPayload, commandStatusDataByteArr)
+	}
 }
 func callSetkeywords(serviceId, keywords string) error {
 	setFilterCall := "http://host.docker.internal:8134/setkeywords/" + serviceId + keywords
