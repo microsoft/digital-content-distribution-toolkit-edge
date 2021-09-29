@@ -262,12 +262,12 @@ func handleFilterUpdatedRequest(apidata []ApiData) {
 
 			if err == nil {
 				log.Printf("Adding completecommand request to db key- %v and value- %v", data.Id, data)
-				fs.AddCommandStatus(data.Id, byteData)
+				fs.AddCommandStatus(commandStatusReq.CommandId, byteData)
 			} else {
 				log.Printf("Failed to requeue completecommand request %v", err)
 			}
 		} else {
-			deleteIds = append(deleteIds, data.Id) //delete entries from db for success ones
+			deleteIds = append(deleteIds, commandStatusReq.CommandId) //delete entries from db for success ones
 		}
 	}
 	log.Printf("[handleCompleteCommandRequest] Deleting successful api calls from db %v", deleteIds)
