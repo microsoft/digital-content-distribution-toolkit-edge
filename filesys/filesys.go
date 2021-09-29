@@ -941,7 +941,22 @@ func (fs *FileSystem) AddProvisionedStatus(deviceId string, data []byte) error {
 
 	return nil
 }
+func (fs *FileSystem) AddCommandStatus(commandId string, data []byte) error {
+	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("PendingAPIRequestMapping"))
+		err := b.Put([]byte(commandId), data)
+		if err != nil {
+			return fmt.Errorf("[AddCommandStatus] %s", err)
+		}
+		return nil
+	})
 
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 func (fs *FileSystem) AddContents(contentIds []string, data [][]byte) error {
 	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("PendingAPIRequestMapping"))

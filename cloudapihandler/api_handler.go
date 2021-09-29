@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	l "binehub/logger"
@@ -45,7 +46,12 @@ type UpdateRequest struct {
 type ProvisionDeviceRequest struct {
 	DeviceId string `json:"deviceId"`
 }
-
+type CommandStatusRequest struct {
+	DeviceId      string `json:"deviceId"`
+	CommandId     string `json:"commandId"`
+	isFailed      bool   `json:"isFailed"`
+	failureReason string `json:"failureReason"`
+}
 type ApiDatas []ApiData
 
 var fs *filesys.FileSystem
@@ -221,7 +227,56 @@ func handleBatchDeletedRequest(apidata []ApiData) {
 	}
 }
 
-func handleFilterUpdatedRequest(apiData []ApiData) {
+func handleFilterUpdatedRequest(apidata []ApiData) {
+
+	var deleteIds []string
+
+	for _, data := range apidata {
+
+		sm := new(l.MessageSubType)
+		telemetryCommand := new(l.TelemetryCommandData)
+		telemetryCommand.CommandName = l.CompleteCommand
+
+		commandStatusReq := new(CommandStatusRequest)
+		commandStatusReq.DeviceId = data.Id
+		responseMap := make(map[string]string, 3)
+		for _, property := range data.Properties {
+			responseMap[property.Key] = property.Value
+		}
+		commandStatusReq.CommandId = responseMap["commandId"]
+		commandStatusReq.isFailed, _ = strconv.ParseBool(responseMap["isFailed"])
+		commandStatusReq.failureReason = responseMap["failureReason"]
+		commandStatusBytes, err := json.Marshal(commandStatusReq)
+		if err != nil {
+			log.Printf("Error in serializing Provision device request %s", err)
+			continue
+		}
+		telemetryCommand.CommandData = string(commandStatusBytes)
+		sm.TelemetryCommandData = *telemetryCommand
+
+		err = logger.Log(l.TelemetryCommandMessage, sm)
+		if err != nil {
+			log.Printf("Re queuing the request as it failed %v ", data.Id)
+			data.RetryCount++ //increment retry count before re adding
+			byteData, err := json.Marshal(data)
+
+			if err == nil {
+				log.Printf("Adding completecommand request to db key- %v and value- %v", data.Id, data)
+				fs.AddCommandStatus(data.Id, byteData)
+			} else {
+				log.Printf("Failed to requeue completecommand request %v", err)
+			}
+		} else {
+			deleteIds = append(deleteIds, data.Id) //delete entries from db for success ones
+		}
+	}
+	log.Printf("[handleCompleteCommandRequest] Deleting successful api calls from db %v", deleteIds)
+	// ensure to delete only completed items
+	err := fs.DeletePendingAPIRequestEntries(deleteIds)
+
+	if err != nil {
+		log.Printf("[handleCompleteCommandRequest] Error in deleting db entries %s", err)
+	}
 
 }
 
