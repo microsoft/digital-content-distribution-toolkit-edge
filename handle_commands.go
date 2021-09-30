@@ -114,7 +114,7 @@ func handleFilterUpdate(payload string) {
 	}
 	var commandStatusData cpi.ApiData
 	commandStatusData.OperationTime = time.Now().UTC()
-	commandStatusData.Id = commandIdInPayload
+	commandStatusData.Id = deviceId
 	commandStatusData.RetryCount = 0
 	commandStatusData.ApiType = cpi.FilterUpdated
 	commandStatusData.Properties = additionalInfo
