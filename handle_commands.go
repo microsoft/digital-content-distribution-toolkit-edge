@@ -107,10 +107,10 @@ func handleFilterUpdate(payload string) {
 	var additionalInfo []cpi.Property
 	additionalInfo = append(additionalInfo, cpi.Property{Key: "commandId", Value: commandIdInPayload})
 	if failedReason == "" {
-		additionalInfo = append(additionalInfo, cpi.Property{Key: "isFailed", Value: "true"})
+		additionalInfo = append(additionalInfo, cpi.Property{Key: "isFailed", Value: "false"})
 		additionalInfo = append(additionalInfo, cpi.Property{Key: "failureReason", Value: failedReason})
 	} else {
-		additionalInfo = append(additionalInfo, cpi.Property{Key: "isFailed", Value: "false"})
+		additionalInfo = append(additionalInfo, cpi.Property{Key: "isFailed", Value: "true"})
 	}
 	var commandStatusData cpi.ApiData
 	commandStatusData.OperationTime = time.Now().UTC()

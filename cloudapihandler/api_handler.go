@@ -244,14 +244,21 @@ func handleFilterUpdatedRequest(apidata []ApiData) {
 			responseMap[property.Key] = property.Value
 		}
 		commandStatusReq.CommandId = responseMap["commandId"]
-		commandStatusReq.isFailed, _ = strconv.ParseBool(responseMap["isFailed"])
+		isFailed, err := strconv.ParseBool(responseMap["isFailed"])
+		if err != nil {
+			log.Printf("Error in parsing bool value in complete command request %s", err)
+			fmt.Printf("Error in parsing bool value in complete command request%s", err)
+		}
+		commandStatusReq.isFailed = isFailed
 		commandStatusReq.failureReason = responseMap["failureReason"]
+		fmt.Printf("command response body: ", commandStatusReq)
 		commandStatusBytes, err := json.Marshal(commandStatusReq)
 		if err != nil {
-			log.Printf("Error in serializing Provision device request %s", err)
+			log.Printf("Error in serializing command complete request %s", err)
 			continue
 		}
 		telemetryCommand.CommandData = string(commandStatusBytes)
+		fmt.Printf("string after serializing:: ", telemetryCommand.CommandData)
 		sm.TelemetryCommandData = *telemetryCommand
 
 		err = logger.Log(l.TelemetryCommandMessage, sm)
