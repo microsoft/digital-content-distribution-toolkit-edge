@@ -49,8 +49,8 @@ type ProvisionDeviceRequest struct {
 type CommandStatusRequest struct {
 	DeviceId      string `json:"deviceId"`
 	CommandId     string `json:"commandId"`
-	isFailed      bool   `json:"isFailed"`
-	failureReason string `json:"failureReason"`
+	IsFailed      bool   `json:"isFailed"`
+	FailureReason string `json:"failureReason"`
 }
 type ApiDatas []ApiData
 
@@ -249,8 +249,8 @@ func handleFilterUpdatedRequest(apidata []ApiData) {
 			log.Printf("Error in parsing bool value in complete command request %s", err)
 			fmt.Printf("Error in parsing bool value in complete command request%s", err)
 		}
-		commandStatusReq.isFailed = isFailed
-		commandStatusReq.failureReason = responseMap["failureReason"]
+		commandStatusReq.IsFailed = isFailed
+		commandStatusReq.FailureReason = responseMap["failureReason"]
 		fmt.Printf("command response body: ", commandStatusReq)
 		commandStatusBytes, err := json.Marshal(commandStatusReq)
 		if err != nil {

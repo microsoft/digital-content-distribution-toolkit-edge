@@ -86,7 +86,7 @@ const (
 )
 
 type TelemetryCommandData struct {
-	CommandName TelemetryCommandName `json:"commandName,omitempty"`
+	CommandName TelemetryCommandName `json:"commandName"`
 	CommandData string               `json:"commandData,omitempty"`
 }
 
