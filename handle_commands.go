@@ -114,7 +114,7 @@ func handleFilterUpdate(payload string) {
 	}
 	var commandStatusData cpi.ApiData
 	commandStatusData.OperationTime = time.Now().UTC()
-	commandStatusData.Id = commandIdInPayload
+	commandStatusData.Id = deviceId
 	commandStatusData.RetryCount = 0
 	commandStatusData.ApiType = cpi.FilterUpdated
 	commandStatusData.Properties = additionalInfo
@@ -124,8 +124,8 @@ func handleFilterUpdate(payload string) {
 		fmt.Printf("Failed to get byte array of command status data: %v", err)
 		log.Println(fmt.Sprintf("Failed to get byte array of command status data: %v", err))
 	} else {
-		fmt.Printf("Setting provisioned status  %v", commandStatusData)
-		log.Println(fmt.Sprintf("Setting provisioned status  %v", commandStatusData))
+		fmt.Printf("Adding command status  %v", commandStatusData)
+		log.Println(fmt.Sprintf("Adding command status  %v", commandStatusData))
 		fs.AddCommandStatus(commandIdInPayload, commandStatusDataByteArr)
 	}
 }
