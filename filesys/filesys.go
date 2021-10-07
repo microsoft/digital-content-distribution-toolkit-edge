@@ -78,10 +78,6 @@ func (fs *FileSystem) InitFileSystem() error {
 		return err
 	}
 
-	err = fs.CreateHomeFolder()
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
