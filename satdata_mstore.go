@@ -20,10 +20,12 @@ import (
 )
 
 type VodList struct {
-	Status       string `json:"status"`
-	ListContents []struct {
-		ContentID string `json:"ContentId"`
-	} `json:"listContents"`
+	Status       string        `json:"status"`
+	ListContents []ListContent `json:"listContents"`
+}
+
+type ListContent struct {
+	ContentID string `json:"ContentId"`
 }
 
 type VodInfo struct {
@@ -120,6 +122,7 @@ func checkForVODViaMstore() error {
 		return jsonErr
 	}
 	fmt.Println("[Satdata_mstore][checkForVODViaMstore] NO. OF CONTENTS ON THE SAT: ", len(vodlist.ListContents))
+
 	for i, id := range vodlist.ListContents {
 		fmt.Println("=======(", i, ") Processing for CID:=====", id.ContentID)
 		//if
@@ -132,6 +135,14 @@ func checkForVODViaMstore() error {
 			continue
 		}
 	}
+
+	// Handle deleted contents
+	err = handleDeletedContents(vodlist)
+
+	if err != nil {
+		log.Printf("Error in handling deleted contents : %s ", err)
+	}
+
 	// Printing the final file sys after processing all the SAT contents
 	fmt.Println("=========================")
 	fmt.Println("Printing final buckets after processing all the contents on the SAT....")
@@ -171,6 +182,7 @@ func getMetadataAPI(contentId string) error {
 	}
 	return nil
 }
+
 func getMstoreFiles(vod VodInfo) (string, error) {
 	//TODO: rebroadcast of the same contentID only after the first one is deleted ? Assumption ??
 	cid := vod.Metadata.CID
@@ -223,6 +235,76 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	}
 
 	return contentid, nil
+}
+
+func handleDeletedContents(vodlist VodList) error {
+	log.Printf("Handling deleted contents from current vodlist %v", vodlist.ListContents)
+	satAssetMap, err := fs.GetSatelliteMappedItems()
+
+	if err != nil {
+		log.Printf("Error in getting satellite mapped items: %s ", err)
+		return err
+	}
+
+	var deletedSatelliteIds []string
+	var deletedContentIds []string
+
+	satelliteIDs := vodlist.ListContents
+
+	latestAvailableContents := make(map[string]ListContent, len(satelliteIDs))
+	for _, content := range satelliteIDs {
+		latestAvailableContents[content.ContentID] = content
+	}
+
+	for key, value := range satAssetMap {
+		if _, found := latestAvailableContents[key]; !found {
+			log.Printf("Deleted item present in satellite map - Satellite id: %v, Content id: %v", key, value)
+			deletedSatelliteIds = append(deletedSatelliteIds, key)
+			deletedContentIds = append(deletedContentIds, value)
+		}
+	}
+
+	// Delete entries from satellite map
+	log.Printf("Deleting satellite ids : %v", deletedSatelliteIds)
+	err = fs.DeleteSatelliteIds(deletedSatelliteIds)
+
+	if err != nil {
+		log.Printf("Erir in deleting satellite ids %s", err)
+	}
+
+	//Delete entries from asset map
+	log.Printf("Deleting content ids from asset mapping ids : %v", deletedContentIds)
+	err = fs.DeleteAssetMapping(deletedContentIds)
+
+	if err != nil {
+		log.Printf("Erir in deleting asset id mappings ids %s", err)
+	}
+
+	//Add entry to pending bucket
+
+	log.Printf("Adding pending request entries for deleted contents %s", deletedContentIds)
+	for _, contentId := range deletedContentIds {
+		var apidata = new(capi.ApiData)
+		apidata.Id = contentId
+		apidata.ApiType = capi.Deleted
+		apidata.OperationTime = time.Now().UTC()
+		apidata.RetryCount = 0
+
+		data, err := json.Marshal(apidata)
+
+		if err != nil {
+			log.Printf("Error in marshalling api data for deleted content with id %v and error %s ", contentId, err)
+		} else {
+			err = fs.AddContent(contentId, data)
+
+			if err != nil {
+				log.Printf("Error while storing deleted content in pending requests db %s ", err)
+			}
+		}
+
+	}
+
+	return nil
 }
 
 func populateFileInfos(folder string, folderMetadataFilesMap map[string][]FileInfo, folderBulkFilesMap map[string][]FileInfo, filepathMap map[string]string, deadline time.Time) [][]string {

@@ -588,10 +588,11 @@ func (fs *FileSystem) GetSatelliteFolderPath(node string) (string, error) {
 	})
 	return string(path), err
 }
+
 func (fs *FileSystem) GetAssetFolderPathFromDB(id string) (string, error) {
 	var path []byte
 	err := fs.nodesDB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("AssetPathMapping"))
+		b := tx.Bucket([]byte("AssetPathMapping")) // asset id to path
 		path = b.Get([]byte(id))
 		if path == nil {
 			return fmt.Errorf("folder path for %s does not exist", id)
@@ -600,8 +601,10 @@ func (fs *FileSystem) GetAssetFolderPathFromDB(id string) (string, error) {
 	})
 	//containerStorage := cfg.Section("DEVICE_INFO").Key("MSTORE_CONTAINER_STORAGE").String()
 	//containerpathString := strings.ReplaceAll(string(path), "/mnt/hdd_1/mstore/QCAST.ipts", "/mstore")
+	// [a,b,c,d] -- [a,b,e,f]
 	return string(path), err
 }
+
 func (fs *FileSystem) CreateSatelliteIndexing(cid, assetId, pathToAsset string) error {
 	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("SatelliteIdtoAssetIdMapping"))
@@ -870,6 +873,7 @@ func (fs *FileSystem) Old_PrintBuckets() {
 		return nil
 	})
 }
+
 func (fs *FileSystem) PrintBuckets() {
 	fs.nodesDB.View(func(tx *bolt.Tx) error {
 
@@ -898,6 +902,55 @@ func (fs *FileSystem) PrintBuckets() {
 
 		return nil
 	})
+}
+
+func (fs *FileSystem) GetSatelliteMappedItems() (map[string]string, error) {
+	satAssetMap := make(map[string]string)
+
+	fs.nodesDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("SatelliteIdtoAssetIdMapping"))
+
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			satAssetMap[string(k)] = string(v)
+		}
+
+		return nil
+	})
+
+	return satAssetMap, nil
+}
+
+func (fs *FileSystem) DeleteSatelliteIds(deleteIds []string) error {
+	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("SatelliteIdtoAssetIdMapping"))
+		fmt.Printf("Deleting entry for Satellite Asset- satellite ids : %v ", deleteIds)
+
+		for _, item := range deleteIds {
+			if err := b.Delete([]byte(item)); err != nil {
+				return fmt.Errorf("[Filesystem][DeleteSatelliteIds] %s", err)
+			}
+		}
+		return nil
+	})
+
+	return err
+}
+
+func (fs *FileSystem) DeleteAssetMapping(deleteIds []string) error {
+	err := fs.nodesDB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("AssetPathMapping"))
+		fmt.Printf("Deleting entry for asset path mapping- content ids : %v ", deleteIds)
+
+		for _, item := range deleteIds {
+			if err := b.Delete([]byte(item)); err != nil {
+				return fmt.Errorf("[Filesystem][DeleteAssetMapping] %s", err)
+			}
+		}
+		return nil
+	})
+
+	return err
 }
 
 func (fs *FileSystem) GetPendingApiRequests() [][]byte {
