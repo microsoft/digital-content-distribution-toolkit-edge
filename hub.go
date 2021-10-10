@@ -257,6 +257,17 @@ func main() {
 	cpi.InitAPIHandler(*fs, deviceId, logger)
 	go cpi.HandleApiRequests(handle_interval)
 
+	// send assetmap
+	messageSize, err := cfg.Section("BLENDNET").Key("ASSETMAP_MESSAGE_SIZE").Int()
+
+	if err != nil {
+		fmt.Printf("unable to get assetmap message size from ini file: %v", err)
+		log.Println(fmt.Sprintf("unable to get assetmap message size from ini file: %v", err))
+		messageSize = 10
+	}
+	go cpi.HandleAssetMapRequest(messageSize)
+	// check for the elapsed 24 hr
+
 	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")

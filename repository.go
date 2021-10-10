@@ -253,22 +253,25 @@ func getAvailableFolders() []AvailableFolder {
 	return result
 }
 func getAssetFolderPath(assetId string) (FolderPathInfo, error) {
-	path, err := fs.GetAssetFolderPathFromDB(assetId)
+	info, err := fs.GetAssetFolderPathFromDB(assetId)
+	var contentInfo ContentInfo
+	json.Unmarshal(info, &contentInfo)
 	response := FolderPathInfo{}
 	if err == nil {
 		response.Id = assetId
-		response.Folderpath = path
+		response.Folderpath = contentInfo.FolderPath
 	} else {
-		fmt.Println("[getAssetFolderPath] error: ", err.Error())		
+		fmt.Println("[getAssetFolderPath] error: ", err.Error())
 	}
 	return response, err
 }
+
 //FileToCheck Struct with file path and it's hashsum (sha256)
 type FileToCheck struct {
 	path   string
 	sha256 string
 }
 type FolderPathInfo struct {
-	Id        string `json:"id"`
+	Id         string `json:"id"`
 	Folderpath string `json:"folderpath"`
 }

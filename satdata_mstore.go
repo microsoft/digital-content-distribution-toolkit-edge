@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -26,6 +27,10 @@ type VodList struct {
 
 type ListContent struct {
 	ContentID string `json:"ContentId"`
+}
+type ContentInfo struct {
+	DownloadTime time.Time
+	FolderPath   string
 }
 
 type VodInfo struct {
@@ -187,8 +192,8 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 	//TODO: rebroadcast of the same contentID only after the first one is deleted ? Assumption ??
 	cid := vod.Metadata.CID
 	contentid := vod.Metadata.UserDefined.Contentid
-	path, _ := fs.GetAssetFolderPathFromDB(contentid)
-	if path != "" {
+	found, _ := fs.DoesContentIdExist(contentid)
+	if found {
 		fmt.Println("Mapping already exist for the AssetID: ", contentid)
 		log.Println(fmt.Sprintf("skipping AssetId: %s as the mapping with the same id already exist", contentid))
 		sm := new(l.MessageSubType)
@@ -196,12 +201,21 @@ func getMstoreFiles(vod VodInfo) (string, error) {
 		logger.Log("Info", sm)
 		return contentid, nil
 	}
-	pathToAsset := vod.Metadata.VideoFilename
-	err := fs.CreateSatelliteIndexing(cid, contentid, pathToAsset)
+	var contentInfo ContentInfo
+	contentInfo.DownloadTime = time.Now().UTC()
+	contentInfo.FolderPath = vod.Metadata.VideoFilename
+	contentInfoByteArr, err := json.Marshal(contentInfo)
+	if err != nil {
+		fmt.Printf("[SatdataMstore][getMstoreFiles]Failed to get byte array of contentInfo: %v", err)
+		log.Println(fmt.Sprintf("[SatdataMstore][getMstoreFiles]Failed to get byte array of contentInfo: %v", err))
+		return contentid, err
+	}
+	err = fs.CreateSatelliteIndexing(cid, contentid, contentInfoByteArr)
 	if err != nil {
 		log.Println("[SatdataMstore][getMstoreFiles] ", fmt.Sprintf("AssetId: %s cannot be indexed", contentid, " Error: ", err))
 		return contentid, err
 	}
+	pathToAsset := path.Dir(contentInfo.FolderPath)
 	fmt.Println("Printing buckets")
 	fs.PrintBuckets()
 	fmt.Println("====================")
