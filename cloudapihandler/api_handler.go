@@ -376,12 +376,12 @@ func (apidatas ApiDatas) IncrementRetryCount() {
 	}
 }
 
-func HandleAssetMapRequest(messageSize int) {
+func HandleAssetMapRequest(messageSize int) error {
 	assetMap, err := fs.GetAssetInfoMapItems()
 	if err != nil {
 		log.Printf("Error in getting assetInfo map %s", err)
 		fmt.Printf("Error in getting assetInfo map %s", err)
-		return
+		return err
 	}
 	contentBatch := make([]ContentData, 0, messageSize)
 	for id, v := range assetMap {
@@ -389,7 +389,7 @@ func HandleAssetMapRequest(messageSize int) {
 		err = json.Unmarshal(v, &contentInfo)
 		if err != nil {
 			log.Printf("Error in marshalling the contentinfo while sending the assetmap %s", err)
-			continue
+			return err
 		}
 		content := new(ContentData)
 		content.ContentId = id
@@ -405,8 +405,7 @@ func HandleAssetMapRequest(messageSize int) {
 			err = sendDownloadedTelemetryData(*updateRequest)
 			if err != nil {
 				log.Printf("[handleAssetMapRequest] Error in marshalling request. Failed to send grpc  %s ", err)
-				contentBatch = contentBatch[:0]
-				continue
+				return err
 			}
 			contentBatch = contentBatch[:0]
 		}
@@ -419,8 +418,10 @@ func HandleAssetMapRequest(messageSize int) {
 		err = sendDownloadedTelemetryData(*updateRequest)
 		if err != nil {
 			log.Printf("[handleAssetMapRequest] Error in marshalling request. Failed to send grpc  %s ", err)
+			return err
 		}
 	}
+	return nil
 }
 
 func sendDownloadedTelemetryData(updateRequest UpdateRequest) error {
