@@ -37,7 +37,10 @@ type ContentData struct {
 	ContentId     string    `json:"contentId"`
 	OperationTime time.Time `json:"operationTime"`
 }
-
+type ContentInfo struct {
+	DownloadTime time.Time
+	FolderPath   string
+}
 type UpdateRequest struct {
 	DeviceId string        `json:"deviceId"`
 	Contents []ContentData `json:"contents"`
@@ -371,4 +374,72 @@ func (apidatas ApiDatas) IncrementRetryCount() {
 	for _, data := range apidatas {
 		data.RetryCount++
 	}
+}
+
+func HandleAssetMapRequest(messageSize int) error {
+	assetMap, err := fs.GetAssetInfoMapItems()
+	if err != nil {
+		log.Printf("Error in getting assetInfo map %s", err)
+		fmt.Printf("Error in getting assetInfo map %s", err)
+		return err
+	}
+	contentBatch := make([]ContentData, 0, messageSize)
+	for id, v := range assetMap {
+		contentInfo := ContentInfo{}
+		err = json.Unmarshal(v, &contentInfo)
+		if err != nil {
+			log.Printf("Error in marshalling the contentinfo while sending the assetmap %s", err)
+			return err
+		}
+		content := new(ContentData)
+		content.ContentId = id
+		content.OperationTime = contentInfo.DownloadTime
+
+		contentBatch = append(contentBatch, *content)
+		if len(contentBatch) == messageSize {
+			//send the map
+			// empty the contentbatch
+			updateRequest := new(UpdateRequest)
+			updateRequest.DeviceId = deviceId
+			updateRequest.Contents = contentBatch
+			err = sendDownloadedTelemetryData(*updateRequest)
+			if err != nil {
+				log.Printf("[handleAssetMapRequest] Error in marshalling request. Failed to send grpc  %s ", err)
+				return err
+			}
+			contentBatch = contentBatch[:0]
+		}
+	}
+	if len(contentBatch) > 0 {
+		//send the remaining assets
+		updateRequest := new(UpdateRequest)
+		updateRequest.DeviceId = deviceId
+		updateRequest.Contents = contentBatch
+		err = sendDownloadedTelemetryData(*updateRequest)
+		if err != nil {
+			log.Printf("[handleAssetMapRequest] Error in marshalling request. Failed to send grpc  %s ", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func sendDownloadedTelemetryData(updateRequest UpdateRequest) error {
+	body, err := json.Marshal(updateRequest)
+
+	if err != nil {
+		return err
+	}
+
+	sm := new(l.MessageSubType)
+	telemetryCommand := new(l.TelemetryCommandData)
+	telemetryCommand.CommandName = l.ContentDownloaded
+	telemetryCommand.CommandData = string(body)
+	sm.TelemetryCommandData = *telemetryCommand
+
+	err = logger.Log(l.TelemetryCommandMessage, sm)
+	if err != nil {
+		return err
+	}
+	return nil
 }

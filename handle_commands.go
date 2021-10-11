@@ -124,8 +124,8 @@ func handleFilterUpdate(payload string) {
 		fmt.Printf("Failed to get byte array of command status data: %v", err)
 		log.Println(fmt.Sprintf("Failed to get byte array of command status data: %v", err))
 	} else {
-		fmt.Printf("Setting provisioned status  %v", commandStatusData)
-		log.Println(fmt.Sprintf("Setting provisioned status  %v", commandStatusData))
+		fmt.Printf("Adding command status  %v", commandStatusData)
+		log.Println(fmt.Sprintf("Adding command status  %v", commandStatusData))
 		fs.AddCommandStatus(commandIdInPayload, commandStatusDataByteArr)
 	}
 }

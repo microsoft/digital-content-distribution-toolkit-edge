@@ -257,6 +257,39 @@ func main() {
 	cpi.InitAPIHandler(*fs, deviceId, logger)
 	go cpi.HandleApiRequests(handle_interval)
 
+	// send assetmap
+	messageSize, err := cfg.Section("BLENDNET").Key("ASSETMAP_MESSAGE_SIZE").Int()
+
+	if err != nil {
+		fmt.Printf("unable to get assetmap message size from ini file: %v", err)
+		log.Println(fmt.Sprintf("unable to get assetmap message size from ini file: %v", err))
+		messageSize = 10
+	}
+	errors := make(chan error, 1)
+	defer close(errors)
+	// check for the elapsed 24 hr
+	currentTimestamp := time.Now().Unix()
+	lastTimestamp, err := cfg.Section("BLENDNET").Key("ASSETMAP_TIMESTAMP").Int64()
+	if err != nil {
+		fmt.Printf("unable to last timestamp of assetmap sent from ini file: %v", err)
+		log.Println(fmt.Sprintf("last timestamp of assetmap sent from ini file: %v", err))
+		lastTimestamp = 0
+	}
+	timeElapsedInHr := (currentTimestamp - lastTimestamp) / 60 / 60
+	if timeElapsedInHr > 24 {
+		//go cpi.HandleAssetMapRequest(messageSize)
+		go func() {
+			errors <- cpi.HandleAssetMapRequest(messageSize)
+		}()
+		if err := <-errors; err != nil {
+			// persist the timestamp in the ini file
+			cfg.Section("BLENDNET").Key("ASSETMAP_TIMESTAMP").SetValue(strconv.FormatInt(currentTimestamp, 10))
+			if writeErr := cfg.SaveTo("hub_config.ini"); writeErr != nil {
+				fmt.Printf("unable to store last timestamp of assetmap sent in the ini file: %v", writeErr)
+				log.Println(fmt.Sprintf("unable to store last timestamp of assetmap sent in the ini file: %v", writeErr))
+			}
+		}
+	}
 	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")
