@@ -49,7 +49,7 @@ metadata = {
     "validityEndDate": "2021-03-31T18:24:56+00:00",
     "CID": "6639",
     "theoricDuration": "",
-    "video filename": "/media/sda1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/22mar21_1043_vod_16MB.mp4",
+    "video filename": "/mnt/hdd_1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/22mar21_1043_vod_16MB.mp4",
     "trailer filename": "/media/sda1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/",
     "cover filename": "/media/sda1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/22mar21_1043_img2.jpg",
     "urlForDataFiles": "/media/sda1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/",

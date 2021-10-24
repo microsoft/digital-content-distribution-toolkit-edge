@@ -15,7 +15,7 @@ import (
 
 func deleteContent(interval int) {
 	for true {
-		time.Sleep(time.Duration(interval) * time.Second)
+		time.Sleep(time.Duration(interval) * time.Minute)
 		log.Println("--------Checking for validity dates of the Contents----------")
 		fmt.Println("--------Checking for validity dates of the Contents----------")
 		fmt.Println("Printing buckets before deletion")
@@ -101,9 +101,9 @@ func checkDeadlineAndDelete(path string, actualPathPrefix string) error {
 		sm.AssetInfo.Size = deletesize
 		sm.AssetInfo.RelativeLocation = actualPathPrefix
 		logger.Log("AssetDeleteOnDeviceByScheduler", sm)
-		sm = new(l.MessageSubType)
-		sm.FloatValue = getDiskInfo()
-		logger.Log("HubStorage", sm)
+		// sm = new(l.MessageSubType)
+		// sm.FloatValue = getDiskInfo()
+		// logger.Log("HubStorage", sm)
 
 	}
 	return nil

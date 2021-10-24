@@ -383,6 +383,8 @@ func HandleAssetMapRequest(messageSize int) error {
 		fmt.Printf("Error in getting assetInfo map %s", err)
 		return err
 	}
+	fmt.Println("AssetMap size::", len(assetMap))
+	log.Println("AssetMap size::", len(assetMap))
 	contentBatch := make([]ContentData, 0, messageSize)
 	for id, v := range assetMap {
 		contentInfo := ContentInfo{}
@@ -436,7 +438,6 @@ func sendDownloadedTelemetryData(updateRequest UpdateRequest) error {
 	telemetryCommand.CommandName = l.ContentDownloaded
 	telemetryCommand.CommandData = string(body)
 	sm.TelemetryCommandData = *telemetryCommand
-
 	err = logger.Log(l.TelemetryCommandMessage, sm)
 	if err != nil {
 		return err

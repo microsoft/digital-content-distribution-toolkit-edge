@@ -45,7 +45,8 @@ func (s *server) ReceiveCommand(ctx context.Context, commandParams *pb.CommandSe
 	case "Delete":
 		go handleDelete(payload)
 	case "FilterUpdate":
-		go handleFilterUpdate(payload)
+		deviceIniFileName := cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String()
+		go handleFilterUpdate(payload, deviceIniFileName)
 	default:
 		log.Printf("Command received: %s. Not supported by the hub device\n", command)
 		//send telemetry
@@ -56,7 +57,7 @@ func (s *server) ReceiveCommand(ctx context.Context, commandParams *pb.CommandSe
 	return &pb.CommandServiceResponse{Code: 1, Message: "Recieved payload for " + command}, nil
 }
 
-func handleFilterUpdate(payload string) {
+func handleFilterUpdate(payload string, deviceIniFile string) {
 	//check if valid payload
 	//setfilters
 	//if success- write in the ini file(persistence)
@@ -90,11 +91,11 @@ func handleFilterUpdate(payload string) {
 	err := callSetkeywords(serviceId, keywords)
 	if err == nil {
 		//persistence of the filters
-		cfg.Section("DEVICE_INFO").Key("FILTERS").SetValue(keywords)
-		writeErr := cfg.SaveTo("hub_config.ini")
+		device_cfg.Section("DEVICE_DETAIL").Key("FILTERS").SetValue(keywords)
+		writeErr := device_cfg.SaveTo(deviceIniFile)
 		if writeErr == nil {
 			//setkeywords = true
-			fmt.Println("Filters set successfully::", cfg.Section("DEVICE_INFO").Key("FILTERS").String())
+			fmt.Println("Filters set successfully::", device_cfg.Section("DEVICE_DETAIL").Key("FILTERS").String())
 		} else {
 			failedReason = err.Error()
 			fmt.Println(failedReason)
@@ -131,7 +132,7 @@ func handleFilterUpdate(payload string) {
 }
 func callSetkeywords(serviceId, keywords string) error {
 	setFilterCall := "http://host.docker.internal:8134/setkeywords/" + serviceId + keywords
-	//setFilterCall := "http://localhost:8134/setkeywords/" + serviceId + keywords
+
 	fmt.Println(setFilterCall)
 	res, err := http.Get(setFilterCall)
 	if err != nil {

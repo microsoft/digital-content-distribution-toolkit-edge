@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -39,6 +40,7 @@ func verifyToken(token string) (*Claims, error) {
 			return claims, nil
 		}
 		fmt.Println(err.Error())
+		log.Println(err.Error())
 		fmt.Println(i)
 		logger.Log_old("Debug", "Middleware", map[string]string{"Token": token, "Function": "verifyToken", "Error": err.Error(), "publicKey": string(i)})
 	}

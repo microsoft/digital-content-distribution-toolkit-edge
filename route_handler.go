@@ -19,11 +19,18 @@ import (
 const lengthOfStringBytes int = 4
 const lengthOfInt32Bytes int = 4
 const lengthOfInt64Bytes int = 8
+const static string = "/static"
 
 // Setup Routes and their handles which the hub exposes
 // Route 1: "/list/files/:parent" returns the children and their metadata of :parent
 func setupRoutes(ginEngine *gin.Engine) {
-	//ginEngine.Use(AuthRequiredMiddleware)
+	enableAuth, err := cfg.Section("APP_AUTHENTICATION").Key("ENABLE_AUTH").Bool()
+	if err != nil {
+		enableAuth = false
+	}
+	if enableAuth {
+		ginEngine.Use(AuthRequiredMiddleware)
+	}
 	ginEngine.Static("/static", "/")
 	ginEngine.GET("/metadata/", serveSingleMetadata)
 	ginEngine.GET("/list/files/", serveMetadata)
@@ -43,9 +50,7 @@ func serveFolderPath(context *gin.Context) {
 	fmt.Println("Getting folderpath for AssetID: ", assetId)
 	if path, err := getAssetFolderPath(assetId); err == nil {
 		//TODO: to be removed later. Just for testing now
-		//path.Folderpath = "static"+path.Folderpath
-		trimmedPath := strings.TrimPrefix(path.Folderpath, "/mnt/hdd_1/mstore/QCAST.ipts/")
-		path.Folderpath = trimmedPath
+		path.Folderpath = static + path.Folderpath
 		if val, err := vanillaJSON(path); err == nil {
 			fmt.Println("val:", val)
 			context.Header("hubId", device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String())

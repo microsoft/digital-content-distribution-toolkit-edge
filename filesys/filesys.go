@@ -214,6 +214,14 @@ func (fs *FileSystem) PrintBuckets() {
 		}
 
 		fmt.Println()
+		fmt.Println("----------- Pending API calls bucket --------------")
+
+		b = tx.Bucket([]byte("PendingAPIRequestMapping"))
+
+		c = b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			fmt.Printf("key=%s, value=%s\n", k, v)
+		}
 
 		return nil
 	})
