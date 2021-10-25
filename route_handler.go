@@ -36,6 +36,7 @@ func setupRoutes(ginEngine *gin.Engine) {
 	ginEngine.GET("/list/files/", serveMetadata)
 	ginEngine.GET("/list/leaves/", serveLeaves)
 	ginEngine.GET("/folderpath/", serveFolderPath)
+	ginEngine.GET("/deviceId", serveDeviceId)
 	ginEngine.GET("/download/files", serveFile)
 	//fs.PrintFileSystem()
 }
@@ -59,6 +60,11 @@ func serveFolderPath(context *gin.Context) {
 		}
 	}
 	errorResponse(context, "Folderpath for the AssetID not found")
+
+}
+func serveDeviceId(context *gin.Context) {
+	context.Header("hubId", device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String())
+	return
 
 }
 

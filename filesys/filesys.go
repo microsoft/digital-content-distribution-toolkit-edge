@@ -3,12 +3,14 @@ package filesys
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	bolt "github.com/boltdb/bolt"
 	"github.com/google/uuid"
@@ -45,6 +47,11 @@ type FileSystem struct {
 	homeNode        []byte
 	homeDirLocation string
 	nodesDB         *bolt.DB
+}
+type ContentInfoOnDevice struct {
+	DownloadTime time.Time
+	FolderPath   string
+	CommandId    string
 }
 
 func MakeFileSystem(homeDirLocation string, boltdb_location string) (*FileSystem, error) {
@@ -131,6 +138,32 @@ func (fs *FileSystem) GetAssetFolderPathFromDB(id string) ([]byte, error) {
 	//containerpathString := strings.ReplaceAll(string(path), "/mnt/hdd_1/mstore/QCAST.ipts", "/mstore")
 	// [a,b,c,d] -- [a,b,e,f]
 	return info, err
+}
+func (fs *FileSystem) GetBroadcastCommandId(contentId string) (string, error) {
+	var infoByte []byte
+	err := fs.nodesDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("AssetPathMapping")) // asset id to {downloadTime, path}
+		infoByte = b.Get([]byte(contentId))
+		if infoByte == nil {
+			return fmt.Errorf("Error in getting commandId for contentID: ", contentId)
+		}
+		return nil
+	})
+	var info ContentInfoOnDevice
+	err = json.Unmarshal(infoByte, &info)
+	return info.CommandId, err
+}
+func (fs *FileSystem) GetContentIdFromSatelliteId(satelliteId string) (string, error) {
+	var infoByte []byte
+	err := fs.nodesDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("SatelliteIdtoAssetIdMapping")) // asset id to {downloadTime, path}
+		infoByte = b.Get([]byte(satelliteId))
+		if infoByte == nil {
+			return fmt.Errorf("Error in getting contentID for sateliteid: ", satelliteId)
+		}
+		return nil
+	})
+	return string(infoByte), err
 }
 
 func (fs *FileSystem) CreateSatelliteIndexing(cid, assetId string, contentInfo []byte) error {

@@ -84,7 +84,7 @@ func checkDeadlineAndDelete(path string, actualPathPrefix string) error {
 	curr := time.Now().Unix()
 	if curr > deadline {
 		log.Println("[DeleteContentOnExpiry] Validity date expired. Deleting ", actualPathPrefix)
-		deletesize := getDirSizeinMB(path)
+		//deletesize := getDirSizeinMB(path)
 		hierarchy := strings.Split(strings.Trim(actualPathPrefix, "/"), "/")
 		err := fs.RecursiveDeleteFolder(hierarchy)
 		if err != nil {
@@ -96,11 +96,11 @@ func checkDeadlineAndDelete(path string, actualPathPrefix string) error {
 		// 	"DeleteStatus": "SUCCESS", "FolderPath": actualPathPrefix,
 		// 	"Mode": "Expired"})
 		//logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
-		sm := new(l.MessageSubType)
-		sm.AssetInfo.AssetId = hierarchy[len(hierarchy)-1]
-		sm.AssetInfo.Size = deletesize
-		sm.AssetInfo.RelativeLocation = actualPathPrefix
-		logger.Log("AssetDeleteOnDeviceByScheduler", sm)
+		// sm := new(l.MessageSubType)
+		// sm.AssetInfo.AssetId = hierarchy[len(hierarchy)-1]
+		// sm.AssetInfo.Size = deletesize
+		// sm.AssetInfo.RelativeLocation = actualPathPrefix
+		// logger.Log("AssetDeleteOnDeviceByScheduler", sm)
 		// sm = new(l.MessageSubType)
 		// sm.FloatValue = getDiskInfo()
 		// logger.Log("HubStorage", sm)
