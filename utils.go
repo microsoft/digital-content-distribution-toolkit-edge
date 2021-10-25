@@ -35,22 +35,29 @@ const (
 	GB = 1024 * MB
 )
 
-func DiskUsage(path string) (disk DiskStatus) {
+func DiskUsage(path string) (DiskStatus, error) {
+	var disk DiskStatus
 	fs := syscall.Statfs_t{}
 	err := syscall.Statfs(path, &fs)
 	if err != nil {
-		return
+		return disk, err
 	}
 	disk.Total = fs.Blocks * uint64(fs.Bsize)
 	disk.Avail = fs.Bavail * uint64(fs.Bsize)
-	return
+	return disk, nil
 }
 
-func getDiskInfo() float64 {
-	//TODO: disk directory path confirm
-	disk := DiskUsage("./")
-	fmt.Println(fmt.Sprintf("%.2f", float64(disk.Avail)/float64(MB)) + "/" + fmt.Sprintf("%.2f", float64(disk.Total)/float64(MB)))
-	return float64(disk.Avail) / float64(MB)
+func getDiskInfo(directory string) (float64, float64, error) {
+	avail := 0.0
+	total := 0.0
+	disk, err := DiskUsage(directory)
+	if err != nil {
+		return avail, total, err
+	}
+	avail = float64(disk.Avail) / float64(MB)
+	total = float64(disk.Total) / float64(MB)
+	log.Println("Storage Info: ", fmt.Sprintf("%.2f", float64(disk.Avail)/float64(MB))+"/"+fmt.Sprintf("%.2f", float64(disk.Total)/float64(MB)))
+	return avail, total, nil
 }
 
 func (pw *ProgressWriter) Write(b []byte) (int, error) {

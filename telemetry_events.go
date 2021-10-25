@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -13,9 +14,49 @@ import (
 	l "binehub/logger"
 )
 
+func telemetryScheduler(interval int, dirpath string) {
+	for true {
+		liveness()
+		totalAssetsCount()
+		storageInfo(dirpath)
+		time.Sleep(time.Duration(interval) * time.Minute)
+	}
+}
+func liveness() {
+	sm := new(l.MessageSubType)
+	sm.StringMessage = "ALIVE"
+	logger.Log("Liveness", sm)
+}
+func totalAssetsCount() {
+	assetMap, err := fs.GetAssetInfoMapItems()
+	sm := new(l.MessageSubType)
+	if err == nil {
+		sm.Integer = len(assetMap)
+		logger.Log(l.TotalNumberOfAssetsOnTheDevice, sm)
+	}
+}
+func storageInfo(dirpath string) {
+	available, total, err := getDiskInfo(dirpath)
+	if err != nil {
+		log.Println("Error in getting storage info on the hub: ", dirpath, " ", err)
+		fmt.Println("Error in getting storage info on the hub: ", dirpath, " ", err)
+		return
+	}
+	sm := new(l.MessageSubType)
+	sm.FloatValue = math.Round(available*100) / 100
+	logger.Log(l.HubStorageAvailable, sm)
+	sm.FloatValue = math.Round(total*100) / 100
+	logger.Log(l.TotalStorage, sm)
+}
+
+/****************************************************************************
+ Old Code to check the files integrity - Not in use
+File integrity is now checked by SES
+*****************************************************************************/
+
 func checkIntegrity(interval int) {
 	for true {
-		time.Sleep(time.Duration(interval) * time.Second)
+		time.Sleep(time.Duration(interval) * time.Minute)
 		log.Println("------Checking for files integrity-------")
 		children, _ := fs.GetChildrenForNode(fs.GetHomeNode())
 		for i := 0; i < len(children); i += fs.GetNodeLength() {
@@ -61,7 +102,6 @@ func folderToCheck(folderName string) (int, int) {
 	//check if path exist in the zzzz folder
 	if _, err := os.Stat(actualPath); os.IsNotExist(err) {
 		log.Println("[Integrity_Liveness][checkheirarchy] ", fmt.Sprintf("Directory MISSING in the home folder for folderName : (%s) and actual path: (%s)", abstractedFolderName, actualPath))
-		//logger.Log("Error", "Integrity_Liveness", map[string]string{"Message": "Directory MISSING in the HOME folder", "FolderName": abstractedFolderName, "Actual Path": actualPath})
 		return c, t
 	}
 	log.Println("[Integrity_Liveness][checkheirarchy] ", fmt.Sprintf("Checking folder Path (%s) for Heirarchy (%s): ", actualPath, abstractedFolderName))
@@ -70,7 +110,6 @@ func folderToCheck(folderName string) (int, int) {
 		//check if the satellite path exist
 		if _, err := os.Stat(satellitePath); os.IsNotExist(err) {
 			log.Println("[Integrity_Liveness][checkheirarchy] ", fmt.Sprintf("Directory MISSING in the mstore folder for folderName : (%s) and actual path: (%s)", abstractedFolderName, satellitePath))
-			//logger.Log("Error", "Integrity_Liveness", map[string]string{"Message": "Directory MISSING in the MSTORE folder", "FolderName": abstractedFolderName, "Actual Path": satellitePath})
 			return c, t
 		}
 		log.Println("[Integrity_Liveness][checkheirarchy] Found to be a Satellite content...Satellite folder path: ", satellitePath)
@@ -120,9 +159,8 @@ func checkfiles(heirarchy string, folderpath string, hashsummap map[string]strin
 			//TODO: get abstracted path for actual path
 			//logger.Log("Telemetry", "IntegrityStats", map[string]string{"FileName": filepath.Join(folderpath, file.Name()), "Folder": heirarchy, "Directory Location": folderpath, "IntegrityStatus": "Corrupted. Hashum did not match"})
 
-			//TODO: AssetId???
-			sm := l.MessageSubType{IntegrityStats: l.IntegrityStatsMessage{RelativeLocation: heirarchy, Filename: file.Name()}}
-			logger.Log("CorruptedFileStatsFromScheduler", &sm)
+			// sm := l.MessageSubType{IntegrityStats: l.IntegrityStatsMessage{RelativeLocation: heirarchy, Filename: file.Name()}}
+			// logger.Log("CorruptedFileStatsFromScheduler", &sm)
 			c++
 			continue
 		}
@@ -167,12 +205,4 @@ func getTotalFiles(folderpath string) int {
 		t += len(files) - 1
 	}
 	return t
-}
-func liveness(interval int) {
-	for true {
-		sm := new(l.MessageSubType)
-		sm.StringMessage = "ALIVE"
-		logger.Log("Liveness", sm)
-		time.Sleep(time.Duration(interval) * time.Second)
-	}
 }

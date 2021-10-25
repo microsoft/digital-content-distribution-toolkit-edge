@@ -99,7 +99,7 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 			//logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 			log.Println(fmt.Sprintf("[HandleMethodCalls][AdditionalFilesSync] Heirarchy: %s synced via LAN/4G", download_params.GetFolderpath()))
 			log.Println(fmt.Sprintf("[HandleMethodCalls][AdditionalFilesSync] AssetSize: %f MB", getDirSizeinMB(actualPath)))
-			log.Println(fmt.Sprintf("[HandleMethodCalls][AdditionalFilesSync] Disk space available on the Hub: %s", getDiskInfo()))
+			//log.Println(fmt.Sprintf("[HandleMethodCalls][AdditionalFilesSync] Disk space available on the Hub: %s", getDiskInfo()))
 
 			return &pb.Response{Responsemessage: "Additional Files downloaded"}, nil
 		}
@@ -131,7 +131,7 @@ func (s *relayCommandServer) Download(ctx context.Context, download_params *pb.D
 	//logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 	log.Println(fmt.Sprintf("[HandleMethodCalls][Download] Heirarchy: %s synced via LAN/4G", download_params.GetFolderpath()))
 	log.Println(fmt.Sprintf("[HandleMethodCalls][Download] AssetSize: %f MB", getDirSizeinMB(path)))
-	log.Println(fmt.Sprintf("[HandleMethodCalls][Download] Disk space available on the Hub: %s", getDiskInfo()))
+	//log.Println(fmt.Sprintf("[HandleMethodCalls][Download] Disk space available on the Hub: %s", getDiskInfo()))
 	return &pb.Response{Responsemessage: "Folder downloaded"}, nil
 }
 func deleteFilesFromExistingFolder(path string, fileInfos [][]string) error {
@@ -237,7 +237,7 @@ func (s *relayCommandServer) Delete(ctx context.Context, delete_params *pb.Delet
 	//logger.Log("Telemetry", "ContentDeleteInfo", map[string]string{"DeleteStatus": "SUCCESS", "FolderPath": delete_params.GetFolderpath(), "Mode": "CloudCommand"})
 	//logger.Log("Telemetry", "HubStorage", map[string]string{"AvailableDiskSpace(MB)": getDiskInfo()})
 	log.Println(fmt.Sprintf("[HandleMethodCalls][Delete] Heirarchy deleted: %s ", delete_params.GetFolderpath()))
-	log.Println(fmt.Sprintf("[HandleMethodCalls][Delete] Disk space available on the Hub: %s", getDiskInfo()))
+	//log.Println(fmt.Sprintf("[HandleMethodCalls][Delete] Disk space available on the Hub: %s", getDiskInfo()))
 	return &pb.Response{Responsemessage: "Folder deleted"}, nil
 }
 

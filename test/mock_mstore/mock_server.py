@@ -9,13 +9,13 @@ from aiohttp import web
 
 
 PORT = 8134
-contentID = {"6639"}
+contentID = {"6640"}
 listcontents = {
                 "status":"0",
                 "listContents":
                 [
                     {
-                        "ContentId":"6639"
+                        "ContentId":"6640"
                     }
                 ]
                 }
@@ -41,15 +41,16 @@ metadata = {
     "series": "false",
     "userDefined": {
       "title": "MStore_tests",
-      "contentid": "COCKTAIL"
+      "contentid": "123",
+      "contentbroadcastcommandid":"404870"
     },
     "movieID": "BINE_22mar21_1043_16MB",
     "price": "0.00",
     "validityStartDate": "2021-03-22T09:07:56+00:00",
     "validityEndDate": "2021-03-31T18:24:56+00:00",
-    "CID": "6639",
+    "CID": "6640",
     "theoricDuration": "",
-    "video filename": "/media/sda1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/22mar21_1043_vod_16MB.mp4",
+    "video filename": "/mnt/hdd_1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/22mar21_1043_vod_16MB.mp4",
     "trailer filename": "/media/sda1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/",
     "cover filename": "/media/sda1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/22mar21_1043_img2.jpg",
     "urlForDataFiles": "/media/sda1/mstore/QCAST.ipts/storage/6639_22mar21_1043_16MB_210322090756_210331182456/",

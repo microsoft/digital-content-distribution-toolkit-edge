@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	l "binehub/logger"
@@ -19,13 +20,19 @@ const (
 	Provisioned
 	FilterUpdated
 )
+const (
+	SendCloudTelemetry      = "sendCloudTelemetry"
+	SendIOTCentralTelemetry = "sendIotCentralTelemetry"
+)
 
 type ApiData struct {
-	Id            string
-	ApiType       Type
-	RetryCount    int
-	OperationTime time.Time
-	Properties    []Property
+	Id                      string
+	ApiType                 Type
+	RetryCount              int
+	OperationTime           time.Time
+	SendCloudTelemetry      bool
+	SendIOTCentralTelemetry bool
+	Properties              []Property
 }
 
 type Property struct {
@@ -37,9 +44,18 @@ type ContentData struct {
 	ContentId     string    `json:"contentId"`
 	OperationTime time.Time `json:"operationTime"`
 }
-type ContentInfo struct {
+type ContentInfoOnDevice struct {
 	DownloadTime time.Time
 	FolderPath   string
+	CommandId    string
+}
+type ContentProperties struct {
+	Size               float64   `json:"size,omitempty"`
+	ContentId          string    `json:"contentId,omitempty"`
+	ContainerLocation  string    `json:"containerLocation,omitempty"`
+	OperationTime      time.Time `json:"operationTime, omitempty"`
+	SesCID             string    `json:"sesCID,omitempty"`
+	BroadcastCommandId string    `json:"broadcastCommandId,omitempty"`
 }
 type UpdateRequest struct {
 	DeviceId string        `json:"deviceId"`
@@ -132,47 +148,91 @@ func ProcessRequests(segragatedMap map[Type][]ApiData) {
 func handleBatchDownloadRequest(apidata []ApiData) {
 
 	var contentData []ContentData
-
+	var contentProperties []ContentProperties
 	for _, data := range apidata {
+		if data.SendCloudTelemetry {
+			content := new(ContentData)
+			content.ContentId = data.Id
+			content.OperationTime = data.OperationTime
 
-		content := new(ContentData)
-		content.ContentId = data.Id
-		content.OperationTime = data.OperationTime
+			contentData = append(contentData, *content)
+		}
+		if data.SendIOTCentralTelemetry {
+			content := new(ContentProperties)
+			responseMap := make(map[string]string)
+			content.ContentId = data.Id
+			content.OperationTime = data.OperationTime
+			for _, property := range data.Properties {
+				responseMap[property.Key] = property.Value
+			}
+			content.BroadcastCommandId = responseMap["commandId"]
+			content.ContainerLocation = responseMap["containerLocation"]
+			content.SesCID = responseMap["sesCid"]
+			content.Size, _ = strconv.ParseFloat(responseMap["size"], 64)
 
-		contentData = append(contentData, *content)
+			contentProperties = append(contentProperties, *content)
+		}
+
+	}
+	var telemetryCommandErr, iotCentralTelemetryErr error
+	if len(contentData) > 0 {
+		updateRequest := new(UpdateRequest)
+		updateRequest.DeviceId = deviceId
+		updateRequest.Contents = contentData
+
+		body, err := json.Marshal(updateRequest)
+
+		if err != nil {
+			log.Printf("[handleBatchDownloadRequest] Error in marshalling request. Failed to send grpc  %s ", err)
+			return
+		}
+
+		sm := new(l.MessageSubType)
+		telemetryCommand := new(l.TelemetryCommandData)
+		telemetryCommand.CommandName = l.ContentDownloaded
+		telemetryCommand.CommandData = string(body)
+		sm.TelemetryCommandData = *telemetryCommand
+
+		telemetryCommandErr = logger.Log(l.TelemetryCommandMessage, sm)
+
+	}
+	if len(contentProperties) > 0 {
+		body, err := json.Marshal(contentProperties)
+
+		if err != nil {
+			log.Printf("[handleBatchDownloadRequest] Error in marshalling request for contentProperties. Failed to send grpc  %s ", err)
+			return
+		}
+
+		sm := new(l.MessageSubType)
+		contentInfo := new(l.ContentsInfo)
+		contentInfo.NumberOfContents = len(contentProperties)
+		contentInfo.ContentProperties = string(body)
+		sm.ContentsInfo = *contentInfo
+		iotCentralTelemetryErr = logger.Log(l.AssetDownloadOnDeviceFromSES, sm)
 	}
 
-	updateRequest := new(UpdateRequest)
-	updateRequest.DeviceId = deviceId
-	updateRequest.Contents = contentData
+	if telemetryCommandErr != nil || iotCentralTelemetryErr != nil {
+		if telemetryCommandErr == nil {
+			//flag for cloudTelemetry is set to false. Sent successfully
+			ApiDatas(apidata).setTelemetryFlag(SendCloudTelemetry, false)
+		}
+		if iotCentralTelemetryErr == nil {
+			// iotcetntral telemtry set to false.
+			ApiDatas(apidata).setTelemetryFlag(SendIOTCentralTelemetry, false)
 
-	body, err := json.Marshal(updateRequest)
-
-	if err != nil {
-		log.Printf("[handleBatchDownloadRequest] Error in marshalling request. Failed to send grpc  %s ", err)
-		return
-	}
-
-	sm := new(l.MessageSubType)
-	telemetryCommand := new(l.TelemetryCommandData)
-	telemetryCommand.CommandName = l.ContentDownloaded
-	telemetryCommand.CommandData = string(body)
-	sm.TelemetryCommandData = *telemetryCommand
-
-	err = logger.Log(l.TelemetryCommandMessage, sm)
-
-	if err != nil {
+		}
 		// re add entire batch with incremented retry count
 		ApiDatas(apidata).IncrementRetryCount()
 
-		err = fs.AddContents(ApiDatas(apidata).GetIds(), ApiDatas(apidata).GetDataArray())
+		err := fs.AddContents(ApiDatas(apidata).GetIds(), ApiDatas(apidata).GetDataArray())
 
 		if err != nil {
 			log.Printf("[handleBatchDownloadRequest] Error in re-adding batch to db %s", err)
 		}
 
 	} else {
-		err = fs.DeletePendingAPIRequestEntries(ApiDatas(apidata).GetIds())
+		err := fs.DeletePendingAPIRequestEntries(ApiDatas(apidata).GetIds())
 
 		if err != nil {
 			log.Printf("[handleBatchDownloadRequest] Error in deleting db entries %s", err)
@@ -182,50 +242,92 @@ func handleBatchDownloadRequest(apidata []ApiData) {
 
 func handleBatchDeletedRequest(apidata []ApiData) {
 	var contentData []ContentData
-
+	var contentProperties []ContentProperties
 	for _, data := range apidata {
+		contentId := strings.TrimPrefix(data.Id, "DL_")
+		if data.SendCloudTelemetry {
+			content := new(ContentData)
+			content.ContentId = contentId
+			content.OperationTime = data.OperationTime
 
-		content := new(ContentData)
-		content.ContentId = data.Id
-		content.OperationTime = data.OperationTime
+			contentData = append(contentData, *content)
+		}
+		if data.SendIOTCentralTelemetry {
+			content := new(ContentProperties)
+			responseMap := make(map[string]string)
+			content.ContentId = contentId
+			content.OperationTime = data.OperationTime
+			for _, property := range data.Properties {
+				responseMap[property.Key] = property.Value
+			}
+			content.BroadcastCommandId = responseMap["commandId"]
+			content.SesCID = responseMap["sesCid"]
 
-		contentData = append(contentData, *content)
+			contentProperties = append(contentProperties, *content)
+		}
+
+	}
+	var telemetryCommandErr, iotCentralTelemetryErr error
+	if len(contentData) > 0 {
+		updateRequest := new(UpdateRequest)
+		updateRequest.DeviceId = deviceId
+		updateRequest.Contents = contentData
+
+		body, err := json.Marshal(updateRequest)
+
+		if err != nil {
+			log.Printf("[handleBatchDeletedRequest] Error in marshalling request. Failed to send grpc  %s ", err)
+			return
+		}
+
+		sm := new(l.MessageSubType)
+		telemetryCommand := new(l.TelemetryCommandData)
+		telemetryCommand.CommandName = l.ContentDeleted
+		telemetryCommand.CommandData = string(body)
+		sm.TelemetryCommandData = *telemetryCommand
+
+		telemetryCommandErr = logger.Log(l.TelemetryCommandMessage, sm)
+
+	}
+	if len(contentProperties) > 0 {
+		body, err := json.Marshal(contentProperties)
+
+		if err != nil {
+			log.Printf("[handleBatchDeletedRequest] Error in marshalling request. Failed to send grpc  %s ", err)
+			return
+		}
+		sm := new(l.MessageSubType)
+		contentInfo := new(l.ContentsInfo)
+		contentInfo.NumberOfContents = len(contentProperties)
+		contentInfo.ContentProperties = string(body)
+		sm.ContentsInfo = *contentInfo
+		iotCentralTelemetryErr = logger.Log(l.AssetDeleteOnDeviceByScheduler, sm)
 	}
 
-	updateRequest := new(UpdateRequest)
-	updateRequest.DeviceId = deviceId
-	updateRequest.Contents = contentData
+	if telemetryCommandErr != nil || iotCentralTelemetryErr != nil {
+		if telemetryCommandErr == nil {
+			//flag for cloudTelemetry is set to false. Sent successfully
+			ApiDatas(apidata).setTelemetryFlag(SendCloudTelemetry, false)
+		}
+		if iotCentralTelemetryErr == nil {
+			// iotcetntral telemtry set to false.
+			ApiDatas(apidata).setTelemetryFlag(SendIOTCentralTelemetry, false)
 
-	body, err := json.Marshal(updateRequest)
-
-	if err != nil {
-		log.Printf("[handleBatchDeletedRequest] Error in marshalling request. Failed to send grpc  %s ", err)
-		return
-	}
-
-	sm := new(l.MessageSubType)
-	telemetryCommand := new(l.TelemetryCommandData)
-	telemetryCommand.CommandName = l.ContentDeleted
-	telemetryCommand.CommandData = string(body)
-	sm.TelemetryCommandData = *telemetryCommand
-
-	err = logger.Log(l.TelemetryCommandMessage, sm)
-
-	if err != nil {
+		}
 		// re add entire batch with incremented retry count
 		ApiDatas(apidata).IncrementRetryCount()
 
-		err = fs.AddContents(ApiDatas(apidata).GetIds(), ApiDatas(apidata).GetDataArray())
+		err := fs.AddContents(ApiDatas(apidata).GetIds(), ApiDatas(apidata).GetDataArray())
 
 		if err != nil {
 			log.Printf("[handleBatchDeletedRequest] Error in re-adding batch to db %s", err)
 		}
 
 	} else {
-		err = fs.DeletePendingAPIRequestEntries(ApiDatas(apidata).GetIds())
+		err := fs.DeletePendingAPIRequestEntries(ApiDatas(apidata).GetIds())
 
 		if err != nil {
-			log.Printf("[handleBatchDeletedRequest] Error in deleting db entries %s", err)
+			log.Printf("[handleBatchDownloadRequest] Error in deleting db entries %s", err)
 		}
 	}
 }
@@ -343,6 +445,18 @@ func handledProvisionedRequest(apiData []ApiData) {
 
 }
 
+func (apidatas ApiDatas) setTelemetryFlag(flag string, val bool) {
+	switch flag {
+	case SendCloudTelemetry:
+		for _, data := range apidatas {
+			data.SendCloudTelemetry = val
+		}
+	case SendIOTCentralTelemetry:
+		for _, data := range apidatas {
+			data.SendIOTCentralTelemetry = val
+		}
+	}
+}
 func (apidatas ApiDatas) GetIds() []string {
 	var ids []string
 
@@ -383,9 +497,12 @@ func HandleAssetMapRequest(messageSize int) error {
 		fmt.Printf("Error in getting assetInfo map %s", err)
 		return err
 	}
+	fmt.Println("AssetMap size::", len(assetMap))
+	log.Println("AssetMap size::", len(assetMap))
+	isAssetMap := true
 	contentBatch := make([]ContentData, 0, messageSize)
 	for id, v := range assetMap {
-		contentInfo := ContentInfo{}
+		contentInfo := ContentInfoOnDevice{}
 		err = json.Unmarshal(v, &contentInfo)
 		if err != nil {
 			log.Printf("Error in marshalling the contentinfo while sending the assetmap %s", err)
@@ -402,7 +519,7 @@ func HandleAssetMapRequest(messageSize int) error {
 			updateRequest := new(UpdateRequest)
 			updateRequest.DeviceId = deviceId
 			updateRequest.Contents = contentBatch
-			err = sendDownloadedTelemetryData(*updateRequest)
+			err = sendDownloadedTelemetryData(*updateRequest, isAssetMap)
 			if err != nil {
 				log.Printf("[handleAssetMapRequest] Error in marshalling request. Failed to send grpc  %s ", err)
 				return err
@@ -415,7 +532,7 @@ func HandleAssetMapRequest(messageSize int) error {
 		updateRequest := new(UpdateRequest)
 		updateRequest.DeviceId = deviceId
 		updateRequest.Contents = contentBatch
-		err = sendDownloadedTelemetryData(*updateRequest)
+		err = sendDownloadedTelemetryData(*updateRequest, isAssetMap)
 		if err != nil {
 			log.Printf("[handleAssetMapRequest] Error in marshalling request. Failed to send grpc  %s ", err)
 			return err
@@ -424,7 +541,7 @@ func HandleAssetMapRequest(messageSize int) error {
 	return nil
 }
 
-func sendDownloadedTelemetryData(updateRequest UpdateRequest) error {
+func sendDownloadedTelemetryData(updateRequest UpdateRequest, isAssetMap bool) error {
 	body, err := json.Marshal(updateRequest)
 
 	if err != nil {
@@ -435,8 +552,10 @@ func sendDownloadedTelemetryData(updateRequest UpdateRequest) error {
 	telemetryCommand := new(l.TelemetryCommandData)
 	telemetryCommand.CommandName = l.ContentDownloaded
 	telemetryCommand.CommandData = string(body)
+	if isAssetMap {
+		telemetryCommand.IsAssetMap = isAssetMap
+	}
 	sm.TelemetryCommandData = *telemetryCommand
-
 	err = logger.Log(l.TelemetryCommandMessage, sm)
 	if err != nil {
 		return err

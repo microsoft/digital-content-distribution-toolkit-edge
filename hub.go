@@ -41,7 +41,8 @@ func main() {
 	cfg, err = ini.Load("hub_config.ini")
 	//cfg, err = ini.Load("hub_config_tmp.ini")
 	fmt.Println("loaded hub_config ini file")
-	device_cfg, device_err = ini.Load(cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String())
+	device_ini := cfg.Section("HUB_AUTHENTICATION").Key("DEVICE_DETAIL_FILE").String()
+	device_cfg, device_err = ini.Load(device_ini)
 	codeLogsFile := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_PATH").String()
 	codeLogsFileMaxSize, err := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_MAX_SIZE").Int()
 	codeLogsFileMaxBackups, err := cfg.Section("LOGGER").Key("CODE_LOGS_FILE_MAX_BACKUPS").Int()
@@ -69,7 +70,6 @@ func main() {
 	bufferSize, err := cfg.Section("LOGGER").Key("MEM_BUFFER_SIZE").Int()
 	deviceId := device_cfg.Section("DEVICE_DETAIL").Key("deviceId").String()
 	serviceId := cfg.Section("MSTORE_SERVICE").Key("serviceId").String()
-	filters := cfg.Section("DEVICE_INFO").Key("FILTERS").String()
 	applicationName := cfg.Section("APP_INFO").Key("APPLICATION_NAME").String()
 	applicationVersion := cfg.Section("APP_INFO").Key("APPLICATION_VERSION").String()
 	upstreamAddress := cfg.Section("GRPC").Key("UPSTREAM_ADDRESS").String()
@@ -97,6 +97,10 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	filters := device_cfg.Section("DEVICE_DETAIL").Key("FILTERS").String()
+	if filters == "" {
+		filters = "Invalid"
+	}
 	fmt.Println("Setting up the filters on the startup of the hub module:", filters)
 	filters = "/" + strings.Trim(filters, "/")
 	if err = callSetkeywords(serviceId, filters); err != nil {
@@ -107,32 +111,26 @@ func main() {
 	}
 
 	fmt.Println("Info", "All first level info being sent to iot-hub...")
-	//fs.CreateSatelliteIndexing("6760","b25f2953-760f-4351-a547-2f237db59634", "/mnt/hdd_1/mstore/QCAST.ipts/storage/6760_ab5f2953-760f-4351-a547-2f237db59634/ab5f2953-760f-4351-a547-2f237db59634.mpd" )
 	fs.PrintBuckets()
 	// launch a goroutine to handle method calls
 	wg.Add(6)
-	//go handle_method_calls(downstream_grpc_port, wg)
 	go handleCommands(downstream_grpc_port, wg)
 
 	// start a concurrent background service which checks if the files on the device are tampered with
 	//integrityCheckInterval, err := cfg.Section("DEVICE_INFO").Key("INTEGRITY_CHECK_SCHEDULER").Int()
 	//go checkIntegrity(integrityCheckInterval)
 
-	satApiCmd := cfg.Section("DEVICE_INFO").Key("SAT_API_SWITCH").String()
 	getdata_interval, err := cfg.Section("DEVICE_INFO").Key("MSTORE_SCHEDULER").Int()
-	switch satApiCmd {
-	case "noovo":
-		go pollNoovo(getdata_interval)
-	case "mstore":
-		go pollMstore(getdata_interval)
-	}
-	liveness_interval, err := cfg.Section("DEVICE_INFO").Key("LIVENESS_SCHEDULER").Int()
-	go liveness(liveness_interval)
-	deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
-	go deleteContent(deletion_interval)
-	//TODO: remove--- for testing mock telemetry msg upstream
-	//go mock_liveness(liveness_interval)
-	go mock_hubstorageandmemory(1800)
+	deviceStorage := cfg.Section("DEVICE_INFO").Key("MSTORE_DEVICE_STORAGE").String()
+	containerStorage := cfg.Section("DEVICE_INFO").Key("MSTORE_CONTAINER_STORAGE").String()
+	go pollMstore(getdata_interval, containerStorage, deviceStorage)
+
+	telemetry_interval, err := cfg.Section("DEVICE_INFO").Key("LIVENESS_SCHEDULER").Int()
+	mountedVolpath := cfg.Section("DEVICE_INFO").Key("MSTORE_CONTAINER_STORAGE").String()
+	//go liveness(telemetry_interval)
+	go telemetryScheduler(telemetry_interval, mountedVolpath)
+	//deletion_interval, err := cfg.Section("DEVICE_INFO").Key("DELETION_SCHEDULER").Int()
+	//go deleteContent(deletion_interval)
 	//go mock_telelmetry(180)
 	// setup key manager and load keys
 	storage_url := cfg.Section("APP_AUTHENTICATION").Key("BLOB_STORAGE_KEYS_GET_URL").String()
@@ -221,13 +219,9 @@ func main() {
 		if len(km.GetKeyList()) == 0 {
 			logger.Log_old("Critical", "Keymanager", map[string]string{"Message": fmt.Sprintf("Failed to setup keymanager: %v", err)})
 			log.Println(fmt.Sprintf("Failed to setup keymanager: %v", err))
-			os.Exit(1)
+			//os.Exit(1)
 		}
-
 	}
-
-	//go mock_liveness(liveness_interval)
-	//go mock_hubstorageandmemory(120)
 
 	var provisionData cpi.ApiData
 	provisionData.Id = deviceId
@@ -269,9 +263,9 @@ func main() {
 	defer close(errors)
 	// check for the elapsed 24 hr
 	currentTimestamp := time.Now().Unix()
-	lastTimestamp, err := cfg.Section("BLENDNET").Key("ASSETMAP_TIMESTAMP").Int64()
+	lastTimestamp, err := device_cfg.Section("DEVICE_DETAIL").Key("ASSETMAP_TIMESTAMP").Int64()
 	if err != nil {
-		fmt.Printf("unable to last timestamp of assetmap sent from ini file: %v", err)
+		fmt.Printf("unable to getlast timestamp of assetmap sent from ini file: %v", err)
 		log.Println(fmt.Sprintf("last timestamp of assetmap sent from ini file: %v", err))
 		lastTimestamp = 0
 	}
@@ -283,8 +277,9 @@ func main() {
 		}()
 		if err := <-errors; err != nil {
 			// persist the timestamp in the ini file
-			cfg.Section("BLENDNET").Key("ASSETMAP_TIMESTAMP").SetValue(strconv.FormatInt(currentTimestamp, 10))
-			if writeErr := cfg.SaveTo("hub_config.ini"); writeErr != nil {
+			fmt.Println(device_ini)
+			device_cfg.Section("DEVICE_DETAIL").Key("ASSETMAP_TIMESTAMP").SetValue(strconv.FormatInt(currentTimestamp, 10))
+			if writeErr := device_cfg.SaveTo(device_ini); writeErr != nil {
 				fmt.Printf("unable to store last timestamp of assetmap sent in the ini file: %v", writeErr)
 				log.Println(fmt.Sprintf("unable to store last timestamp of assetmap sent in the ini file: %v", writeErr))
 			}
