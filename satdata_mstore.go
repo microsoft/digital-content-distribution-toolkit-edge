@@ -210,8 +210,9 @@ func getMstoreFiles(vod VodInfo, containerStorage, deviceStorage string) (string
 		// logger.Log("Info", sm)
 		return contentid, nil
 	}
+	downlaodTime := time.Now().UTC()
 	var contentInfo ContentInfo
-	contentInfo.DownloadTime = time.Now().UTC()
+	contentInfo.DownloadTime = downlaodTime
 	pathToMpdFile := strings.Replace(vod.Metadata.VideoFilename, deviceStorage, containerStorage, 1)
 	contentInfo.FolderPath = pathToMpdFile
 	contentInfo.CommandId = vod.Metadata.UserDefined.Contentbroadcastcommandid
@@ -243,7 +244,7 @@ func getMstoreFiles(vod VodInfo, containerStorage, deviceStorage string) (string
 	var apidata = new(capi.ApiData)
 	apidata.Id = contentid
 	apidata.ApiType = capi.Downloaded
-	apidata.OperationTime = time.Now().UTC()
+	apidata.OperationTime = downlaodTime
 	apidata.RetryCount = 0
 	apidata.SendCloudTelemetry = true
 	apidata.SendIOTCentralTelemetry = true
