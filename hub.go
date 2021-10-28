@@ -99,6 +99,13 @@ func main() {
 	}
 	filters := device_cfg.Section("DEVICE_DETAIL").Key("FILTERS").String()
 	if filters == "" {
+		device_cfg.Section("DEVICE_DETAIL").Key("FILTERS").SetValue("Invalid")
+		writeErr := device_cfg.SaveTo(device_ini)
+		if writeErr != nil {
+			fmt.Printf("Error in saving filters to invalid to the ini file: %v\n", err)
+			log.Println(fmt.Sprintf("Error in saving filters to invalid to the ini file: %v\n", err))
+
+		}
 		filters = "Invalid"
 	}
 	fmt.Println("Setting up the filters on the startup of the hub module:", filters)
@@ -251,40 +258,24 @@ func main() {
 	cpi.InitAPIHandler(*fs, deviceId, logger)
 	go cpi.HandleApiRequests(handle_interval)
 
-	// send assetmap
+	cpi.InitAssetMapCall(device_ini, device_cfg)
 	messageSize, err := cfg.Section("BLENDNET").Key("ASSETMAP_MESSAGE_SIZE").Int()
 
 	if err != nil {
 		fmt.Printf("unable to get assetmap message size from ini file: %v", err)
 		log.Println(fmt.Sprintf("unable to get assetmap message size from ini file: %v", err))
-		messageSize = 10
+		messageSize = 25
 	}
-	errors := make(chan error, 1)
-	defer close(errors)
-	// check for the elapsed 24 hr
-	currentTimestamp := time.Now().Unix()
-	lastTimestamp, err := device_cfg.Section("DEVICE_DETAIL").Key("ASSETMAP_TIMESTAMP").Int64()
+	// this interval is for the goroutine that sends the assetmap. Every hour it checks whether elapsed time is greater than 24 hour. If it is then it sends the Assetmap telemetry
+	sleepInterval, err := cfg.Section("BLENDNET").Key("ASSETMAP_SLEEP_INTERVAL").Int()
+
 	if err != nil {
-		fmt.Printf("unable to getlast timestamp of assetmap sent from ini file: %v", err)
-		log.Println(fmt.Sprintf("last timestamp of assetmap sent from ini file: %v", err))
-		lastTimestamp = 0
+		fmt.Printf("unable to get assetmap message size from ini file: %v", err)
+		log.Println(fmt.Sprintf("unable to get assetmap message size from ini file: %v", err))
+		sleepInterval = 60
 	}
-	timeElapsedInHr := (currentTimestamp - lastTimestamp) / 60 / 60
-	if timeElapsedInHr > 24 {
-		//go cpi.HandleAssetMapRequest(messageSize)
-		go func() {
-			errors <- cpi.HandleAssetMapRequest(messageSize)
-		}()
-		if err := <-errors; err != nil {
-			// persist the timestamp in the ini file
-			fmt.Println(device_ini)
-			device_cfg.Section("DEVICE_DETAIL").Key("ASSETMAP_TIMESTAMP").SetValue(strconv.FormatInt(currentTimestamp, 10))
-			if writeErr := device_cfg.SaveTo(device_ini); writeErr != nil {
-				fmt.Printf("unable to store last timestamp of assetmap sent in the ini file: %v", writeErr)
-				log.Println(fmt.Sprintf("unable to store last timestamp of assetmap sent in the ini file: %v", writeErr))
-			}
-		}
-	}
+
+	go cpi.HandleAssetMapRequest(sleepInterval, messageSize)
 	// set up the web server and routes
 	router := gin.Default()
 	fmt.Println("Setting up routes")
