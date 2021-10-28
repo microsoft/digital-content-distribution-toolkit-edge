@@ -10,6 +10,8 @@ import (
 	"time"
 
 	l "binehub/logger"
+
+	"gopkg.in/ini.v1"
 )
 
 type Type int
@@ -76,11 +78,18 @@ type ApiDatas []ApiData
 var fs *filesys.FileSystem
 var deviceId string
 var logger *l.Logger
+var deviceCfg *ini.File
+var deviceIniFilename string
 
 func InitAPIHandler(filesystem filesys.FileSystem, devId string, log *l.Logger) {
 	fs = &filesystem
 	deviceId = devId
 	logger = log
+
+}
+func InitAssetMapCall(file string, deviceIni *ini.File) {
+	deviceIniFilename = file
+	deviceCfg = deviceIni
 }
 
 func HandleApiRequests(interval int) {
@@ -490,7 +499,35 @@ func (apidatas ApiDatas) IncrementRetryCount() {
 	}
 }
 
-func HandleAssetMapRequest(messageSize int) error {
+func HandleAssetMapRequest(messageSize, sleepInterval int) {
+	for {
+		currentTimestamp := time.Now().Unix()
+		lastTimestamp, err := deviceCfg.Section("DEVICE_DETAIL").Key("ASSETMAP_TIMESTAMP").Int64()
+		if err != nil {
+			fmt.Println("unable to getlast timestamp of assetmap sent from ini file: ", err)
+			log.Println(fmt.Sprintf("last timestamp of assetmap sent from ini file: %v", err))
+			lastTimestamp = 0
+		}
+		timeElapsedInHr := (currentTimestamp - lastTimestamp) / 60 / 60
+		if timeElapsedInHr >= 1 {
+			err := sendAssetmapInBatches(messageSize)
+			if err != nil {
+				fmt.Println("Error in sending the AssetMap: ", err)
+				log.Println(fmt.Sprintf("Error in sending the AssetMap %v", err))
+			} else {
+				// persist the lastTimestamp in the ini file
+				deviceCfg.Section("DEVICE_DETAIL").Key("ASSETMAP_TIMESTAMP").SetValue(strconv.FormatInt(currentTimestamp, 10))
+				if writeErr := deviceCfg.SaveTo(deviceIniFilename); writeErr != nil {
+					fmt.Printf("unable to store last timestamp of assetmap sent in the ini file: %v", writeErr)
+					log.Println(fmt.Sprintf("unable to store last timestamp of assetmap sent in the ini file: %v", writeErr))
+				}
+			}
+		}
+		log.Printf("Done sending the assetmap. Sleeping for %v minute", sleepInterval)
+		time.Sleep(time.Duration(sleepInterval) * time.Minute)
+	}
+}
+func sendAssetmapInBatches(messageSize int) error {
 	assetMap, err := fs.GetAssetInfoMapItems()
 	if err != nil {
 		log.Printf("Error in getting assetInfo map %s", err)
@@ -540,7 +577,6 @@ func HandleAssetMapRequest(messageSize int) error {
 	}
 	return nil
 }
-
 func sendDownloadedTelemetryData(updateRequest UpdateRequest, isAssetMap bool) error {
 	body, err := json.Marshal(updateRequest)
 
