@@ -509,7 +509,7 @@ func HandleAssetMapRequest(messageSize, sleepInterval int) {
 			lastTimestamp = 0
 		}
 		timeElapsedInHr := (currentTimestamp - lastTimestamp) / 60 / 60
-		if timeElapsedInHr >= 24 {
+		if timeElapsedInHr >= 1 {
 			err := sendAssetmapInBatches(messageSize)
 			if err != nil {
 				fmt.Println("Error in sending the AssetMap: ", err)
