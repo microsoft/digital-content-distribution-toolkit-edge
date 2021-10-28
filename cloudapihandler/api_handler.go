@@ -499,7 +499,7 @@ func (apidatas ApiDatas) IncrementRetryCount() {
 	}
 }
 
-func HandleAssetMapRequest(messageSize, sleepInterval int) {
+func HandleAssetMapRequest(sleepInterval, messageSize int) {
 	for {
 		currentTimestamp := time.Now().Unix()
 		lastTimestamp, err := deviceCfg.Section("DEVICE_DETAIL").Key("ASSETMAP_TIMESTAMP").Int64()
