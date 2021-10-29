@@ -24,6 +24,10 @@ import (
 	cl "binehub/logger"
 )
 
+/****************************** All the "fmt" statements are written on the console.
+******************************* All the "log" statements are written to the log files.
+*********************/
+
 type PublicKey struct {
 	TimeStamp string `json:"timestamp"`
 	PublicKey string `json:"value"`
