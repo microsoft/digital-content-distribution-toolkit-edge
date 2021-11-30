@@ -260,7 +260,9 @@ func main() {
 	}
 
 	cpi.InitAPIHandler(*fs, deviceId, logger)
-	go cpi.HandleApiRequests(handle_interval)
+
+	downloadBatchMessageSize, err := cfg.Section("BLENDNET").Key("DOWNLOAD_TELEMETRY_MESSAGE_SIZE").Int()
+	go cpi.HandleApiRequests(handle_interval, downloadBatchMessageSize)
 
 	cpi.InitAssetMapCall(device_ini, device_cfg)
 	messageSize, err := cfg.Section("BLENDNET").Key("ASSETMAP_MESSAGE_SIZE").Int()
