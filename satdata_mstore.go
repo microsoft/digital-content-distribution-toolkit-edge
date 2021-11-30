@@ -163,8 +163,8 @@ func checkForVODViaMstore(containerStorage, deviceStorage string) error {
 }
 
 func getMetadataAPI(contentId, containerStorage, deviceStorage string) error {
-	query := "http://host.docker.internal:8134/getmetadata/" + contentId
-	//query := "http://localhost:8134/getmetadata/" + contentId
+	//query := "http://host.docker.internal:8134/getmetadata/" + contentId
+	query := "http://localhost:8134/getmetadata/" + contentId
 	res, err := http.Get(query)
 	if err != nil {
 		return err
