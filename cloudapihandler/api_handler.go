@@ -92,7 +92,7 @@ func InitAssetMapCall(file string, deviceIni *ini.File) {
 	deviceCfg = deviceIni
 }
 
-func HandleApiRequests(interval int, downloadMessageSize int) {
+func HandleApiRequests(interval int) {
 	var apiData []ApiData
 
 	var result [][]byte
@@ -112,7 +112,7 @@ func HandleApiRequests(interval int, downloadMessageSize int) {
 
 		var segregatedData = GetSegregatedItems(apiData)
 
-		ProcessRequests(segregatedData, downloadMessageSize)
+		ProcessRequests(segregatedData)
 
 		apiData = nil // making it nil so that in next batch old entries do not exist
 
@@ -135,12 +135,12 @@ func GetSegregatedItems(apiData []ApiData) map[Type][]ApiData {
 	return segragatedData
 }
 
-func ProcessRequests(segragatedMap map[Type][]ApiData, messageSize int) {
+func ProcessRequests(segragatedMap map[Type][]ApiData) {
 	for key := range segragatedMap {
 		switch key {
 		case Downloaded:
 			log.Println("Handle batch download request")
-			sendDownloadRequestInBatches(segragatedMap[key], messageSize)
+			handleBatchDownloadRequest(segragatedMap[key])
 		case Deleted:
 			log.Println("Handle batch delete request")
 			handleBatchDeletedRequest(segragatedMap[key])
@@ -154,23 +154,17 @@ func ProcessRequests(segragatedMap map[Type][]ApiData, messageSize int) {
 	}
 }
 
-func sendDownloadRequestInBatches(apidata []ApiData, messageSize int) error {
+func handleBatchDownloadRequest(apidata []ApiData) {
 
-	contentDataBatch := make([]ContentData, 0, messageSize)
-	contentPropertiesBatch := make([]ContentProperties, 0, messageSize)
-	apiDataBatch := make([]ApiData, 0, messageSize)
-	fmt.Println("Setting message size for download telemetry as ", messageSize)
+	var contentData []ContentData
+	var contentProperties []ContentProperties
 	for _, data := range apidata {
-		var telemetryCommandErr, iotCentralTelemetryErr error
-
-		apiDataBatch = append(apiDataBatch, data)
-
 		if data.SendCloudTelemetry {
 			content := new(ContentData)
 			content.ContentId = data.Id
 			content.OperationTime = data.OperationTime
 
-			contentDataBatch = append(contentDataBatch, *content)
+			contentData = append(contentData, *content)
 		}
 		if data.SendIOTCentralTelemetry {
 			content := new(ContentProperties)
@@ -185,54 +179,74 @@ func sendDownloadRequestInBatches(apidata []ApiData, messageSize int) error {
 			content.SesCID = responseMap["sesCid"]
 			content.Size, _ = strconv.ParseFloat(responseMap["size"], 64)
 
-			contentPropertiesBatch = append(contentPropertiesBatch, *content)
-		}
-
-		if len(contentDataBatch) == messageSize {
-			updateRequest := new(UpdateRequest)
-			updateRequest.DeviceId = deviceId
-			updateRequest.Contents = contentDataBatch
-			fmt.Println("Download content batch initial content " + contentDataBatch[0].ContentId)
-			telemetryCommandErr = sendDownloadedTelemetryData(*updateRequest, false)
-			contentDataBatch = contentDataBatch[:0]
-		}
-
-		if len(contentPropertiesBatch) == messageSize {
-			iotCentralTelemetryErr = sendDownloadedTelemetryForIoTCentralGraph(contentPropertiesBatch)
-			contentPropertiesBatch = contentPropertiesBatch[:0]
-		}
-
-		if telemetryCommandErr != nil || iotCentralTelemetryErr != nil {
-			if telemetryCommandErr == nil {
-				//flag for cloudTelemetry is set to false. Sent successfully
-				ApiDatas(apiDataBatch).setTelemetryFlag(SendCloudTelemetry, false)
-			}
-			if iotCentralTelemetryErr == nil {
-				// iotcetntral telemtry set to false.
-				ApiDatas(apiDataBatch).setTelemetryFlag(SendIOTCentralTelemetry, false)
-
-			}
-			// re add entire batch with incremented retry count
-			ApiDatas(apiDataBatch).IncrementRetryCount()
-
-			err := fs.AddContents(ApiDatas(apiDataBatch).GetIds(), ApiDatas(apidata).GetDataArray())
-
-			if err != nil {
-				log.Printf("[handleBatchDeletedRequest] Error in re-adding batch to db %s", err)
-			}
-
-		} else {
-			err := fs.DeletePendingAPIRequestEntries(ApiDatas(apiDataBatch).GetIds())
-
-			if err != nil {
-				log.Printf("[handleBatchDownloadRequest] Error in deleting db entries %s", err)
-			}
+			contentProperties = append(contentProperties, *content)
 		}
 
 	}
+	var telemetryCommandErr, iotCentralTelemetryErr error
+	if len(contentData) > 0 {
+		updateRequest := new(UpdateRequest)
+		updateRequest.DeviceId = deviceId
+		updateRequest.Contents = contentData
 
-	return nil
+		body, err := json.Marshal(updateRequest)
 
+		if err != nil {
+			log.Printf("[handleBatchDownloadRequest] Error in marshalling request. Failed to send grpc  %s ", err)
+			return
+		}
+
+		sm := new(l.MessageSubType)
+		telemetryCommand := new(l.TelemetryCommandData)
+		telemetryCommand.CommandName = l.ContentDownloaded
+		telemetryCommand.CommandData = string(body)
+		sm.TelemetryCommandData = *telemetryCommand
+
+		telemetryCommandErr = logger.Log(l.TelemetryCommandMessage, sm)
+
+	}
+	if len(contentProperties) > 0 {
+		body, err := json.Marshal(contentProperties)
+
+		if err != nil {
+			log.Printf("[handleBatchDownloadRequest] Error in marshalling request for contentProperties. Failed to send grpc  %s ", err)
+			return
+		}
+
+		sm := new(l.MessageSubType)
+		contentInfo := new(l.ContentsInfo)
+		contentInfo.NumberOfContents = len(contentProperties)
+		contentInfo.ContentProperties = string(body)
+		sm.ContentsInfo = *contentInfo
+		iotCentralTelemetryErr = logger.Log(l.AssetDownloadOnDeviceFromSES, sm)
+	}
+
+	if telemetryCommandErr != nil || iotCentralTelemetryErr != nil {
+		if telemetryCommandErr == nil {
+			//flag for cloudTelemetry is set to false. Sent successfully
+			ApiDatas(apidata).setTelemetryFlag(SendCloudTelemetry, false)
+		}
+		if iotCentralTelemetryErr == nil {
+			// iotcetntral telemtry set to false.
+			ApiDatas(apidata).setTelemetryFlag(SendIOTCentralTelemetry, false)
+
+		}
+		// re add entire batch with incremented retry count
+		ApiDatas(apidata).IncrementRetryCount()
+
+		err := fs.AddContents(ApiDatas(apidata).GetIds(), ApiDatas(apidata).GetDataArray())
+
+		if err != nil {
+			log.Printf("[handleBatchDownloadRequest] Error in re-adding batch to db %s", err)
+		}
+
+	} else {
+		err := fs.DeletePendingAPIRequestEntries(ApiDatas(apidata).GetIds())
+
+		if err != nil {
+			log.Printf("[handleBatchDownloadRequest] Error in deleting db entries %s", err)
+		}
+	}
 }
 
 func handleBatchDeletedRequest(apidata []ApiData) {
@@ -513,7 +527,6 @@ func HandleAssetMapRequest(sleepInterval, messageSize int) {
 		time.Sleep(time.Duration(sleepInterval) * time.Minute)
 	}
 }
-
 func sendAssetmapInBatches(messageSize int) error {
 	assetMap, err := fs.GetAssetInfoMapItems()
 	if err != nil {
@@ -584,18 +597,4 @@ func sendDownloadedTelemetryData(updateRequest UpdateRequest, isAssetMap bool) e
 		return err
 	}
 	return nil
-}
-
-func sendDownloadedTelemetryForIoTCentralGraph(contentProperties []ContentProperties) error {
-	body, err := json.Marshal(contentProperties)
-	if err != nil {
-		log.Printf("[handleBatchDownloadRequest] Error in marshalling request for contentProperties. Failed to send grpc  %s ", err)
-		return err
-	}
-	sm := new(l.MessageSubType)
-	contentInfo := new(l.ContentsInfo)
-	contentInfo.NumberOfContents = len(contentProperties)
-	contentInfo.ContentProperties = string(body)
-	sm.ContentsInfo = *contentInfo
-	return logger.Log(l.AssetDownloadOnDeviceFromSES, sm)
 }
