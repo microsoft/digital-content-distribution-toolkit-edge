@@ -9,13 +9,43 @@ from aiohttp import web
 
 
 PORT = 8134
-contentID = {"6640"}
+contentID = {"6640", "6641", "6642", "6643", "6645", "6646", "6647", "6648", "6649", "6650"}
 listcontents = {
                 "status":"0",
                 "listContents":
                 [
                     {
                         "ContentId":"6640"
+                    },
+                    {
+                        "ContentId":"6641"
+                    },
+                    {
+                        "ContentId":"6642"
+                    },
+                    {
+                        "ContentId":"6643"
+                    },
+                    {
+                        "ContentId":"6644"
+                    },
+                    {
+                        "ContentId":"6645"
+                    },
+                    {
+                        "ContentId":"6646"
+                    },
+                    {
+                        "ContentId":"6647"
+                    },
+                    {
+                        "ContentId":"6648"
+                    },
+                    {
+                        "ContentId":"6649"
+                    },
+                    {
+                        "ContentId":"6650"
                     }
                 ]
                 }
@@ -77,14 +107,17 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
     def do_GET(self):
         if re.search('/listcontents', self.path):
+            print("List contents API called")
             self.set_headers()
             resp = json.dumps(listcontents)
             self.wfile.write(resp.encode('utf8'))
             return
         if re.search('/getmetadata/[0-9]+', self.path):
+            print("Get metadata API called")
             self.set_headers()
             cid = self.path.split('/')[-1]
             if cid in contentID: 
+                metadata['metadata']['userDefined']['contentid'] = cid
                 resp = json.dumps(metadata)
                 self.wfile.write(resp.encode('utf8'))
                 return
