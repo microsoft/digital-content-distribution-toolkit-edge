@@ -267,7 +267,7 @@ func getMstoreFiles(vod VodInfo, containerStorage, deviceStorage string) (string
 func handleDeletedContents(vodlist VodList) error {
 	log.Printf("Handling deleted contents from current vodlist %v", vodlist.ListContents)
 	satAssetMap, err := fs.GetSatelliteMappedItems()
-
+	fmt.Println("SATELLITE ASSET MAP ", satAssetMap)
 	if err != nil {
 		log.Printf("Error in getting satellite mapped items: %s ", err)
 		return err
@@ -278,6 +278,7 @@ func handleDeletedContents(vodlist VodList) error {
 
 	satelliteIDs := vodlist.ListContents
 
+	fmt.Println("SATELLITE IDS ", satelliteIDs)
 	latestAvailableContents := make(map[string]ListContent, len(satelliteIDs))
 	for _, content := range satelliteIDs {
 		latestAvailableContents[content.ContentID] = content
@@ -290,6 +291,8 @@ func handleDeletedContents(vodlist VodList) error {
 			deletedContentIds = append(deletedContentIds, value)
 		}
 	}
+
+	fmt.Println("DELETED SATELLITE ITEMS ", deletedSatelliteIds)
 	deletedContentsInfoMap := make(map[string]DeletedContentsInfo)
 	for _, id := range deletedContentIds {
 		deletedContent := new(DeletedContentsInfo)

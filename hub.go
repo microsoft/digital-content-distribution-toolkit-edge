@@ -262,7 +262,19 @@ func main() {
 	cpi.InitAPIHandler(*fs, deviceId, logger)
 
 	downloadBatchMessageSize, err := cfg.Section("BLENDNET").Key("DOWNLOAD_TELEMETRY_MESSAGE_SIZE").Int()
-	go cpi.HandleApiRequests(handle_interval, downloadBatchMessageSize)
+
+	if err != nil {
+		fmt.Printf("unable to get download batch message size from ini file: %v", err)
+		downloadBatchMessageSize = 10
+	}
+	deleteBatchMessageSize, err := cfg.Section("BLENDNET").Key("DELETE_TELEMETRY_MESSAGE_SIZE").Int()
+
+	if err != nil {
+		fmt.Printf("unable to get delete batch message size from ini file: %v", err)
+		deleteBatchMessageSize = 10
+	}
+
+	go cpi.HandleApiRequests(handle_interval, downloadBatchMessageSize, deleteBatchMessageSize)
 
 	cpi.InitAssetMapCall(device_ini, device_cfg)
 	messageSize, err := cfg.Section("BLENDNET").Key("ASSETMAP_MESSAGE_SIZE").Int()

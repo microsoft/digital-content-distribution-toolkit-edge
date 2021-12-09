@@ -118,6 +118,7 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
             cid = self.path.split('/')[-1]
             if cid in contentID: 
                 metadata['metadata']['userDefined']['contentid'] = cid
+                metadata['metadata']['CID'] = cid
                 resp = json.dumps(metadata)
                 self.wfile.write(resp.encode('utf8'))
                 return
