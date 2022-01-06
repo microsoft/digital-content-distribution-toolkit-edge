@@ -41,6 +41,7 @@ type TelemetryMessage struct {
 	TotalStorage                   float64               `json:"totalStorage,omitempty"`
 	Memory                         float64               `json:"memory,omitempty"`
 	Liveness                       string                `json:"liveness,omitempty"`
+	LivenessNumeric                int                   `json:"livenessNumeric,omitempty"`
 	InvalidCommandOnDevice         string                `json:"invalidCommandOnDevice,omitempty"`
 	Error                          string                `json:"error,omitempty"`
 	Critical                       string                `json:"critical,omitempty"`
@@ -78,6 +79,7 @@ type TelemetryCommandData struct {
 
 const (
 	Liveness                       = "Liveness"
+	LivenessNumeric                = "LivenessNumeric"
 	Debug                          = "Debug"
 	Info                           = "Info"
 	Warning                        = "Warning"
@@ -97,7 +99,7 @@ const (
 
 func (lt EventType) isValid() error {
 	switch lt {
-	case Liveness, Debug, Info, Warning, Error, Critical, AssetDeleteOnDeviceByScheduler, AssetDownloadOnDeviceFromSES, TotalNumberOfAssetsOnTheDevice, Memory, HubStorageAvailable, TotalStorage, TelemetryCommandMessage:
+	case Liveness, LivenessNumeric, Debug, Info, Warning, Error, Critical, AssetDeleteOnDeviceByScheduler, AssetDownloadOnDeviceFromSES, TotalNumberOfAssetsOnTheDevice, Memory, HubStorageAvailable, TotalStorage, TelemetryCommandMessage:
 		return nil
 	}
 	return fmt.Errorf("Invalid log type %v", string(lt))
@@ -211,14 +213,18 @@ func (l *Logger) Log(eventType string, subType *MessageSubType) error {
 		fmt.Errorf("[Logger]invalid message type %s", eventType)
 		return fmt.Errorf(fmt.Sprintf("[Logger]invalid message type %s", eventType))
 	}
+
 	tm := new(TelemetryMessage)
 	tm.ApplicationName = l.applicationName
 	tm.ApplicationVersion = l.applicationVersion
 	tm.DeviceIdInData = l.deviceId
 	tm.Timestamp = time.Now().Unix()
+
 	switch EventType(eventType) {
 	case Liveness:
 		tm.Liveness = subType.StringMessage
+	case LivenessNumeric:
+		tm.LivenessNumeric = subType.Integer
 	case InvalidCommandOnDevice:
 		tm.InvalidCommandOnDevice = subType.StringMessage
 	case HubStorageAvailable:
@@ -251,6 +257,7 @@ func (l *Logger) Log(eventType string, subType *MessageSubType) error {
 		tm.Warning = subType.StringMessage
 	}
 	byteMessage, err := json.Marshal(tm)
+	fmt.Println(err)
 	if err != nil {
 		log.Println(fmt.Sprintf("[LoggerGRPC] error in creating grpc message: %v", err))
 		return fmt.Errorf(fmt.Sprintf("[LoggerGRPC] error in creating grpc message: %v", err))

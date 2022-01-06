@@ -17,6 +17,7 @@ import (
 func telemetryScheduler(interval int, dirpath string) {
 	for true {
 		liveness()
+		livenessNumeric()
 		totalAssetsCount()
 		storageInfo(dirpath)
 		time.Sleep(time.Duration(interval) * time.Minute)
@@ -34,6 +35,12 @@ func totalAssetsCount() {
 		sm.Integer = len(assetMap)
 		logger.Log(l.TotalNumberOfAssetsOnTheDevice, sm)
 	}
+}
+
+func livenessNumeric() {
+	sm := new(l.MessageSubType)
+	sm.Integer = 1
+	logger.Log(l.LivenessNumeric, sm)
 }
 func storageInfo(dirpath string) {
 	available, total, err := getDiskInfo(dirpath)
