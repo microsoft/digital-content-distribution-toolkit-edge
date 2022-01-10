@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.34.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Protos\TelemetryService.proto" GrpcServices="Server" />
+    <Protobuf Include="ClientProtos\CommandService.proto" GrpcServices="Client" />
+  </ItemGroup>
+</Project>

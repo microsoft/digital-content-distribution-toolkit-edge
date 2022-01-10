@@ -1,0 +1,89 @@
+# Check Variables
+# environment variable dictates the deployment to devices with the tags.environment
+# See trigger: and targetcondition: of the Deploy task
+# Eg. if environment is `dev`, the proxy-module will be deployed to devices having tags.environment=dev
+
+trigger:
+- t-nag/azure-pipelines-proxy
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: AzureIoTEdge@2
+  displayName: '[arm64v8] Build module images'
+  inputs:
+    action: 'Build module images'
+    templateFilePath: 'proxy/HubEdgeProxy/deployment.fieldrg.arm.template.json'
+    defaultPlatform: 'arm64v8'
+
+- task: AzureIoTEdge@2
+  displayName: '[arm64v8] Push module images'
+  inputs:
+    action: 'Push module images'
+    containerregistrytype: 'Azure Container Registry'
+    azureSubscriptionEndpoint: 'Sneakernet Subscription(79b6781b-bc04-4e86-95d0-0e81a597feb5)'
+    azureContainerRegistry: '{"loginServer":"bineiot.azurecr.io", "id" : "/subscriptions/79b6781b-bc04-4e86-95d0-0e81a597feb5/resourceGroups/fieldtrial_dev_rg/providers/Microsoft.ContainerRegistry/registries/bineiot"}'
+    templateFilePath: 'proxy/HubEdgeProxy/deployment.fieldrg.arm.template.json'
+    defaultPlatform: 'arm64v8'
+    fillRegistryCredential: 'true'
+
+- task: AzureIoTEdge@2
+  displayName: '[arm64v8] Generate deployment manifest'
+  inputs:
+    action: 'Generate deployment manifest'
+    templateFilePath: 'proxy/HubEdgeProxy/deployment.fieldrg.arm.template.json'
+    defaultPlatform: 'arm64v8'
+    deploymentManifestOutputPath: '$(System.DefaultWorkingDirectory)/proxy/HubEdgeProxy/output-deployment-arm64v8.json'
+    validateGeneratedDeploymentManifest: 'true'
+
+- task: AzureIoTEdge@2
+  displayName: '[arm64v8] Deploy to IoT Edge devices'
+  inputs:
+    action: 'Deploy to IoT Edge devices'
+    deploymentFilePath: '$(System.DefaultWorkingDirectory)/proxy/HubEdgeProxy/output-deployment-arm64v8.json'
+    azureSubscription: 'Sneakernet Subscription(79b6781b-bc04-4e86-95d0-0e81a597feb5)'
+    iothubname: 'BlNEIOTHub'
+    deploymentid: '$(System.TeamProject)-devops-deployment-arm64v8'
+    priority: '0'
+    deviceOption: 'Multiple Devices'
+    targetcondition:  tags.environment='$(environment)'
+
+- task: AzureIoTEdge@2
+  displayName: '[amd64] Build module images'
+  inputs:
+    action: 'Build module images'
+    templateFilePath: 'proxy/HubEdgeProxy/deployment.fieldrg.template.json'
+    defaultPlatform: 'amd64'
+
+- task: AzureIoTEdge@2
+  displayName: '[amd64] Push module images'
+  inputs:
+    action: 'Push module images'
+    containerregistrytype: 'Azure Container Registry'
+    azureSubscriptionEndpoint: 'Sneakernet Subscription(79b6781b-bc04-4e86-95d0-0e81a597feb5)'
+    azureContainerRegistry: '{"loginServer":"bineiot.azurecr.io", "id" : "/subscriptions/79b6781b-bc04-4e86-95d0-0e81a597feb5/resourceGroups/fieldtrial_dev_rg/providers/Microsoft.ContainerRegistry/registries/bineiot"}'
+    templateFilePath: 'proxy/HubEdgeProxy/deployment.fieldrg.template.json'
+    defaultPlatform: 'amd64'
+    fillRegistryCredential: 'true'
+
+- task: AzureIoTEdge@2
+  displayName: '[amd64] Generate deployment manifest'
+  inputs:
+    action: 'Generate deployment manifest'
+    templateFilePath: 'proxy/HubEdgeProxy/deployment.fieldrg.template.json'
+    defaultPlatform: 'amd64'
+    deploymentManifestOutputPath: '$(System.DefaultWorkingDirectory)/proxy/HubEdgeProxy/output-deployment-amd64.json'
+    validateGeneratedDeploymentManifest: 'true'
+
+- task: AzureIoTEdge@2
+  displayName: '[amd64] Deploy to IoT Edge devices'
+  inputs:
+    action: 'Deploy to IoT Edge devices'
+    deploymentFilePath: '$(System.DefaultWorkingDirectory)/proxy/HubEdgeProxy/output-deployment-amd64.json'
+    azureSubscription: 'Sneakernet Subscription(79b6781b-bc04-4e86-95d0-0e81a597feb5)'
+    iothubname: 'BlNEIOTHub'
+    deploymentid: '$(System.TeamProject)-devops-deployment-amd64'
+    priority: '0'
+    deviceOption: 'Multiple Devices'
+    targetcondition:  tags.environment='$(environment)'

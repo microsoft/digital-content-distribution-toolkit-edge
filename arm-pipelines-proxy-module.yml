@@ -1,0 +1,67 @@
+variables:
+  AMDRunNumber: 'amd64-$(Build.BuildNumber)'
+  ARMRunNumber: 'arm64v8-$(Build.BuildNumber)'
+
+trigger:
+- t-nag/proxy-pipeline-iot-edge
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: Docker@2
+  displayName: Login to ACR
+  inputs:
+    command: login
+    containerRegistry: $(acr-service-connection)
+
+- task: CmdLine@2
+  displayName: "[amd64] Building AMD docker image"
+  inputs:
+    script: "cd ./proxy/HubEdgeProxy/modules/HubEdgeProxyModule; docker build -t $(amd_image_name):$(AMDRunNumber) -f ./Dockerfile.amd64 ."
+
+- task: CmdLine@2
+  displayName: "[amd] Tagging docker image"
+  inputs:
+    script: "docker tag $(amd_image_name):$(AMDRunNumber) $(amd_image_name):latest"
+
+- task: CmdLine@2
+  displayName: "[amd64] Pushing AMD image to ACR"
+  inputs:
+    script: "docker push --all-tags $(amd_image_name)"
+
+- task: CmdLine@2
+  displayName: "[arm] Setting up qemu for buildx"
+  inputs:
+    script: "docker run --rm --privileged docker/binfmt:820fdd95a9972a5308930a2bdfb8573dd4447ad3; cat /proc/sys/fs/binfmt_misc/qemu-aarch64"  
+
+- task: CmdLine@2
+  displayName: "[arm] Setting up ARM docker builder"
+  inputs:
+    script: "docker buildx create --name mybuilder; docker buildx use mybuilder; docker buildx inspect --bootstrap"
+
+- task: CmdLine@2
+  displayName: "[arm] Building ARM docker image"
+  inputs:
+    script: "cd ./proxy/HubEdgeProxy/modules/HubEdgeProxyModule; docker buildx build -t $(arm_docker_img) --output type=docker,dest=$(arm_docker_img).tar -f ./Dockerfile.arm64v8 ."
+
+- task: CmdLine@2
+  displayName: "[arm] Loading $(arm_docker_img).tar"
+  inputs:
+    script: "docker load -i ./proxy/HubEdgeProxy/modules/HubEdgeProxyModule/$(arm_docker_img).tar"
+
+- task: CmdLine@2
+  displayName: "[arm] Tagging docker image"
+  inputs:
+    script: "docker tag $(arm_docker_img) $(arm_image_name):$(ARMRunNumber); docker tag $(arm_image_name):$(ARMRunNumber) $(arm_image_name):latest"
+
+- task: CmdLine@2
+  displayName: "[arm] Pushing ARM image to ACR"
+  inputs:
+    script: "docker push --all-tags $(arm_image_name)"
+
+- task: Docker@2
+  displayName: Logout of ACR
+  inputs:
+    command: logout
+    containerRegistry: $(acr-service-connection)

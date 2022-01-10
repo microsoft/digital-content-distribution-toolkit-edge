@@ -1,0 +1,141 @@
+{
+  "$schema-template": "2.0.0",
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {
+              "acrhk": {
+                "username": "$CONTAINER_REGISTRY_USERNAME_acrhk",
+                "password": "$CONTAINER_REGISTRY_PASSWORD_acrhk",
+                "address": "acrhk.azurecr.io"
+              }
+            }
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "type": "docker",
+            "env": {
+              "storageFolder": {
+                  "value": "/iotedge/storage/"
+              }
+            }, 
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "createOptions": {
+                "HostConfig": {
+                  "Binds":["/etc/iotedge/storageonhost:/iotedge/storage/"]
+                }
+              }
+            }
+          },
+          "edgeHub": {
+            "type": "docker",
+            "env": {
+              "storageFolder": {
+                  "value": "/iotedge/storage/"
+              }
+            },
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "createOptions": {
+                "HostConfig": {
+                  "Binds":["/etc/iotedge/storageonhost:/iotedge/storage/"],
+                  "PortBindings": {
+                    "5671/tcp": [
+                      {
+                        "HostPort": "5671"
+                      }
+                    ],
+                    "8883/tcp": [
+                      {
+                        "HostPort": "8883"
+                      }
+                    ],
+                    "443/tcp": [
+                      {
+                        "HostPort": "443"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "modules": {
+          "HubEdgeProxyModule": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "startupOrder": 0,
+            "settings": {
+              "image": "${MODULES.HubEdgeProxyModule}",
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "5001/tcp": [
+                      {
+                        "HostPort": "5001"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "MsrTestWorkerModule": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "startupOrder": 1,
+            "settings": {
+              "image": "acrhk.azurecr.io/msrtestworkerservice:latest",
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "5002/tcp": [
+                      {
+                        "HostPort": "5002"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "routes": {
+          "HubEdgeProxyModuleToIoTHub": "FROM /messages/modules/HubEdgeProxyModule/outputs/* INTO $upstream",
+          "MsrTestWorkerModuleToIoTHub": "FROM /messages/modules/MsrTestWorkerModule/outputs/* INTO $upstream"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 172800
+        }
+      }
+    },
+    "HubEdgeProxyModule": {
+      "properties.desired": {
+        "ProxyModuleClientEndpoints":
+        {
+          "HUBServer":"http://MsrTestWorkerModule:5002"
+        }
+      }
+    }
+  }
+}
