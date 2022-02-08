@@ -18,7 +18,6 @@ func telemetryScheduler(interval int, dirpath string) {
 	for true {
 		liveness()
 		livenessNumeric()
-		totalAssetsCount()
 		storageInfo(dirpath)
 		time.Sleep(time.Duration(interval) * time.Minute)
 	}
@@ -28,13 +27,12 @@ func liveness() {
 	sm.StringMessage = "ALIVE"
 	logger.Log("Liveness", sm)
 }
-func totalAssetsCount() {
-	assetMap, err := fs.GetAssetInfoMapItems()
+
+// fired every 30mins from satdata_mstore whenever list contents are fetched
+func totalAssetsCount(assetCount int) {
 	sm := new(l.MessageSubType)
-	if err == nil {
-		sm.Integer = len(assetMap)
-		logger.Log(l.TotalNumberOfAssetsOnTheDevice, sm)
-	}
+	sm.Integer = assetCount
+	logger.Log(l.TotalNumberOfAssetsOnTheDevice, sm)
 }
 
 func livenessNumeric() {

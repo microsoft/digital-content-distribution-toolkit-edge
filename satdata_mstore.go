@@ -134,7 +134,7 @@ func checkForVODViaMstore(containerStorage, deviceStorage string) error {
 		return jsonErr
 	}
 	fmt.Println("[Satdata_mstore][checkForVODViaMstore] NO. OF CONTENTS ON THE SAT: ", len(vodlist.ListContents))
-
+	totalAssetsCount(len(vodlist.ListContents)) //send asset count to telemetry
 	for i, id := range vodlist.ListContents {
 		fmt.Println("=======(", i, ") Processing for CID:=====", id.ContentID)
 
