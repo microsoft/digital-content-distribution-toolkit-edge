@@ -48,6 +48,7 @@ type TelemetryMessage struct {
 	Warning                        string                `json:"warning,omitempty"`
 	Info                           string                `json:"info,omitempty"`
 	Debug                          string                `json:"debug,omitempty"`
+	EventType                      string                `json:"eventType"`
 }
 type ContentsInfo struct {
 	NumberOfContents  int    `json:"numberOfContents,omitempty"`
@@ -219,6 +220,7 @@ func (l *Logger) Log(eventType string, subType *MessageSubType) error {
 	tm.ApplicationVersion = l.applicationVersion
 	tm.DeviceIdInData = l.deviceId
 	tm.Timestamp = time.Now().Unix()
+	tm.EventType = eventType
 
 	switch EventType(eventType) {
 	case Liveness:
