@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
+
 	pbTelemetry "binehub/goUpstreamTelemetry"
 
 	"google.golang.org/grpc"
@@ -49,6 +51,7 @@ type TelemetryMessage struct {
 	Info                           string                `json:"info,omitempty"`
 	Debug                          string                `json:"debug,omitempty"`
 	EventType                      string                `json:"eventType"`
+	EventId                        string                `json:"eventId"`
 }
 type ContentsInfo struct {
 	NumberOfContents  int    `json:"numberOfContents,omitempty"`
@@ -221,6 +224,7 @@ func (l *Logger) Log(eventType string, subType *MessageSubType) error {
 	tm.DeviceIdInData = l.deviceId
 	tm.Timestamp = time.Now().Unix()
 	tm.EventType = eventType
+	tm.EventId = uuid.NewString()
 
 	switch EventType(eventType) {
 	case Liveness:
