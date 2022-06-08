@@ -3,7 +3,7 @@
   "modulesContent": {
     "$edgeAgent": {
       "properties.desired": {
-        "schemaVersion": "1.0",
+        "schemaVersion": "1.1",
         "runtime": {
           "type": "docker",
           "settings": {
@@ -11,9 +11,9 @@
             "loggingOptions": "",
             "registryCredentials": {
               "bineiot": {
-                "username": "$CONTAINER_REGISTRY_USERNAME_acrbineiotdevsp",
-                "password": "$CONTAINER_REGISTRY_PASSWORD_acrbineiotdevsp",
-                "address": "acrbineiotdev.azurecr.io"
+                "username": "$CONTAINER_REGISTRY_USERNAME_acrbineiotstagesp",
+                "password": "$CONTAINER_REGISTRY_PASSWORD_acrbineiotstagesp",
+                "address": "acrbineiotstage.azurecr.io"
               }
             }
           }
@@ -84,7 +84,7 @@
             "restartPolicy": "always",
             "startupOrder": 0,
             "settings": {
-              "image": "acrbineiotdev.azurecr.io/hubedgeproxymodule:arm32v7-20210726.3",
+              "image": "acrbineiotstage.azurecr.io/hubedgeproxymodule:arm32v7-20220203.2",
               "createOptions": {
                 "HostConfig": {
                   "Binds":["/opt/data/settings/iotedge/hubedgeproxymoduleonhost/logs:/app/logs/"],
@@ -114,7 +114,7 @@
             "restartPolicy": "always",
             "startupOrder": 1,
             "settings": {
-              "image": "acrbineiotdev.azurecr.io/hubmodule:arm32v7-20210803.1",
+              "image": "acrbineiotstage.azurecr.io/hubmodule:arm32v7-20220322.1",
               "createOptions": {
                 "HostConfig": {
                   "Binds":["/opt/data/settings/iotedge/hubmoduleonhost:/root/hubmoduleonhost/",
@@ -137,15 +137,37 @@
             }
           },
           "vodeproxy": {
-            "version": "1.0.0",
+            "version": "1.0",
             "type": "docker",
+            "env": {
+              "storageFolder": {
+                  "value": "/sshkeys/"
+              },
+              "update_ssh": {
+                "value": "/update_sshkeys/"
+              }
+            },
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "acrbineiotdev.azurecr.io/vodeproxy:1.0.0-arm32v7",
+              "image": "acrbineiotstage.azurecr.io/vodeproxy:2.2.12-arm32v7",
               "createOptions": {
+                "ExposedPorts": {
+                  "10000/tcp": {
+                  }
+                },
                 "HostConfig":{
-                  "ExtraHosts":["host.docker.internal:172.17.0.1"]
+                  "ExtraHosts":["host.docker.internal:172.17.0.1"],
+                  "Binds": [ "/opt/data/cadata/solidRSSH_key_update:/update_sshkeys/",
+                             "/opt/data/cadata/solidRSSH:/sshkeys/" ],
+                  "NetworkMode": "bridge",
+                  "PortBindings": {
+                    "10000/tcp": [
+                      {
+                        "HostPort": "10000"
+                      }
+                    ]
+                  }
                 }
               }
             }
@@ -155,7 +177,7 @@
     },
     "$edgeHub": {
       "properties.desired": {
-        "schemaVersion": "1.0",
+        "schemaVersion": "1.1",
         "routes": {
           "HubEdgeProxyModuleToIoTHub": "FROM /messages/modules/HubEdgeProxyModule/outputs/* INTO $upstream",
           "HubModuleToIoTHub": "FROM /messages/modules/HubModule/outputs/* INTO $upstream",
@@ -172,6 +194,21 @@
         {
           "HUBServer":"http://HubModule:5002"
         }
+      }
+    },
+    "vodeproxy": {
+      "properties.desired": {
+        "rootkeys": [
+          "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCi0TsrlpWQgfsI7+GJUImD1KIPtGKtDI6zXJqlwylpNC0eA/YDqF10piekZylGS8OnXh+ebv9Rtt0u6TzR1+5ldbG3qnADEVAJL4UC0c3F50pgZAWbAbILxd3N2KinPCVesE0Ofh/6mVZ4A7L512/2LGrFlEv1MwE8BXQCUNapFFkWnL80oFrPQjMqt91IRDazYXi36xx2e6lTlxgvFJI1CK39hUkFC7yMzbMqT5JolDXCkf9nX73kMtTptN7ZLcJ3h672zLERuE8dI40U55SAs+NB+Nf10LYe/lv/5rZDd/DlQ1JWPjv+gghANf+/gT5CrcG/ECj+fDpG3ShKup30pQyMNq4FGBdFrXPVKiirlKTpT2aUoPdYfUDX5axznyO+ttyMuvXq0f4Iah7Cl+Cl7AM/RIoKTtnNMLRK7cwL1nduyFtAK7Xo3GG2Z0U4aAGnoKqzcAdMECrigAtCdP9+rWjW3WdNUF12LibcOKw5cEMos4qcxZ87hxBv1xvhL60= ses@svrwrssh01"
+        ],
+        "engineerkeys": [
+          "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCwqSIcbhUac0VkUVvuQeY2VpQQhMLS56c495IBANzwWCcwnr45z0/pk0dEyj4XZ3kBo7ssV3FyHA/YGMNJAuWVqhOBkooYt6G/GXSNfV3wNeFpwfUyQAVRp4BpTYBjJkzKjWlyv7MJe+pkgZV4PpPr7l7fJNDfPBBfKkMmj1roDkz2FVuf2/V+HgM5PmZIlsyYTUtsahpa7C4xtQ4WXuv6ZSVkFo0jB4DYW3jWI2o5JPsGqTrAYEbiQL3MrPw9GkLPesVoMXXshwLU7K995guI65eMlHPby4Y3Ge25AsHCFQ2P9Hk7QlHMpRghqxvlmnXo5OYf+9iM4VAaTsDcBojU5uBvGbBWfPCaWaRg5BdpRA2soV1I0mj798mqdW1anktYWJCKRHzIDLxiGLgNPBrm4lGKmbx0UB5bXhxdr2dpgtTyo1LvFfHfrbKqtCxLl7EJu7OFvgtYOTECIjtz+sQoXEaWF5Gx3/mJvP0e8EZTDJZwxb/4OFxQjMmbd7LhfR8= ses_engineer@svrwrssh01"
+        ],
+        "WLAN_SSID": "meramishtu",
+        "WLAN_PW": "12345678",
+        "THROTTLE_ENABLED": true,
+        "THROTTLE_UP": 128,
+        "THROTTLE_DOWN": 128
       }
     }
   }
