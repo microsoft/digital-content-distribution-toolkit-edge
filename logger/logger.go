@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 // custom logger implementaion to handle telemetry as well
 package logger
 

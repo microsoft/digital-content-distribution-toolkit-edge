@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 // file system implementation with actual flat hierarchy and true hierarchy stored in bolt db
 package filesys
 

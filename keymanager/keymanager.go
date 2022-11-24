@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 // Package to maintain a fixed size FIFO cache of public keys
 package keymanager
 
